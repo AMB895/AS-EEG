@@ -1,14 +1,6 @@
 function [revisar] = epochAS(inputfile, epochfolder, task, taskdirectory,condition,lowBP,topBP)
 revisar = {};
 
-% do first steps of preprocessing pipeline before epoching:
-% 1. re-reference to mastoid
-% 2. Filter
-% 3. Resample
-% 4. Epoch
-% 5. do rest of preprocessing
-
-
 % what file are we using
 if ~exist(inputfile,'file'), error('inputfile "%s" does not exist!', inputfile), end
 [d, currentName, ext ] = fileparts(inputfile);

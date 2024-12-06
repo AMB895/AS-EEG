@@ -5,15 +5,19 @@ addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/eeg/eog_cal/')
 addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/eeg/eog_cal/trial_data/anti/')
 addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/txt/')
 trialDataASpath = '/Volumes/Hera/Projects/7TBrainMech/scripts/eeg/eog_cal/trial_data/anti/';
-merged7t = readtable('merged_7t.csv'); % to get ages
-idAgeDate = [merged7t.lunaid, merged7t.eeg_date, merged7t.eeg_age];
-noEEGscan = find(isnan(idAgeDate(:,3)));
+merged7t = readtable('merged_7t.csv'); % to get age and sex
+idAgeDateSex = {merged7t.lunaid, merged7t.eeg_date, merged7t.eeg_age, merged7t.sex};
+noEEGscan = find(isnan(cell2mat(idAgeDateSex(:,3))));
+idAgeDateSex{1,1}(noEEGscan) = [];
+idAgeDateSex{1,2}(noEEGscan) = [];
+idAgeDateSex{1,3}(noEEGscan) = [];
+idAgeDateSex{1,4}(noEEGscan) = [];
 contents = dir(trialDataASpath);
 
 %% Calculating Error Rate and average Latency
-tableSize = [length(contents)-2 9];
-varTypes = {'string','string','double','double','double','double','double','double','double'};
-varNames = {'Luna ID','Scan Date','Age','Error Rate (no dropped)','Average Latency (correct trials)','# Correct','# Incorrect','# Dropped','Total Trials'};
+tableSize = [length(contents)-2 10];
+varTypes = {'double','double','double','string','double','double','double','double','double','double'};
+varNames = {'Luna ID','Scan Date','Age','Sex','Error Rate (no dropped)','Average Latency (correct trials)','# Correct','# Incorrect','# Dropped','Total Trials'};
 ErrorLatencyTable = table('Size',tableSize,'VariableTypes',varTypes,'VariableNames',varNames);
 trialType = cell([length(contents)-2 5]);
 
@@ -25,29 +29,45 @@ for i=1:length(contents)
     nameDate = strsplit(fileName,{'_','.'});
     subjID = str2double(nameDate{1});
     scanDate = str2double(nameDate{2});
-    index_merged7t = find(idAgeDate(:,1) == subjID & idAgeDate(:,2) == scanDate);
-    ageAtScan = idAgeDate(index_merged7t,3);
+    index_merged7t = find(idAgeDateSex{:,1} == subjID & idAgeDateSex{:,2} == scanDate);
+    ageAtScan = idAgeDateSex{1,3}(index_merged7t);
+    sex = string(idAgeDateSex{1,4}(index_merged7t));
+
+    % Some participants are not in merge7t but have AS EEG score
     if isempty(ageAtScan)
-        ageAtScan = NaN;
+        fprintf('Subject %d Date %d\n',subjID,scanDate)
+         continue
     end
+    % Loading AS score data
     subjectData = load(fileName);
+    
+    % Type of trial index
     asScore = subjectData.thisdata(:,6);
-    latencyWithInfs = subjectData.thisdata(:,5);
-    infsLocation = isinf(latencyWithInfs);
-    latency = latencyWithInfs(~infsLocation);
-    averageLatency = mean(latency);
-    numCorrect = sum(asScore == 1);
     corTrialNum = find(asScore == 1);
-    numIncorrect = sum(asScore == 0);
     incorTrialNum = find(asScore == 0);
-    numDropped = length(find(isnan(asScore)));
     droppedTrialNum = find(isnan(asScore));
+
+    % Calculating Average Latency for correct trials
+    latency = subjectData.thisdata(:,5);
+    latency(incorTrialNum) = [];
+    % for d = 1:length(incorTrialNum) % Removing latency of incorrect trials
+    %     latency(incorTrialNum(d)) = [];
+    % end
+    latency = latency(~isinf(latency)); % Removing latency of dropped trials
+    averageLatency = mean(latency);
+
+    % Error Rate Calculation
+    numCorrect = sum(asScore == 1);
+    numIncorrect = sum(asScore == 0);
+    numDropped = length(find(isnan(asScore)));
     totalTrials = numDropped + numIncorrect + numCorrect;
     ER_noDropped = numIncorrect/(numIncorrect+numCorrect);
-    % ER_withDropped = (numIncorrect+numDropped)/(totalTrials);
-    ErrorLatencyTable(i-2,:) = {subjID,scanDate,ageAtScan,ER_noDropped,averageLatency,numCorrect,numIncorrect,numDropped,totalTrials};
+
+    ErrorLatencyTable(i-2,:) = {subjID,scanDate,ageAtScan,sex,ER_noDropped,averageLatency,numCorrect,numIncorrect,numDropped,totalTrials};
     trialType(i-2,:) = {subjID,scanDate,corTrialNum,incorTrialNum,droppedTrialNum};
 end
+idxMissingData = find(ErrorLatencyTable.("Luna ID") == 0);
+ErrorLatencyTable(idxMissingData,:)=[];
 trialTypeTable = array2table(trialType,'VariableNames',{'Luna ID','Scan Date','Correct Trials','Incorrect Trials','Dropped Trials'});
 
 
