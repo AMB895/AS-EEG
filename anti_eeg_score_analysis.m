@@ -55,7 +55,11 @@ for i=1:length(contents)
     % end
     latency = latency(~isinf(latency)); % Removing latency of dropped trials
     averageLatency = mean(latency);
-
+    % 11875 does not have any correct latency values
+    if isnan(averageLatency)
+        ErrorLatencyTable(i-2,:)=[];
+        continue
+    end
     % Error Rate Calculation
     numCorrect = sum(asScore == 1);
     numIncorrect = sum(asScore == 0);

@@ -70,22 +70,17 @@ fprintf('Effect Size for Adolescents-Children: %1.4f\n',rADC)
 clear
 addpath('/Volumes/Hera/Abby/')
 addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/txt/')
-merge7t = readtable('merged_7t.csv');
-sexID = merge7t(:,{'lunaid','sex','eeg_date'});
-nomissingAgeIdx = find(~isnan(merge7t.eeg_age));
-sexID = sexID(nomissingAgeIdx,:);
 d = readtable('7t_eegAS_ErrorLatency.csv');
-nomissingAge_ind = find(~isnan(d.Age));
-d = d(nomissingAge_ind,:);
 ids = unique(d.LunaID);
-data = table('Size',[306 6],'VariableTypes',{'double','double','double','double','double','string'},...
-    'VariableNames',{'LunaID','Age','Latency','ErrorRate','VisitNumber','Sex'});
+data = table('Size',[306 7],'VariableTypes',{'double','double','double','string','double','double','double'},...
+    'VariableNames',{'LunaID','Scandate','Age','Sex','Latency','ErrorRate','VisitNumber'});
 for i = 1:length(ids)
     ididx = find(d.LunaID==ids(i));
     for j = 1:length(ididx)
-        subIDidx = find(sexID.lunaid==d.LunaID(ididx(j)),1,"first");
+        subData = d(ididx(j),:);
         vistNumber = table(j);
-        data(ididx(j),:) = [d(ididx(j),{'LunaID','Age','AverageLatency_correctTrials_','ErrorRate_noDropped_'}),vistNumber,sexID(subIDidx,"sex")];
+        data(ididx(j),:) = [d(ididx(j),{'LunaID','ScanDate','Age','Sex','AverageLatency_correctTrials_','ErrorRate_noDropped_'}),vistNumber];
+        %data(ididx(j),:) = [d(ididx(j),{'LunaID','Age','AverageLatency_correctTrials_','ErrorRate_noDropped_'}),vistNumber,sexID(subIDidx,"sex")];
     end
 end
 writetable(data,'RepeatedMeasuresLong.xlsx')
@@ -93,13 +88,27 @@ writetable(data,'RepeatedMeasuresLong.xlsx')
 %% repeated measures anova
 addpath('/Volumes/Hera/Abby/')
 addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/txt/')
-data = readtable('7t_eegAS_ErrorLatency.csv');
-ids = unique(data.LunaID);
+d = readtable('7t_eegAS_ErrorLatency.csv');
+ids = unique(d.LunaID);
+data = table('Size',[306 7],'VariableTypes',{'double','double','double','string','double','double','double'},...
+    'VariableNames',{'LunaID','ScanDate','Age','Sex','Latency','ErrorRate','VisitNumber'});
+
+for i = 1:length(ids)
+    ididx = find(d.LunaID==ids(i));
+    for j = 1:length(ididx)
+        subData = d(ididx(j),:);
+        vistNumber = table(j);
+        data(ididx(j),:) = [d(ididx(j),{'LunaID','ScanDate','Age','Sex','AverageLatency_correctTrials_','ErrorRate_noDropped_'}),vistNumber];
+        %data(ididx(j),:) = [d(ididx(j),{'LunaID','Age','AverageLatency_correctTrials_','ErrorRate_noDropped_'}),vistNumber,sexID(subIDidx,"sex")];
+    end
+end
+
 for k = 1:length(ids)
     subIdx = find(data.LunaID==ids(k));
     if length(subIdx) <3
         data(subIdx,:)=[];
     end
 end
-longdata = data;
-writetable(longdata,"RepeatedMeasuresLong.xlsx")
+widedata = unstack(data,{'ScanDate','Age','Sex','Latency','ErrorRate'},'VisitNumber');
+widedata(:,{'ErrorRate_x1','ErrorRate_x2','ErrorRate_x3','ScanDate_x1','ScanDate_x2','ScanDate_x3','Sex_x2','Sex_x3'})=[];
+writetable(widedata,"RepeatedMeasuresWideFinalStats.xlsx")
