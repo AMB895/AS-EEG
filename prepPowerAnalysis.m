@@ -13,8 +13,8 @@ addpath('/Volumes/Hera/Abby/preprocessed_data/anti/AfterWhole/epochclean_homogen
 %         default: [minfreq 50] minfreq determined by number of data
 %         points, cycles and sampling frequency
 % baseline: [min max] using [-700 -400] from Kai
-close all
-clear
+% close all
+% clear
 addpath('/Volumes/Hera/Abby/Resources/eeglab_current/eeglab2024.2/')
 addpath('/Volumes/Hera/Abby/preprocessed_data/anti/AfterWhole/epochclean_homogenize/')
 addpath('/Volumes/Hera/Abby/AS_EEG//PrepPeriodPowerAnalysis/')
@@ -27,7 +27,7 @@ taskdirectory = [maindir '/' task];
 epochedFolder = [taskdirectory,'/AfterWhole/epochclean_homogenize/'];
 epochedName = '/*_epochs_kept.set';
 % Out path
-outFolder = '/Volumes/Abby/AS_EEG/PrepPeriodPowerAnalysis/TimeFreqPlots/'; % need folder for each participant in this folder
+outFolder = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/TimeFreqPlots/'; % need folder for each participant in this folder
 
 EEGfilenames = dir([epochedFolder,epochedName]);
 for currentEEG=1:size(EEGfilenames)
@@ -41,21 +41,23 @@ for currentEEG=1:size(EEGfilenames)
     subFolderName = [subID,'_',scanDate];
     subFolderPath = [outFolder,subFolderName,'/'];
 
-    mkdir outFolder subFolderName 
+    mkdir(outFolder,subFolderName) 
     % Need for loop for each channel nested in this for loop, saving the figure for each channel in the participants folder
     EEG = pop_loadset(inputfile);
     numChannels = EEG.nbchan;
     % making files to save newtimef() outputs for all channels
-    subStruct = struct('SubID',subID,'ScanDate',scanDate,'ERSP',cell(numChannels,[],[]), ...
-        'ITC',cell(numChannels,[],[]),'PowBase',cell(numChannels,[],[]),'Times',cell(numChannels,[],[]), ...
-        'Freqs',cell(numChannels,[],[]))
+    subStruct = struct('SubID',subID,'ScanDate',scanDate,'ERSP',[], ...
+        'ITC',[],'PowBase',[],'Times',[], ...
+        'Freqs',[],'ERSPsig',[],'ITCsig',[],...
+        'PowBasesig',[],'TimesSig',[],'FreqsSig',[],...
+        'ERSPbootsig',[],'ITCbootsig',[]);
     for chanNum = 1:numChannels
         figName = [subID,'_',scanDate,'ChNum',string(chanNum)];
         fig(1)=figure;
         [ersp, itc, powbase, times,freqs]=newtimef(EEG.data(chanNum,:,:),...
             EEG.pnts,[EEG.xmin EEG.xmax]*1000,EEG.srate,[3 0.5],'freqs',[3 50],...
             'baseline',[-700 -400],'plotersp','on','plotitc','on','plotphasesign','off');
-        
+        subStruct.ERSP = ersp;
         fig(2)=figure;
         [erspSig, itcSig, powbaseSig,timesSig,freqsSig,erspboot,itcboot]=newtimef(EEG.data(chanNum,:,:),...
             EEG.pnts,[EEG.xmin EEG.xmax]*1000,EEG.srate,[3 0.5],'freqs',[3 50],...
