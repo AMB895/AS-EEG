@@ -1,23 +1,12 @@
 %% AS Preparatory Period Analysis
-addpath('/Volumes/Hera/Abby/Resources/eeglab_current/eeglab2024.2/')
-addpath('/Volumes/Hera/Abby/preprocessed_data/anti/AfterWhole/epochclean_homogenize/')
-% pop_newtimef() outputs:
-% ersp, itc, powbase, times, freqs, erspboot, itcboot, tfdata
-%newtimef() inputs:
-% itctype: either linear or phase coherence (could be interesting for CFC)
-% varwin: [# of cycles, how you want numbers of cycles to increase linearly]
-%         default: [3, 0.5] 
-% padratio: increases frequency resolution?
-%         default: 2
-% freqs: [min max] frequency limits
-%         default: [minfreq 50] minfreq determined by number of data
-%         points, cycles and sampling frequency
-% baseline: [min max] using [-700 -400] from Kai
-% close all
-% clear
+%% ERSP and ITC for every channel
+% adding necessary paths
 addpath('/Volumes/Hera/Abby/Resources/eeglab_current/eeglab2024.2/')
 addpath('/Volumes/Hera/Abby/preprocessed_data/anti/AfterWhole/epochclean_homogenize/')
 addpath('/Volumes/Hera/Abby/AS_EEG//PrepPeriodPowerAnalysis/')
+load('/Volumes/Hera/Abby/AS_EEG/ErrorLatencyTable.mat') % to get ages
+
+% baseline: [min max] using [-700 -400] from Kai
 
 % Main directory
 maindir = hera('Abby/preprocessed_data');
@@ -31,41 +20,219 @@ outFolder = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/TimeFreqPlots/'; 
 
 EEGfilenames = dir([epochedFolder,epochedName]);
 for currentEEG=1:size(EEGfilenames)
+    
+    % defining input EEG file from epochclean_homogenize
     filename = [EEGfilenames(currentEEG).name];
     inputfile = [epochedFolder,filename];
     
-    [d, currentName, ext ] = fileparts(inputfile);
+    % getting subID and scan date
+    [~, currentName, ~ ] = fileparts(inputfile);
     splitCurrentName = split(currentName,'_');
     subID = cell2mat(splitCurrentName(1));
     scanDate = cell2mat(splitCurrentName(2));
+    name4Struct = sprintf('subject%s%s',subID,scanDate);
+
+    % defining files and folders to be created
     subFolderName = [subID,'_',scanDate];
     subFolderPath = [outFolder,subFolderName,'/'];
+    structName = [subID,'_',scanDate,'.mat'];
 
+    % getting age from ErrorLatency table
+    idxErrorLatTab = find(ErrorLatencyTable.('Luna ID') == subID & ErrorLatencyTable.('Scan Date')==scanDate);
+    age = ErrorLatencyTable(idxErrorLatTab,'Age');
+
+    % Creating new folder in /TimeFreqPlots/ for each subject to save channel plots to
     mkdir(outFolder,subFolderName) 
-    % Need for loop for each channel nested in this for loop, saving the figure for each channel in the participants folder
+
+    % loading subject's EEG and defining number of channels
     EEG = pop_loadset(inputfile);
     numChannels = EEG.nbchan;
-    % making files to save newtimef() outputs for all channels
-    subStruct = struct('SubID',subID,'ScanDate',scanDate,'ERSP',[], ...
+    
+    % making structure to save newtimef() outputs for each channel
+    subStruct = struct('SubID',subID,'ScanDate',scanDate,'Age',age,'ERSP',[], ...
         'ITC',[],'PowBase',[],'Times',[], ...
         'Freqs',[],'ERSPsig',[],'ITCsig',[],...
-        'PowBasesig',[],'TimesSig',[],'FreqsSig',[],...
+        'PowBaseSig',[],'TimesSig',[],'FreqsSig',[],...
         'ERSPbootsig',[],'ITCbootsig',[]);
+    
+    % naming channels for structures within subStruct
+    for i=1:numChannels
+        chanName{i}= sprintf('Ch%d',i);
+    end
+
+    % preallocating for number of channels to each field in subStruct
+    for j = 1:length(chanName)
+         subStruct.ERSP.(chanName{j}) = []; % Dynamically create a field
+         subStruct.ITC.(chanName{j}) = [];
+         subStruct.PowBase.(chanName{j}) = [];
+         subStruct.Times.(chanName{j}) = [];
+         subStruct.Freqs.(chanName{j}) = [];
+         subStruct.ERSPsig.(chanName{j}) = [];
+         subStruct.ITCsig.(chanName{j}) = [];
+         subStruct.PowBaseSig.(chanName{j}) = [];
+         subStruct.TimesSig.(chanName{j}) = [];
+         subStruct.FreqsSig.(chanName{j}) = [];
+         subStruct.ERSPbootsig.(chanName{j}) = [];
+         subStruct.ITCbootsig.(chanName{j}) = [];
+    % preallocating strucutres to save all ersp, itc, times and freqs
+         if subStruct.Age >= 18
+            allerspAdult.(name4Struct).(chanName{j}) = [];
+            allitcAdult.(name4Struct).(chanName{j}) = [];
+            alltimesAdult.(name4Struct).(chanName{j}) = [];
+            allfreqsAdult.(name4Struct).(chanName{j}) = [];
+            allerspsigAdult.(name4Struct).(chanName{j}) = [];
+            allitcsigAdult.(name4Struct).(chanName{j}) = [];
+            alltimessigAdult.(name4Struct).(chanName{j}) = [];
+            allfreqssigAdult.(name4Struct).(chanName{j}) = [];
+            allerspbootAdult.(name4Struct).(chanName{j}) = [];
+            allitcbootAdult.(name4Struct).(chanName{j}) = [];
+         elseif subStruct.Age < 18
+            allerspChild.(name4Struct).(chanName{j}) = [];
+            allitcChild.(name4Struct).(chanName{j}) = [];
+            alltimesChild.(name4Struct).(chanName{j}) = [];
+            allfreqsChild.(name4Struct).(chanName{j}) = [];
+            allerspsigChild.(name4Struct).(chanName{j}) = [];
+            allitcsigChild.(name4Struct).(chanName{j}) = [];
+            allerspbootChild.(name4Struct).(chanName{j}) = [];
+            allitcbootChild.(name4Struct).(chanName{j}) = [];
+         end
+    end 
+
+    % Checking if subject structure file is already created
+    if exist(fullfile(subFolderPath,structName),'file')
+        fprintf('skipping; already created %s\n',structName)
+        continue
+    end
+
     for chanNum = 1:numChannels
-        figName = [subID,'_',scanDate,'ChNum',string(chanNum)];
-        fig(1)=figure;
+        % naming conventions for saving figures and outputs from newtimef()
+        figName = [subID,'_',scanDate,'_Ch',string(chanNum)];
+        chanFieldName = sprintf('Ch%d',chanNum);
+
+        % Checking to see if figure has already been created for channel
+        figFile = [fullfile(subFolderPath,figName),'.fig'];
+        if exist(figFile,'file' ) % if this doesn't work maybe do not use 'file'
+            fprintf('skipping; already created %s\n',figName)
+            continue
+        end
+
+        fig(1)=figure;  % fig contains both figures created for each channel
+        % ersp and itc plots with no significance level
+        % baseline [-700 -400] from Kai
+        % may need to specify points and time window bc equal size matricies will be needed to calculate averages across individuals
         [ersp, itc, powbase, times,freqs]=newtimef(EEG.data(chanNum,:,:),...
             EEG.pnts,[EEG.xmin EEG.xmax]*1000,EEG.srate,[3 0.5],'freqs',[3 50],...
             'baseline',[-700 -400],'plotersp','on','plotitc','on','plotphasesign','off');
-        subStruct.ERSP = ersp;
+        % saving newtimef() outputs to structures within subStruct for each channel
+        subStruct.ERSP.(chanFieldName) = ersp;
+        subStruct.ITC.(chanFieldName) = itc;
+        subStruct.PowBase.(chanFieldName) = powbase;
+        subStruct.Times.(chanFieldName) = times;
+        subStruct.Freqs.(chanFieldName) = freqs;
+
         fig(2)=figure;
+        % ersp and itc plots with significant regions
         [erspSig, itcSig, powbaseSig,timesSig,freqsSig,erspboot,itcboot]=newtimef(EEG.data(chanNum,:,:),...
             EEG.pnts,[EEG.xmin EEG.xmax]*1000,EEG.srate,[3 0.5],'freqs',[3 50],...
             'baseline',[-700 -400],'alpha',0.05,'plotersp','on','plotitc','on','plotphasesign','off');
-        savefig(fig,fullfile(subFolderPath,'TimeFreqPlot.fig'))
+        % saving newtimef() outputs to structures within subStruct for each channel
+        subStruct.ERSPsig.(chanFieldName) = erspSig;
+        subStruct.ITCsig.(chanFieldName) = itcSig;
+        subStruct.PowBaseSig.(chanFieldName) = powbaseSig;
+        subStruct.TimesSig.(chanFieldName) = timesSig;
+        subStruct.FreqsSig.(chanFieldName) = freqsSig;
+        subStruct.ERSPbootsig.(chanFieldName) = erspboot;
+        subStruct.ITCbootsig.(chanFieldName) = itcboot;
+        % saving outputs into specific age structure
+        if subStruct.Age >= 18
+            allerspAdult.(name4Struct).(chanFieldName) = ersp;
+            allitcAdult.(name4Struct).(chanFieldName) = itc;
+            alltimesAdult.(name4Struct).(chanFieldName) = times;
+            allfreqsAdult.(name4Struct).(chanFieldName) = freqs;
+            allerspsigAdult.(name4Struct).(chanFieldName) = erspSig;
+            allitcsigAdult.(name4Struct).(chanFieldName) = itcSig;
+            alltimessigAdult.(name4Struct).(chanFieldName) = timesSig;
+            allfreqssigAdult.(name4Struct).(chanFieldName) = freqsSig;
+            allerspbootAdult.(name4Struct).(chanFieldName) = erspboot;
+            allitcbootAdult.(name4Struct).(chanFieldName) = itcboot;
+        elseif subStruct.Age < 18
+            allerspChild.(name4Struct).(chanFieldName) = ersp;
+            allitcChild.(name4Struct).(chanFieldName) = itc;
+            alltimesChild.(name4Struct).(chanFieldName) = times;
+            allfreqsChild.(name4Struct).(chanFieldName) = freqs;
+            allerspsigChild.(name4Struct).(chanFieldName) = erspSig;
+            allitcsigChild.(name4Struct).(chanFieldName) = itcSig;
+            alltimessigChild.(name4Struct).(chanFieldName) = timesSig;
+            allfreqssigChild.(name4Struct).(chanFieldName) = freqsSig;
+            allerspbootChild.(name4Struct).(chanFieldName) = erspboot;
+            allitcbootChild.(name4Struct).(chanFieldName) = itcboot;
+        end
+        % saving both figures in fig in the subject folder
+        savefig(fig,fullfile(subFolderPath,figName)) 
     end
+    % save subStruct to subject folder
+    save(fullfile(subFolderPath,structName),'subStruct')
 end
-% get average plots for each channel across adults and children
+
+% Path for all data structures
+adultDataPath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/Adults/';
+childDataPath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/Children/';
+allDataAdult = 'TimeFreqDataAdult.mat';
+allDataChildren = 'TimeFreqDataChildren.mat';
+% save all data structures to one .mat file
+if subStruct.Age >= 18    
+    save(fullfile(adultDataPath,allDataAdult),'allerspAdult','allitcAdult','alltimesAdult',...
+        'allfreqsAdult','allerspsigAdult','allitcsigAdult','alltimessigAdult','allfreqssigAdult',...
+        'allerspbootAdult','allitcbootAdult')
+elseif subStruct.Age < 18
+    save(fullfile(childDataPath,allDataChildren),'allerspChild','allitcChild','alltimesChild',...
+        'allfreqsChild','allerspsigChild','allitcsigChild','alltimessigChild','allfreqssigChild',...
+        'allerspbootChild','allitcbootChild')
+end
+%% Creating average ERSP and ITC plots for Children and Adults for all channels
+adultData = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/Adults/TimeFreqDataAdult.mat'); % loads allersp, etc data structures
+childData = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/Children/TimeFreqDataChildren.mat');
+numAdults = length(fieldnames(allerspAdult)); % number of adults
+adultFieldNames = fieldnames(allerspAdult); % names of adults
+numChild = length(fieldnames(allerspChild)); % number of children
+childFieldNames = fieldnames(allerspChild); % names of children
+
+% Paths to save channel data to
+adultPath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/Adults/';
+childPath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/Children/';
+
+% getting field names of channels
+numOfChan = 64; %is there actually 64 channels for every subject?
+for i=1:numOfChan
+    chanName{i}= sprintf('Ch%d',i);
+end
+
+% getting channel data from adults
+for h = 1:numOfChan
+    channelfieldname = chanName{h};
+    erspFileName = sprintf('adultERSP%s.mat',channelfieldname);
+    itcFileName = sprintf('adultITC%s.mat',channelfieldname);
+    timesFileName = sprintf('adultTimes%s.mat',channelfieldname);
+    freqsFileName = sprintf('adultFreqs%s.mat',channelfieldname);
+    for n = 1:numAdults
+        subjectfieldname = adultFieldNames{n};
+        erspChanData = allerspAdult.(subjectfieldname).(channelfieldname);
+        erspAllSubChanAdult(:,:,n) = erspChanData; % 3rd dimension is subject
+        itcChanData = allitcAdult.(subjectfieldname).(channelfieldname);
+        itcAllSubChanAdult(:,:,n) = itcChanData;
+        timesChanData = alltimesAdult.(subjectfieldname).(channelfieldname);
+        timesAllSubChanAdult(:,:,n) = timesChanData;
+        freqsChanData = allfreqsAdult.(subjectfieldname).(channelfieldname);
+        freqsAllSubChanAdult(:,:,n) = freqsChanData;
+    end
+    save(fullfile(adultPath,erspFileName),"erspAllSubChanAdult")
+    save(fullfile(adultPath,itcFileName),"itcAllSubChanAdult")
+    save(fullfile(adultPath,timesFileName),"timesAllSubChanAdult")
+    save(fullfile(adultPath,freqsFileName),"freqsAllSubChanAdult")
+end
+
+% outputs from newtimef() MUST be the same length for each subject to get averages
+
 
 %% used to get % change in baseline from signal
 % this will be used later maybe
