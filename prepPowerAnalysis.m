@@ -119,7 +119,8 @@ for currentEEG=1:size(EEGfilenames)
         fig(1)=figure;  % fig contains both figures created for each channel
         % ersp and itc plots with no significance level
         % baseline [-700 -400] from Kai
-        % may need to specify points and time window bc equal size matricies will be needed to calculate averages across individuals
+       
+        % outputs from newtimef() MUST be the same length for each subject to get averages
         [ersp, itc, powbase, times,freqs]=newtimef(EEG.data(chanNum,:,:),...
             EEG.pnts,[EEG.xmin EEG.xmax]*1000,EEG.srate,[3 0.5],'freqs',[3 50],...
             'baseline',[-700 -400],'plotersp','on','plotitc','on','plotphasesign','off');
@@ -131,7 +132,8 @@ for currentEEG=1:size(EEGfilenames)
         subStruct.Freqs.(chanFieldName) = freqs;
 
         fig(2)=figure;
-        % ersp and itc plots with significant regions
+        % ersp and itc plots with significant regions highlighted
+        % outputs from newtimef() MUST be the same length for each subject to get averages
         [erspSig, itcSig, powbaseSig,timesSig,freqsSig,erspboot,itcboot]=newtimef(EEG.data(chanNum,:,:),...
             EEG.pnts,[EEG.xmin EEG.xmax]*1000,EEG.srate,[3 0.5],'freqs',[3 50],...
             'baseline',[-700 -400],'alpha',0.05,'plotersp','on','plotitc','on','plotphasesign','off');
@@ -169,6 +171,8 @@ for currentEEG=1:size(EEGfilenames)
         end
         % saving both figures in fig in the subject folder
         savefig(fig,fullfile(subFolderPath,figName)) 
+        close all
+        clear fig
     end
     % save subStruct to subject folder
     save(fullfile(subFolderPath,structName),'subStruct')
@@ -189,9 +193,10 @@ elseif subStruct.Age < 18
         'allfreqsChild','allerspsigChild','allitcsigChild','alltimessigChild','allfreqssigChild',...
         'allerspbootChild','allitcbootChild')
 end
-%% Creating average ERSP and ITC plots for Children and Adults for all channels
-adultData = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/Adults/TimeFreqDataAdult.mat'); % loads allersp, etc data structures
-childData = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/Children/TimeFreqDataChildren.mat');
+%% Averaging ERSP and ITC across children and adults for all channels
+% load allersp, allitc, etc data structures for children and adults
+load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/Adults/TimeFreqDataAdult.mat'); 
+load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/Children/TimeFreqDataChildren.mat');
 numAdults = length(fieldnames(allerspAdult)); % number of adults
 adultFieldNames = fieldnames(allerspAdult); % names of adults
 numChild = length(fieldnames(allerspChild)); % number of children
@@ -201,20 +206,28 @@ childFieldNames = fieldnames(allerspChild); % names of children
 adultPath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/Adults/';
 childPath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/Children/';
 
-% getting field names of channels
+% getting field names for channels
 numOfChan = 64; %is there actually 64 channels for every subject?
 for i=1:numOfChan
     chanName{i}= sprintf('Ch%d',i);
 end
 
-% getting channel data from adults
+%% averaging channel data from adults
 for h = 1:numOfChan
     channelfieldname = chanName{h};
+    % defining file names to name averages for each channel
     erspFileName = sprintf('adultERSP%s.mat',channelfieldname);
     itcFileName = sprintf('adultITC%s.mat',channelfieldname);
     timesFileName = sprintf('adultTimes%s.mat',channelfieldname);
     freqsFileName = sprintf('adultFreqs%s.mat',channelfieldname);
+    erspsigFileName = sprintf('adultERSPsig%s.mat',channelfieldname);
+    itcsigFileName = sprintf('adultITCsig%s.mat',channelfieldname);
+    timessigFileName = sprintf('adultTimessig%s.mat',channelfieldname);
+    freqssigFileName = sprintf('adultFreqssig%s.mat',channelfieldname);
+    erspbootFileName = sprintf('adultERSPboot%s.mat',channelfieldname);
+    itcbootFileName = sprintf('adultITCboot%s.mat',channelfieldname);
     for n = 1:numAdults
+        % looping through each subject to get data and storing each channel's data in new variable
         subjectfieldname = adultFieldNames{n};
         erspChanData = allerspAdult.(subjectfieldname).(channelfieldname);
         erspAllSubChanAdult(:,:,n) = erspChanData; % 3rd dimension is subject
@@ -224,14 +237,158 @@ for h = 1:numOfChan
         timesAllSubChanAdult(:,:,n) = timesChanData;
         freqsChanData = allfreqsAdult.(subjectfieldname).(channelfieldname);
         freqsAllSubChanAdult(:,:,n) = freqsChanData;
+
+        % data from setting significance level
+        erspsigChanData = allerspsigAdult.(subjectfieldname).(channelfieldname);
+        erspsigAllSubChanAdult(:,:,n) = erspsigChanData;
+        itcsigChanData = allitcsigAdult.(subjectfieldname).(channelfieldname);
+        itcsigAllSubChanAdult(:,:,n) = itcsigChanData;
+        timessigChanData = alltimessigAdult.(subjectfieldname).(channelfieldname);
+        timessigAllSubChanAdult(:,:,n) = timessigChanData;
+        freqssigChanData = allfreqssigAdult.(subjectfieldname).(channelfieldname);
+        freqssigAllSubChanAdult(:,:,n) = freqssigChanData;
+        erspbootChanData = allerspbootAdult.(subjectfieldname).(channelfieldname);
+        erspbootAllSubChanAdult(:,:,n) = erspbootChanData; % 3rd dimension is subject
+        itcbootChanData = allitcsigAdult.(subjectfieldname).(channelfieldname);
+        itcbootAllSubChanAdult(:,:,n) = itcbootChanData;
     end
-    save(fullfile(adultPath,erspFileName),"erspAllSubChanAdult")
-    save(fullfile(adultPath,itcFileName),"itcAllSubChanAdult")
-    save(fullfile(adultPath,timesFileName),"timesAllSubChanAdult")
-    save(fullfile(adultPath,freqsFileName),"freqsAllSubChanAdult")
+    % before looping to next channel get averages for ersp and itc (maybe
+    % times and freqs but they should be the same for each channel and
+    % subject)
+    avgERSP_adults = mean(erspAllSubChanAdult,3);
+    avgITC_adults = mean(itcAllSubChanAdult,3);
+    avgTimes_adults = mean(timesAllSubChanAdult,3);
+    avgFreqs_adults = mean(freqsAllSubChanAdult,3);
+    avgERSPsig_adults = mean(erspsigAllSubChanAdult,3);
+    avgITCsig_adults = mean(itcsigAllSubChanAdult,3);
+    avgTimessig_adults = mean(timessigAllSubChanAdult,3);
+    avgFreqssig_adults = mean(freqssigAllSubChanAdult,3);
+    avgERSPboot_adults = mean(erspbootAllSubChanAdult,3);
+    avgITCboot_adults = mean(itcbootAllSubChanAdult,3);
+
+    % Plotting and saving plots for average of every channel
+    % ERSP and ITC average plot
+    Fig = figure;
+    subplot(2,1,1)
+    tftopo(avgERSP_adults,avgTimes_adults,avgFreqs_adults)
+    subplot(2,1,2)
+    tftopo(avgITC_adults,avgTimes_adults,avgFreqs_adults)
+
+    figName = sprintf('AverageERSP/ITC_Adults%s',channelfieldname);
+    savefig(Fig,fullfile(adultPath,figName))
+    close all
+    clear Fig
+
+    % not sure exactly how to do significance levels plots- need to mess
+    % around with that
+
+    % saving average across subjects for each channel
+    save(fullfile(adultPath,erspFileName),'avgERSP_adults')
+    save(fullfile(adultPath,itcFileName),'avgITC_adults')
+    save(fullfile(adultPath,timesFileName),'avgTimes_adults')
+    save(fullfile(adultPath,freqsFileName),'avgFreqs_adults')
+    save(fullfile(adultPath,erspsigFileName),'avgERSPsig_adults')
+    save(fullfile(adultPath,itcsigFileName),'avgITCsig_adults')
+    save(fullfile(adultPath,timessigFileName),'avgTimessig_adults')
+    save(fullfile(adultPath,freqssigFileName),'avgFreqssig_adults')
+    save(fullfile(adultPath,erspbootFileName),'avgERSPboot_adults')
+    save(fullfile(adultPath,itcbootFileName),'avgITCboot_adults')
+    % maybe instead of saving every subjects channel data, average all
+    % subjects once the loop goes through all the subjects
+    % save(fullfile(adultPath,erspFileName),"erspAllSubChanAdult")
+    % save(fullfile(adultPath,itcFileName),"itcAllSubChanAdult")
+    % save(fullfile(adultPath,timesFileName),"timesAllSubChanAdult")
+    % save(fullfile(adultPath,freqsFileName),"freqsAllSubChanAdult")
 end
 
-% outputs from newtimef() MUST be the same length for each subject to get averages
+%% averaging channel data for children
+for h = 1:numOfChan
+    channelfieldname = chanName{h};
+    % defining file names to name averages for each channel
+    erspFileName = sprintf('childERSP%s.mat',channelfieldname);
+    itcFileName = sprintf('childITC%s.mat',channelfieldname);
+    timesFileName = sprintf('childTimes%s.mat',channelfieldname);
+    freqsFileName = sprintf('childFreqs%s.mat',channelfieldname);
+    erspsigFileName = sprintf('childERSPsig%s.mat',channelfieldname);
+    itcsigFileName = sprintf('childITCsig%s.mat',channelfieldname);
+    timessigFileName = sprintf('childTimessig%s.mat',channelfieldname);
+    freqssigFileName = sprintf('childFreqssig%s.mat',channelfieldname);
+    erspbootFileName = sprintf('childERSPboot%s.mat',channelfieldname);
+    itcbootFileName = sprintf('childITCboot%s.mat',channelfieldname);
+    for n = 1:numChild
+         % looping through each subject to get data and storing each channel's data in new variable
+        subjectfieldname = childFieldNames{n};
+        erspChanData = allerspChild.(subjectfieldname).(channelfieldname);
+        erspAllSubChanChild(:,:,n) = erspChanData; % 3rd dimension is subject
+        itcChanData = allitcChild.(subjectfieldname).(channelfieldname);
+        itcAllSubChanChild(:,:,n) = itcChanData;
+        timesChanData = alltimesChild.(subjectfieldname).(channelfieldname);
+        timesAllSubChanChild(:,:,n) = timesChanData;
+        freqsChanData = allfreqsChild.(subjectfieldname).(channelfieldname);
+        freqsAllSubChanChild(:,:,n) = freqsChanData;
+
+        % data from setting significance level
+        erspsigChanData = allerspsigChild.(subjectfieldname).(channelfieldname);
+        erspsigAllSubChanChild(:,:,n) = erspsigChanData;
+        itcsigChanData = allitcsigChild.(subjectfieldname).(channelfieldname);
+        itcsigAllSubChanChild(:,:,n) = itcsigChanData;
+        timessigChanData = alltimessigChild.(subjectfieldname).(channelfieldname);
+        timessigAllSubChanChild(:,:,n) = timessigChanData;
+        freqssigChanData = allfreqssigChild.(subjectfieldname).(channelfieldname);
+        freqssigAllSubChanChild(:,:,n) = freqssigChanData;
+        erspbootChanData = allerspbootChild.(subjectfieldname).(channelfieldname);
+        erspbootAllSubChanChild(:,:,n) = erspbootChanData; % 3rd dimension is subject
+        itcbootChanData = allitcsigChild.(subjectfieldname).(channelfieldname);
+        itcbootAllSubChanChild(:,:,n) = itcbootChanData;
+    end
+    % before looping to next channel get averages for ersp and itc (maybe
+    % times and freqs but they should be the same for each channel and
+    % subject)
+    avgERSP_child = mean(erspAllSubChanChild,3);
+    avgITC_child = mean(itcAllSubChanChild,3);
+    avgTimes_child = mean(timesAllSubChanChild,3);
+    avgFreqs_child = mean(freqsAllSubChanChild,3);
+    avgERSPsig_child = mean(erspsigAllSubChanChild,3);
+    avgITCsig_child = mean(itcsigAllSubChanChild,3);
+    avgTimessig_child = mean(timessigAllSubChanChild,3);
+    avgFreqssig_child = mean(freqssigAllSubChanChild,3);
+    avgERSPboot_child = mean(erspbootAllSubChanChild,3);
+    avgITCboot_child = mean(itcbootAllSubChanChild,3);
+
+    % Plotting and saving plots for average of every channel
+    % ERSP and ITC average plot
+    Fig = figure;
+    subplot(2,1,1)
+    tftopo(avgERSP_child,avgTimes_child,avgFreqs_child)
+    subplot(2,1,2)
+    tftopo(avgITC_child,avgTimes_child,avgFreqs_child)
+
+    figName = sprintf('AverageERSP/ITC_Children%s',channelfieldname);
+    savefig(Fig,fullfile(childPath,figName))
+    close all
+    clear Fig
+
+    % not sure exactly how to do significance levels plots- need to mess
+    % around with that
+
+    % saving average across subjects for each channel
+    save(fullfile(childPath,erspFileName),'avgERSP_child')
+    save(fullfile(childPath,itcFileName),'avgITC_child')
+    save(fullfile(childPath,timesFileName),'avgTimes_child')
+    save(fullfile(childPath,freqsFileName),'avgFreqs_child')
+    save(fullfile(childPath,erspsigFileName),'avgERSPsig_child')
+    save(fullfile(childPath,itcsigFileName),'avgITCsig_child')
+    save(fullfile(childPath,timessigFileName),'avgTimessig_child')
+    save(fullfile(childPath,freqssigFileName),'avgFreqssig_child')
+    save(fullfile(childPath,erspbootFileName),'avgERSPboot_child')
+    save(fullfile(childPath,itcbootFileName),'avgITCboot_child')
+    % maybe instead of saving every subjects channel data, average all
+    % subjects once the loop goes through all the subjects
+    % save(fullfile(adultPath,erspFileName),"erspAllSubChanAdult")
+    % save(fullfile(adultPath,itcFileName),"itcAllSubChanAdult")
+    % save(fullfile(adultPath,timesFileName),"timesAllSubChanAdult")
+    % save(fullfile(adultPath,freqsFileName),"freqsAllSubChanAdult")
+end
 
 
 %% used to get % change in baseline from signal
