@@ -125,52 +125,52 @@ for currentEEG=1:size(EEGfilenames)
     save(fullfile(subFolderPath,structName),'subStruct')
 end
 
-%%
-% %% used to get % change in baseline from signal
-% % this will be used later maybe
-% % Baseline from epochs to compare to prep period
-% % Baseline 700 to 400 ms before cue presentation (Hwang 2016)
-% addpath('/Volumes/Hera/Abby/Resources/eeglab_current/eeglab2024.2/')
-% addpath('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/')
-% addpath('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/Baseline/')
-% addpath('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/PrepPeriod/')
-% % Main directory
-% maindir = hera('Abby/preprocessed_data');
-% task = 'anti';
-% taskdirectory = [maindir '/' task]; 
-% % In path
-% epochedFolder = [taskdirectory,'/AfterWhole/epochclean_homogenize/'];
-% epochedName = '/*_epochs_rj.set';
-% % Out path
-% baselineFilePath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/Baseline';
-% prepFilePath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/PrepPeriod';
-% 
-% EEGfilenames = dir([epochedFolder,epochedName]);
-% for currentEEG=1:size(EEGfilenames)
-%     % Baseline epoch 700 ms to 400 ms before red fixation cross
-%     filename = [EEGfilenames(currentEEG).name];
-%     inputfile = [epochedFolder,filename];
-%     [d, currentName, ext ] = fileparts(inputfile);
-%     baselineName = [currentName,'_epoch_baseline'];
-%     baselineFile = [baselineName,'.set'];
-%     if exist(baselineFile,'file')
-%         fprintf('skipping; already created %s\n',baselineName)
-%     else
-%         EEG = pop_loadset(inputfile);
-%         fprintf('Baseline epoching %s\n',baselineName)
-%         baselineEEG = pop_select(EEG,'time',[-0.7 -0.4]);
-%         baselineEEG = pop_saveset(baselineEEG,'filename',baselineName,'filepath',baselineFilePath);
-%     end
-% 
-%     % Smaller prep period epoch -100 ms before red fixation cross to 500 ms after red fixation cross
-%     prepName = [currentName,'_epoch_prep'];
-%     prepFile = [prepName,'.set'];
-%     if exist(prepFile,'file')
-%         fprintf('skipping; already created %s\n',prepName)
-%     else
-%         EEG = pop_loadset(inputfile);
-%         fprintf('Prep Period epoching %s\n',prepName)
-%         prepEEG = pop_select(EEG,'time',[-0.1 0.5]);
-%         prepEEG = pop_saveset(prepEEG,'filename',prepName,'filepath',prepFilePath);
-%     end
-% end
+
+%% used to get % change in baseline from signal
+% this will be used later maybe
+% Baseline from epochs to compare to prep period
+% Baseline 700 to 400 ms before cue presentation (Hwang 2016)
+addpath('/Volumes/Hera/Abby/Resources/eeglab_current/eeglab2024.2/')
+addpath('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/')
+addpath('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/Baseline/')
+addpath('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/PrepPeriod/')
+% Main directory
+maindir = hera('Abby/preprocessed_data');
+task = 'anti';
+taskdirectory = [maindir '/' task]; 
+% In path
+epochedFolder = [taskdirectory,'/AfterWhole/epochclean_homogenize/'];
+epochedName = '/*_epochs_rj.set';
+% Out path
+baselineFilePath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/Baseline';
+prepFilePath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/PrepPeriod';
+
+EEGfilenames = dir([epochedFolder,epochedName]);
+for currentEEG=1:size(EEGfilenames)
+    % Baseline epoch 700 ms to 400 ms before red fixation cross
+    filename = [EEGfilenames(currentEEG).name];
+    inputfile = [epochedFolder,filename];
+    [d, currentName, ext ] = fileparts(inputfile);
+    baselineName = [currentName,'_epoch_baseline'];
+    baselineFile = [baselineName,'.set'];
+    if exist(baselineFile,'file')
+        fprintf('skipping; already created %s\n',baselineName)
+    else
+        EEG = pop_loadset(inputfile);
+        fprintf('Baseline epoching %s\n',baselineName)
+        baselineEEG = pop_select(EEG,'time',[-0.7 -0.4]);
+        baselineEEG = pop_saveset(baselineEEG,'filename',baselineName,'filepath',baselineFilePath);
+    end
+
+    % Smaller prep period epoch -100 ms before red fixation cross to 500 ms after red fixation cross
+    prepName = [currentName,'_epoch_prep'];
+    prepFile = [prepName,'.set'];
+    if exist(prepFile,'file')
+        fprintf('skipping; already created %s\n',prepName)
+    else
+        EEG = pop_loadset(inputfile);
+        fprintf('Prep Period epoching %s\n',prepName)
+        prepEEG = pop_select(EEG,'time',[-0.1 0.5]);
+        prepEEG = pop_saveset(prepEEG,'filename',prepName,'filepath',prepFilePath);
+    end
+end
