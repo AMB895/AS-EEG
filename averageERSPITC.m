@@ -166,3 +166,24 @@ for chan=1:64
     close all
     clear figA figC
 end
+
+%% only looking at plots between 3-30Hz and 0-500 ms
+% messing around
+close all
+timeIdx0 = find(time==0);
+timeIdx500 = find(time==500);
+newTime = time(timeIdx0:timeIdx500);
+freqIdx3 = find(freq==3);
+freqIdx30 = find(freq>30,1,"first");
+newFreq = freq(freqIdx3:freqIdx30);
+newERSP = avgERSPadult(freqIdx3:freqIdx30,timeIdx0:timeIdx500);
+figure;
+surf(newTime,newFreq,newERSP)
+view(2)
+title('adults')
+colorbar
+figure;
+surf(newTime,newFreq,avgERSPchild(freqIdx3:freqIdx30,timeIdx0:timeIdx500))
+view(2)
+title('children')
+colorbar
