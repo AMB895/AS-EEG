@@ -1,10 +1,9 @@
-%% Adding ages to preprocessed EEG structures for Study analysis
+%% Adding ages to preprocessed EEG structures
 % adding paths
 load('/Volumes/Hera/Abby/AS_EEG/ErrorLatencyTable.mat') % to get ages
 addpath('/Volumes/Hera/Abby/preprocessed_data/anti/AfterWhole/epochclean_homogenize/')
 addpath('/Volumes/Hera/Abby/Resources/eeglab_current/eeglab2024.2/')
 addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/eeg/Shane/Preprocessing_Functions/')
-
 
 % Main directory
 maindir = hera('Abby/preprocessed_data');
@@ -12,7 +11,7 @@ task = 'anti';
 taskdirectory = [maindir '/' task]; 
 % In path
 epochedFolder = [taskdirectory,'/AfterWhole/epochclean_homogenize/'];
-epochedName = '*_epochs_kept.set';
+epochedName = '*.set';
 
 EEGfilenames = dir([epochedFolder,epochedName]);
 for currentEEG=1:size(EEGfilenames)
@@ -28,7 +27,7 @@ for currentEEG=1:size(EEGfilenames)
     scanDate = cell2mat(splitCurrentName(2));
 
     % finding age from ErrorLatency Table
-    index = find(ErrorLatencyTable.("Luna ID")==str2double(subID) & ErrorLatencyTable.("Scan Date")==str2double(scanDate));
+    index = find(ErrorLatencyTable.("LunaID")==str2double(subID) & ErrorLatencyTable.("ScanDate")==str2double(scanDate));
     if isempty(index)
         fprintf('No age for %s %s\n',subID,scanDate)
         continue;
@@ -44,7 +43,5 @@ for currentEEG=1:size(EEGfilenames)
     clear AGE
 end
 
-
-% Creating a new Study with EEGLAB
 
 
