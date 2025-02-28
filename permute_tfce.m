@@ -11,18 +11,21 @@ setenv('NUMBER_OF_PROCESSORS','50')
 addpath('/Volumes/Hera/Abby/AS_EEG/limo_tools/')
 addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/fieldtrip-20180926/')
 addpath('/Volumes/Hera/Abby/Resources/eeglab_current/eeglab2024.2/')
-addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/eeg/Shane/Preprocessing_Functions/')
-addpath('/Volumes/Hera/Abby/preprocessed_data/anti/AfterWhole/epochclean_homogenize/')
 
 % start eeglab
 [ALLEEG,EEG,CURRENTSET,ALLCOM]=eeglab;
 
-% TFCE outputs data path
+% TFCE data path
 tfcepath = '/Volumes/Hera/Abby/AS_EEG/TFCE/';
-% names of files to be loaded
-cor_origtfcename = 'TFCE_scores_correct.mat';
-cor_incor_origtfcename = 'TFCE_scores_cor_incor.mat';
-cor_errcor_origtfcename = 'TFCE_scores_cor_errcor.mat';
+
+% Names and paths of data to be loaded
+maindir = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/';
+cortrialspath = [maindir,'CorrectTrials/'];
+corttestname = 'ttest_outputs_cor.mat';
+coragename = 'linregress_age_outputs_cor.mat';
+corageinvname = 'lineregress_invage_outputs_cor.mat';
+corincorttestname = 'two_sample_ttest_cor_incor.mat';
+corerrcorttestname = 'two_sample_ttest_cor_errcor.mat';
 
 % names of files to be created
 cor_permtfcename = 'permutationTFCE_correct.mat';
@@ -33,16 +36,16 @@ nperm = 1000;
 f = waitbar(0,'Starting','Name','TFCE Permutation Progress');
 
 % load original t/F values: channels x freqs x times
-COR_TVAL = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/CorrectTrials/ttest_outputs_cor.mat','tval');
+COR_TVAL = load(fullfile(cortrialspath,corttestname),'tval');
 cor_tval = COR_TVAL.tval;
-COR_FVAL_AGE = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/CorrectTrials/linregress_age_outputs_cor.mat','fval');
+COR_FVAL_AGE = load(fullfile(cortrialspath,coragename),'fval');
 cor_fval_age = COR_FVAL_AGE.fval;
-COR_FVAL_AGEINV = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/CorrectTrials/linregress_invage_outputs_cor.mat','fval_inv');
+COR_FVAL_AGEINV = load(fullfile(cortrialspath,corageinvname),'fval_inv');
 cor_fval_ageinv = COR_FVAL_AGEINV.fval_inv;
 
-COR_INCOR_TTEST = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/two_sample_ttest_cor_incor.mat');
+COR_INCOR_TTEST = load(fullfile(maindir,corincorttestname),'t');
 cor_incor_tval = COR_INCOR_TTEST.t;
-COR_ERRCOR_TTEST = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/two_sample_ttest_cor_errcor.mat');
+COR_ERRCOR_TTEST = load(fullfile(maindir,corerrcorttestname),'t');
 cor_errcor_tval = COR_ERRCOR_TTEST.t;
 
 % Get number of channels to loop through

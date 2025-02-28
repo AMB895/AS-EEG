@@ -23,21 +23,21 @@ cor_incor_origtfcename = 'TFCE_scores_cor_incor.mat';
 cor_errcor_origtfcename = 'TFCE_scores_cor_errcor.mat';
 
 % load t-test t-values for all trial types
-cor_ttest = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/CorrectTrials/ttest_outputs_cor.mat');
+cor_ttest = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/CorrectTrials/ttest_outputs_cor.mat');
 cor_tval = cor_ttest.tval;
 
 % load two-sample t-test t-values
-cor_incor_ttest = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/two_sample_ttest_cor_incor.mat');
+cor_incor_ttest = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/two_sample_ttest_cor_incor.mat');
 cor_incor_tval = cor_incor_ttest.t;
-cor_errcor_ttest = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/two_sample_ttest_cor_errcor.mat');
+cor_errcor_ttest = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/two_sample_ttest_cor_errcor.mat');
 cor_errcor_tval = cor_errcor_ttest.t;
 
 % load linear regression with age F-values for al trial types
-cor_age = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/CorrectTrials/linregress_age_outputs_cor.mat');
+cor_age = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/CorrectTrials/linregress_age_outputs_cor.mat');
 cor_fval_age = cor_age.fval;
 
 % load linear regression with inverse age F-values for al trial types
-cor_invage = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/CorrectTrials/linregress_invage_outputs_cor.mat');
+cor_invage = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/CorrectTrials/linregress_invage_outputs_cor.mat');
 cor_fval_invage = cor_invage.fval_inv;
 
 % load channel logical matrix

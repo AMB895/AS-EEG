@@ -17,7 +17,7 @@ trialtype = 1; % correct trials
 
 if trialtype ==1
     % all ERSP path
-    allerspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/CorrectTrials';
+    allerspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/CorrectTrials';
     allerspdataname = 'all_ERSP_DATA_cor.mat';
     % Files being made
     ttestdataname = 'ttest_outputs_cor.mat';
@@ -25,7 +25,7 @@ if trialtype ==1
     invageregressdataname = 'linregress_invage_outputs_cor.mat';
 elseif trialtype ==0
     % all ERSP path
-    allerspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/IncorrectTrials';
+    allerspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/IncorrectTrials';
     allerspdataname = 'all_ERSP_DATA_incor.mat';
     % Files being made
     ttestdataname = 'ttest_outputs_incor.mat';
@@ -33,7 +33,7 @@ elseif trialtype ==0
     invageregressdataname = 'linregress_invage_outputs_incor.mat';
 elseif trialtype ==2
     % all ERSP path
-    allerspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/ErrorCorrectTrials';
+    allerspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/ErrorCorrectTrials';
     allerspdataname = 'all_ERSP_DATA_errcor.mat';
     % Files being made
     ttestdataname = 'ttest_outputs_errcor.mat';

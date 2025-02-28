@@ -15,8 +15,10 @@ load('/Volumes/Hera/Abby/AS_EEG/ErrorLatencyTable.mat') % to get ages
 maindir = hera('Abby/preprocessed_data');
 task = 'anti';
 taskdirectory = [maindir '/' task]; 
-% trialtype = 1; % correct trials
-trialtype = 0; % incorrect trials
+
+% Uncomment the type of trial you wish to run
+trialtype = 1; % correct trials
+% trialtype = 0; % incorrect trials
 % trialtype = 2; % error corrected trials
 
 % Epoched data path
@@ -25,21 +27,21 @@ epochedpath = [taskdirectory,'/AfterWhole/epochclean_homogenize/'];
 if trialtype ==1
     epochedname = '*_epochs_kept_cor.set';
     % Save ERSP path
-    allerspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/CorrectTrials';
+    allerspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/CorrectTrials';
     allerspdataname = 'all_ERSP_DATA_cor.mat';
-    suberspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/CorrectTrials/SubjectERSP/';
+    suberspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/CorrectTrials/SubjectERSP/';
 elseif trialtype ==0
     epochedname = '*_epochs_kept_incor.set';
     % Save ERSP path
-    allerspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/IncorrectTrials';
+    allerspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/IncorrectTrials';
     allerspdataname = 'all_ERSP_DATA_incor.mat';
-    suberspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/IncorrectTrials/SubjectERSP/';
+    suberspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/IncorrectTrials/SubjectERSP/';
 elseif trialtype ==2
     epochedname = '*_epochs_kept_errcor.set';
     % Save ERSP path
-    allerspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/ErrorCorrectTrials';
+    allerspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/ErrorCorrectTrials';
     allerspdataname = 'all_ERSP_DATA_errcor.mat';
-    suberspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/ErrorCorrectTrials/SubjectERSP/';
+    suberspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/ErrorCorrectTrials/SubjectERSP/';
 end
 
 % loading template of channel labels
@@ -201,10 +203,3 @@ end
 
 % Since I initialized allerspdata, the first subject is a blank subject,
 % therefore need to delete the first index of the 4th dimension before doing stats
-
-
-
-
-
-
-

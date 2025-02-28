@@ -12,18 +12,18 @@ load('/Volumes/Hera/Abby/AS_EEG/ErrorLatencyTable.mat') % to get ages
 [ALLEEG,EEG,CURRENTSET,ALLCOM]=eeglab;
 
 % Load data
-cor_ersp = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/CorrectTrials/all_ERSP_DATA_cor.mat');
-cor_id = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/CorrectTrials/ID_info.mat');
+cor_ersp = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/CorrectTrials/all_ERSP_DATA_cor.mat');
+cor_id = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/CorrectTrials/ID_info.mat');
 cor_id = cor_id.IDmatrix;
 times = cor_ersp.times;
 freqs = cor_ersp.freqs;
 cor_ersp = cor_ersp.allerspdata;
-errcor_ersp = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/ErrorCorrectTrials/all_ERSP_DATA_errcor.mat');
-errcor_id = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/ErrorCorrectTrials/ID_info.mat');
+errcor_ersp = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/ErrorCorrectTrials/all_ERSP_DATA_errcor.mat');
+errcor_id = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/ErrorCorrectTrials/ID_info.mat');
 errcor_ersp = errcor_ersp.allerspdata;
 errcor_id = errcor_id.IDmatrix;
-incor_ersp = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/IncorrectTrials/all_ERSP_DATA_incor.mat');
-incor_id = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/IncorrectTrials/ID_info.mat');
+incor_ersp = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/IncorrectTrials/all_ERSP_DATA_incor.mat');
+incor_id = load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/IncorrectTrials/ID_info.mat');
 incor_ersp  = incor_ersp.allerspdata;
 incor_id = incor_id.IDmatrix;
 
@@ -55,7 +55,7 @@ end
 numChans = size(cor_ersp,1);
 numFreqs = size(cor_ersp,2);
 numTimes = size(cor_ersp,3);
-if exist('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/two_sample_ttest_cor_incor.mat','file')
+if exist('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/two_sample_ttest_cor_incor.mat','file')
     fprintf('already computed two-sample t-test for correct and incorrect trials\n')
 else
     % setting up progress bar
@@ -72,7 +72,7 @@ else
             end
         end    
     end
-    save('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/two_sample_ttest_cor_incor.mat','p','t')
+    save('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/two_sample_ttest_cor_incor.mat','p','t')
 end
 
 %% Correct vs. Error corrected Trials
@@ -104,7 +104,7 @@ end
 numChans = size(cor_ersp,1);
 numFreqs = size(cor_ersp,2);
 numTimes = size(cor_ersp,3);
-if exist('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/two_sample_ttest_cor_errcor.mat','file')
+if exist('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/two_sample_ttest_cor_errcor.mat','file')
     fprintf('already computed two-sample t-test for correct and error corrected trials\n')
 else
     % setting up progress bar
@@ -121,5 +121,5 @@ else
             end
         end    
     end
-    save('/Volumes/Hera/Abby/AS_EEG/PrepPeriodPowerAnalysis/two_sample_ttest_cor_errcor.mat','p','t')
+    save('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/two_sample_ttest_cor_errcor.mat','p','t')
 end
