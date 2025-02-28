@@ -5,16 +5,16 @@ addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/fieldtrip-20180926/')
 addpath('/Volumes/Hera/Abby/Resources/eeglab_current/eeglab2024.2/')
 addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/eeg/Shane/Preprocessing_Functions/')
 addpath('/Volumes/Hera/Abby/preprocessed_data/anti/AfterWhole/epochclean_homogenize/')
-load('/Volumes/Hera/Abby/AS_EEG/ErrorLatencyTable.mat') % to get ages
+
 % start eeglab
 [ALLEEG,EEG,CURRENTSET,ALLCOM]=eeglab;
 
-% Setting up directories and paths
 % Uncomment what type of trial you want to run
 trialtype = 1; % correct trials
 % trialtype = 0; % incorrect trials
 % trialtype = 2; % error corrected trials
 
+% Setting up directories and paths
 if trialtype ==1
     % all ERSP path
     allerspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/CorrectTrials';
@@ -45,26 +45,15 @@ end
 % Group activity significantly greater than baseline
 
 % load ERSP data and ID info
-% erspdata: [chan, freq, time, subject]
+% erspdata: [subject,chan, freq, time]
 load(fullfile(allerspdatapath,allerspdataname))
 load(fullfile(allerspdatapath,'ID_info.mat'))
-
-% check to see if first 'subject' in allerspdata is empty
-% for some reason in my ersp_analysis.m it added an empty ersp data frame
-% to allerspdata
-if (sum(squeeze(allerspdata(:,:,:,1) ~=0),'all') == 0) && (length(IDmatrix) ~= size(allerspdata,4))
-    fprintf('First subject in allerspdata is empty\nDeleting allerspdata(:,:,:,1)\n')
-    allerspdata = allerspdata(:,:,:,2:end);
-    erspdata = allerspdata;
-else
-    fprintf('No empty subject in allerspdata\n')
-    erspdata = allerspdata;
-end
+erspdata = allerspdata;
 
 % defining number of channels, frequencies, and times to loop through
-numChans = size(erspdata,1);
-numFreqs = size(erspdata,2);
-numTimes = size(erspdata,3);
+numChans = size(erspdata,2);
+numFreqs = size(erspdata,3);
+numTimes = size(erspdata,4);
 
 % skipping if group activation t-test outputs exist
 if exist(fullfile(allerspdatapath,ttestdataname),'file')
@@ -79,7 +68,7 @@ else
         for j = 1:numFreqs
             for k = 1:numTimes
                 % t-test for every (time,frequency) point for each channel
-                data = squeeze(erspdata(i,j,k,:));
+                data = squeeze(erspdata(:,i,j,k));
                 % saving t-statistic and p-value
                 [~,pval_ttest(i,j,k),~,ttest_stats] = ttest(data);
                 tval(i,j,k) = ttest_stats.tstat;
@@ -90,21 +79,10 @@ else
 end
 
 %% Age effects for channel/frequency/time- Linear Regression
-% erspdata: [chan,freq,time,subject]
+% erspdata: [subject,chan,freq,time]
 load(fullfile(allerspdatapath,allerspdataname))
 load(fullfile(allerspdatapath,'ID_info.mat'))
-
-% check to see if first 'subject' in allerspdata is empty
-% for some reason in my ersp_analysis.m it added an empty ersp data frame
-% to allerspdata
-if (sum(squeeze(allerspdata(:,:,:,1) ~=0),'all') == 0) && (length(IDmatrix) ~= size(allerspdata,4))
-    fprintf('First subject in allerspdata is empty\nDeleting allerspdata(:,:,:,1)\n')
-    allerspdata = allerspdata(:,:,:,2:end);
-    erspdata = allerspdata;
-else
-    fprintf('No empty subject in allerspdata\n')
-    erspdata = allerspdata;
-end
+erspdata = allerspdata;
 
 % skipping if age effects linear regression outputs exist
 if exist(fullfile(allerspdatapath,ageregressdataname),'file')
@@ -112,15 +90,15 @@ if exist(fullfile(allerspdatapath,ageregressdataname),'file')
 else
     
     % defining number of channels, frequencies, and times to loop through
-    numChans = size(erspdata,1);
-    numFreqs = size(erspdata,2);
-    numTimes = size(erspdata,3);
+    numChans = size(erspdata,2);
+    numFreqs = size(erspdata,3);
+    numTimes = size(erspdata,4);
     
     % Making age vector to input into regress()
     % regress(y,x) inputs:
     %   y = response vector
     %   x = predictor vector w/ column of ones to calculate coefficients
-    age = [ones(size(erspdata,4),1),IDmatrix(:,3)];
+    age = [ones(size(erspdata,1),1),IDmatrix(:,3)];
     
     % setting up progress bar
     f = waitbar(0,'Chan','Name','Linear Regression Progress');
@@ -131,7 +109,7 @@ else
         for j = 1:numFreqs
             for k = 1:numTimes
                 % Linear regression for every (time,freq) point for every channel
-                data = squeeze(erspdata(i,j,k,:));
+                data = squeeze(erspdata(:,i,j,k));
                 [b,~,~,~,regress_stats] = regress(data,age);
                 % regress_stats : [R-square, F stat, p value, Error variance]
                 % saving b(2) (age coefficient, b(1) = coefficient of intercept)
@@ -146,21 +124,10 @@ else
 end
 
 %% Inverse Age effects for channel/frequency/time- Linear Regression
-% erspdata: [chan,freq,time,subject]
+% erspdata: [subject,chan,freq,time]
 load(fullfile(allerspdatapath,allerspdataname))
 load(fullfile(allerspdatapath,'ID_info.mat'))
-
-% check to see if first 'subject' in allerspdata is empty
-% for some reason in my ersp_analysis.m it added an empty ersp data frame
-% to allerspdata
-if (sum(squeeze(allerspdata(:,:,:,1) ~=0),'all') == 0) && (length(IDmatrix) ~= size(allerspdata,4))
-    fprintf('First subject in allerspdata is empty\nDeleting allerspdata(:,:,:,1)\n')
-    allerspdata = allerspdata(:,:,:,2:end);
-    erspdata = allerspdata;
-else
-    fprintf('No empty subject in allerspdata\n')
-    erspdata = allerspdata;
-end
+erspdata = allerspdata;
 
 % skipping if inverse age effects linear regression outputs exist
 if exist(fullfile(allerspdatapath,invageregressdataname),'file')
@@ -168,15 +135,15 @@ if exist(fullfile(allerspdatapath,invageregressdataname),'file')
 else
 
     % defining number of channels, frequencies, and times to loop through
-    numChans = size(erspdata,1);
-    numFreqs = size(erspdata,2);
-    numTimes = size(erspdata,3);
+    numChans = size(erspdata,2);
+    numFreqs = size(erspdata,3);
+    numTimes = size(erspdata,4);
 
     % Making age vector to input into regress()
     % regress(y,x) inputs:
     %   y = response vector
     %   x = predictor vector w/ column of ones to calculate coefficients
-    inverse_age = [ones(size(erspdata,4),1),(1./IDmatrix(:,3))];
+    inverse_age = [ones(size(erspdata,1),1),(1./IDmatrix(:,3))];
     
     % setting up progress bar
     f = waitbar(0,'Chan','Name','Inverse Age Linear Regression Progress');
@@ -187,7 +154,7 @@ else
         for j = 1:numFreqs
             for k = 1:numTimes
                 % Linear regression for every (time,freq) point for every channel
-                data = squeeze(erspdata(i,j,k,:));
+                data = squeeze(erspdata(:,i,j,k));
                 [b_inv,~,~,~,regress_stats_inv] = regress(data,inverse_age);
                 % regress_stats : [R-square, F stat, p value, Error variance]
                 % saving b(2) (age coefficient, b(1) = coefficient of intercept)
@@ -200,6 +167,3 @@ else
     end
     save(fullfile(allerspdatapath,invageregressdataname),'b_age_inv','fval_inv','pval_inv')
 end
-
-
-

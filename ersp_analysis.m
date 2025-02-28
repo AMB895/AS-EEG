@@ -53,23 +53,26 @@ load('/Volumes/Hera/Abby/AS_EEG/templatechannellabels.mat')
 EEGfilenames = dir([epochedpath,epochedname]);
 totalEEGs = size(EEGfilenames,1);
 
+% Defining allerspdata and IDmatrix
+allerspdata = [];
+IDmatrix = [];
 % loading allerspdata matrix if it exists
 % if it don't exist setting them to empty matricies
-if exist(fullfile(allerspdatapath,allerspdataname),'file')
-    fprintf('loading all ersp data\n')
-    load(fullfile(allerspdatapath,allerspdataname))
-else
-    allerspdata = [];
-end
-
-% loading ID matrix if it exists
-% if it don't exist setting them to empty matricies
-if exist(fullfile(allerspdatapath,'ID_info.mat'),'file')
-    fprintf('loading ID info\n')
-    load(fullfile(allerspdatapath,'ID_info.mat'))
-else
-    IDmatrix=[];
-end
+% if exist(fullfile(allerspdatapath,allerspdataname),'file')
+%     fprintf('loading all ersp data\n')
+%     load(fullfile(allerspdatapath,allerspdataname))
+% else
+%     allerspdata = [];
+% end
+% 
+% % loading ID matrix if it exists
+% % if it don't exist setting them to empty matricies
+% if exist(fullfile(allerspdatapath,'ID_info.mat'),'file')
+%     fprintf('loading ID info\n')
+%     load(fullfile(allerspdatapath,'ID_info.mat'))
+% else
+%     IDmatrix=[];
+% end
 
 % loading missing data matrix if exits
 % if they don't exist setting them to empty matricies
@@ -99,9 +102,15 @@ for currentEEG = 1:size(EEGfilenames)
     lunaid = [subID,'_',scanDate];
     suberspdataname = sprintf('%sersp.mat',lunaid);
     
-    % skipping subject if already in allerspdata matrix
+    % adding subject to allerspdata matrix if already computed ERSP
     if exist(fullfile(suberspdatapath,suberspdataname),'file')
-        fprintf('skipping; computed ersp for %s\n',lunaid)
+        fprintf('skipping; computed ersp for %s\nLoading and adding suberspdata to allerspdata\n',lunaid)
+        load(fullfile(suberspdatapath,suberspdataname),'suberspdata','times','freqs')
+        allerspdata(end+1,:,:,:) = suberspdata;
+        fprintf('Adding subject to IDmatrix\n')
+        EEG = pop_loadset(inputfile);
+        age = EEG.age;
+        IDmatrix(end+1,:) = [str2double(subID),str2double(scanDate),age];
         continue
     else
 
@@ -190,16 +199,14 @@ for currentEEG = 1:size(EEGfilenames)
             save(fullfile(suberspdatapath,suberspdataname),'suberspdata','times','freqs')
 
             % add subject's erspdata to all ersp data 4D matrix
-            allerspdata(:,:,:,end+1) = suberspdata;
+            % [subjects,channels,freqs,times]
+            allerspdata(end+1,:,:,:) = suberspdata;
             
             clear suberspdata
-            % Saving ERSP outputs and missing data
-            save(fullfile(allerspdatapath,allerspdataname),"allerspdata","times","freqs")
-            save(fullfile(allerspdatapath,'ID_info.mat'),"IDmatrix")
-            save(fullfile(allerspdatapath,'missingdata.mat'),"zeroEpochs","nochanlabels","noAge","missingASscore","notViable")
         end
     end
 end
-
-% Since I initialized allerspdata, the first subject is a blank subject,
-% therefore need to delete the first index of the 4th dimension before doing stats
+ % Saving ERSP outputs and missing data
+save(fullfile(allerspdatapath,allerspdataname),"allerspdata","times","freqs")
+save(fullfile(allerspdatapath,'ID_info.mat'),"IDmatrix")
+save(fullfile(allerspdatapath,'missingdata.mat'),"zeroEpochs","nochanlabels","noAge","missingASscore","notViable")

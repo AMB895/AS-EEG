@@ -4,14 +4,16 @@ addpath(genpath('/Volumes/Hera/Projects/7TBrainMech/scripts/eeg/Shane/Preprocess
 addpath(genpath('/resources/Euge/'))
 addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/fieldtrip-20180926/')
 addpath('/Volumes/Hera/Abby/Resources/eeglab_current/eeglab2024.2/')
-load('/Volumes/Hera/Abby/AS_EEG/ErrorLatencyTable.mat')
+load('/Volumes/Hera/Abby/AS_EEG/ErrorLatencyTable_20250218.mat')
 addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/txt/')
 addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/eeg/eog_cal/trial_data/anti/')
+
+eeglab;
 %%
 maindir = hera('Abby/preprocessed_data');
 task='anti';
 taskdirectory = [maindir '/' task]; 
-setfilesDir = [taskdirectory, '/AfterWhole/ICAWholeClean/*_icapru.set'];
+setfilesDir = [taskdirectory, '/AfterWhole/ICAWholeClean_homogenize/*_icapru.set'];
 filesDir = dir(setfilesDir);
 % getting all files
 for i = 1:length(filesDir)
@@ -22,32 +24,28 @@ end
 %%
 n = length(setfiles);
 sz = size(ErrorLatencyTable);
-ICAvarAgeTable = table('Size',[sz(1),6],'VariableTypes',...
-    {'double','double','double','string','double','double'},...
-    'VariableNames',{'LunaID','ScanDate','Age','Sex','BeforeICAVar','AfterICAVar'});
+noASscore = [];
+ICAVarMat = [];
+
 for i=1:n
     inputfile = setfiles{i};
-    [d, currentName, ext ] = fileparts(inputfile);
+    [~, currentName, ~ ] = fileparts(inputfile);
     parts = split(currentName,'_');
     subid = str2double(parts{1});
     scandate = str2double(parts{2});
-    idx = find(ErrorLatencyTable.("Luna ID")==subid & ErrorLatencyTable.("Scan Date")==scandate);
+    idx = find(ErrorLatencyTable.("LunaID")==subid & ErrorLatencyTable.("ScanDate")==scandate);
     if isempty(idx)
+        noASscore(end+1,:) = [double(subid),double(scandate)];
         continue
     end
     EEG = pop_loadset(inputfile);
     varBefore = EEG.etc.varBeforeICArej;
     varAfter = EEG.etc.varAfterICArej;
-    ageAtScan = ErrorLatencyTable.("Age")(idx);
-    sex = string(table2cell(ErrorLatencyTable(idx,"Sex")));
-    ICAvarAgeTable(i,:) = {subid,scandate,ageAtScan,sex,varBefore,varAfter};
+    ageAtScan = EEG.age;
+    ICAVarMat(end+1,:) = [subid,scandate,ageAtScan,varBefore,varAfter];
 end
-idxMissingData = find(ICAvarAgeTable.("LunaID") == 0);
-ICAvarAgeTable(idxMissingData,:) = [];
 
-%%
-merged7t = readtable('merged_7t.csv'); % to get ages
-asScore = load('eeg_anti.mat');
-merge7tIDs = unique(merged7t.lunaid);
-errorLatIDs = unique(ErrorLatencyTable.("Luna ID"));
-asScoreIDs = unique(asScore.datatable.("LunaID"));
+ICAVarTable = table(ICAVarMat(:,1),ICAVarMat(:,2),ICAVarMat(:,3),ICAVarMat(:,4),ICAVarMat(:,5),...
+    'VariableNames',{'LunaID','ScanDate','Age','VarBeforeICA','VarAfterICA'});
+save('/Volumes/Hera/Abby/AS_EEG/icaVariance.mat',"ICAVarTable")
+writetable(ICAVarTable,'/Volumes/Hera/Abby/AS_EEG/icaVariance.csv')
