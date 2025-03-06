@@ -7,7 +7,8 @@
 [~,hostname] = system('hostname');
 
 % directories and paths for running on rhea
-if strcmp(hostname,'rhea.wpic.upmc.edu')
+if exist('/Volumes/Hera','dir')
+% if strcmp(hostname,'rhea.wpic.upmc.edu')
     % increase number of cores for parallel processing
     % limo defaults to 35, but only see 22
     setenv('NUMBER_OF_PROCESSORS','50')
@@ -52,9 +53,14 @@ if strcmp(hostname,'rhea.wpic.upmc.edu')
     % setting up waitbar- only when running on rhea
     f = waitbar(0,'Starting','Name','TFCE Permutation Progress');
 
-elseif strcmp(hostname,'br014.ib.bridges2.psc.edu') % directories & paths for PSC
+    % load channel neighborhood matrix
+    load('/Volumes/Hera/Abby/AS_EEG/STUDY/logicalchanneighbmatrix.mat')
+
+elseif exist('/ocean/projects/','dir')
+% elseif strcmp(hostname,'br014.ib.bridges2.psc.edu') % directories & paths for PSC
     % increase number of cores for parallel processing
     % limo defaults to 35, but only see 22
+    % LOOK AT- IS THIS OK FOR PSC??
     setenv('NUMBER_OF_PROCESSORS','50')
     % adding necessary paths 
     % FIXME!! rsync toolboxes to PSC
@@ -92,7 +98,10 @@ elseif strcmp(hostname,'br014.ib.bridges2.psc.edu') % directories & paths for PS
     COR_ERRCOR_TTEST = load(fullfile(maindir,corerrcorttestname),'t');
     cor_errcor_tval = COR_ERRCOR_TTEST.t;
 
-elseif strcmp(hostname,'oaclf1lunalin1.acct.upmchs.net') % cannot run on local computer
+    % load channel neighborhood matrix
+    load('/ocean/projects/soc230004p/shared/antisaccade_eeg/logicalchanneighbmatrix.mat')
+
+elseif strcmp(hostname(1:end-1),'oaclf1lunalin1.acct.upmchs.net') % cannot run on local computer
     error('Run permute_tfce.m on supercomputer or rhea')
 end
 
@@ -134,6 +143,7 @@ for n=1:nperm
     if strcmp(hostname,'rhea.wpic.upmc.edu')
         waitbar(n/nperm,f,sprintf('%d',n))
     end
+
     % Run TFCE on permuted t-values/ F-values for correct trials
     % limo_tfce inputs:
     %   type: 3 (for 3D data) where data is channels x freqs x times
@@ -151,7 +161,7 @@ for n=1:nperm
     cor_max_perm_tfce_age(:,n) = max(cor_perm_tfce_score_age,[],[2,3]);
     cor_max_perm_tfce_ageinv(:,n) = max(cor_perm_tfce_score_ageinv,[],[2 3]);
 
-    %% Correct and Incorrect Trials
+    %% Correct vs. Incorrect Trials
     % getting total size of t-values matrix
     cor_incor_totalSize = size(cor_incor_tval,1)*size(cor_incor_tval,2)*size(cor_incor_tval,3);
     
@@ -170,7 +180,7 @@ for n=1:nperm
     % Save maximum TFCE score over all channels
     cor_incor_max_perm_tfce_group(:,n) = max(cor_incor_perm_tfce_score_group,[],[2 3]);
 
-    %% Correct and Error Corrected Trials
+    %% Correct vs. Error Corrected Trials
     % getting total size of t-values matrix
     cor_errcor_totalSize = size(cor_errcor_tval,1)*size(cor_errcor_tval,2)*size(cor_errcor_tval,3);
     
