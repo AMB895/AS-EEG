@@ -61,7 +61,7 @@ elseif exist('/ocean/projects/','dir')
     % increase number of cores for parallel processing
     % limo defaults to 35, but only see 22
     % LOOK AT- IS THIS OK FOR PSC??
-    setenv('NUMBER_OF_PROCESSORS','50')
+    getenv('NUMBER_OF_PROCESSORS') % CHECK THIS
     % adding necessary paths 
     % FIXME!! rsync toolboxes to PSC
     addpath('/ocean/projects/soc230004p/shared/antisaccade_eeg/tools/')
