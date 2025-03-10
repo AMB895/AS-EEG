@@ -27,8 +27,8 @@ contents = dir(trialDataASpath);
 % error rate = # err / (# cor + # err + # err cor)
 
 % Setting Error Latency table up
-varTypes = {'double','double','double','string','double','double','double','double','double','double','double','double','double'};
-varNames = {'LunaID','ScanDate','Age','Sex','ErrorRateBea','ErrorRate','AverageLatencyCorrect','Correct','ErrorCorrected','Incorrect','Dropped','Total','Viable'};
+varTypes = {'double','double','double','string','double','double','double','double','double','double','double','double','double','double','double','double','double','double'};
+varNames = {'LunaID','ScanDate','Age','Sex','ErrorRateBea','ErrorRate','AverageLatencyCorrect','VarLatCor','AvgerageLatencyIncorrect','VarLatIncor','AverageLatencyErrorCorrect','VarLatErrCor','Correct','ErrorCorrected','Incorrect','Dropped','Total','Viable'};
 tableSize = [length(contents) length(varTypes)];
 ErrorLatencyTable = table('Size',tableSize,'VariableTypes',varTypes,'VariableNames',varNames);
 
@@ -70,11 +70,19 @@ for currentSub=1:length(contents)
 
     % Calculating Average Latency for correct trials
     latency = subTable.Latency;
-    allRemoveLat_idx = [incor_idx; errcor_idx; drop_idx];
-    latency(allRemoveLat_idx) = [];
+    corLat = latency(cor_idx);
+    incorLat = latency(incor_idx);
+    errcorLat = latency(errcor_idx);
+    % allRemoveLat_idx = [incor_idx; errcor_idx; drop_idx];
+    % latency(allRemoveLat_idx) = [];
         
     % calculating average latency for correct trials
-    avgLat = mean(latency);   
+    avgCorLat = mean(corLat);   
+    varCorLat = std(corLat);
+    avgIncorLat = mean(incorLat);
+    varIncorLat = std(incorLat);
+    avgErrCorLat = mean(errcorLat);
+    varErrCorLat = std(errcorLat);
 
     % Error Rate Calculation
     numCor = length(cor_idx);
@@ -94,14 +102,15 @@ for currentSub=1:length(contents)
         viable = 0;
     end
         
-    ErrorLatencyTable(end+1,:) = {lunaID,scanDate,age,sex,ER_bea,ER,avgLat,numCor,numErrCor,numIncor,numDrop,totalTrials,viable};
+    ErrorLatencyTable(currentSub,:) = {lunaID,scanDate,age,sex,ER_bea,ER,avgCorLat,varCorLat,avgIncorLat,varIncorLat,avgErrCorLat,varErrCorLat,numCor,numErrCor,numIncor,numDrop,totalTrials,viable};
 end
+
 idxMissingData = find(ErrorLatencyTable.LunaID == 0);
 ErrorLatencyTable(idxMissingData,:)=[];
 
 %% Save latency and error rate as .csv file
-save('/Volumes/Hera/Abby/AS_EEG/ErrorLatencyTable_20250218.mat','ErrorLatencyTable')
-writetable(ErrorLatencyTable,'/Volumes/Hera/Abby/AS_EEG/7t_eegAS_ErrorLatency_20250218.csv')
+save('/Volumes/Hera/Abby/AS_EEG/ErrorLatencyTable_20250310.mat','ErrorLatencyTable')
+writetable(ErrorLatencyTable,'/Volumes/Hera/Abby/AS_EEG/7t_eegAS_ErrorLatency_20250310.csv')
 
 %% Stats on latency and error rate
 % Viable subjects table
