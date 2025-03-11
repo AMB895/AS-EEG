@@ -12,11 +12,11 @@ if strcmp(hostname(1:end-1),'rhea.wpic.upmc.edu')
     addpath('/Volumes/Hera/Abby/AS_EEG/limo_tools/')
     addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/fieldtrip-20180926/')
     addpath('/Volumes/Hera/Abby/Resources/eeglab_current/eeglab2024.2/')
-    limo_check_ppool_psc;
+    % limo_check_ppool_psc;
     
     % increase number of cores for parallel processing
-    setenv('NUMBER_OF_PROCESSORS','1')
-    N = 20;
+    setenv('NUMBER_OF_PROCESSORS','50')
+    % N = 20;
     
     % start eeglab
     [ALLEEG,EEG,CURRENTSET,ALLCOM]=eeglab;
@@ -29,7 +29,7 @@ if strcmp(hostname(1:end-1),'rhea.wpic.upmc.edu')
     cortrialsdir = [maindir,'CorrectTrials/'];
 
     % setting up waitbar- only when running on rhea
-%     f = waitbar(0,'Starting','Name','TFCE Permutation Progress');
+    f = waitbar(0,'Starting','Name','TFCE Permutation Progress');
 
     % load channel neighborhood matrix
     chanStructure = load('/Volumes/Hera/Abby/AS_EEG/STUDY/logicalchanneighbmatrix.mat');
@@ -95,19 +95,14 @@ cor_max_perm_tfce_ageinv = zeros(nchans,nperm);
 % cor_incor_max_perm_tfce_group = zeros(nchans,nperm);
 % cor_errcor_max_perm_tfce_group = zeros(nchans,nperm);
 
-c = parcluster('local');
-c.NumWorkers = N;
-p = gcp('nocreate');
-sprintf('Number of pools:\n')
-disp(p)
-parfor n=1:nperm
-    % N = str2double(getenv('NUMBER_OF_PROCESSORS'));
-    % disp(N)
-    % if isnan(N)
-    %     setenv('NUMBER_OF_PROCESSORS','1')
-    % end
-    sprintf('Iteration Number %d',n)
-    tic
+% c = parcluster('local');
+% c.NumWorkers = N;
+% p = gcp('nocreate');
+% sprintf('Number of pools:\n')
+% disp(p)
+for n=1:nperm
+    % sprintf('Iteration Number %d',n)
+    % tic
     % getting total size of t-values matrix
     cor_totalSize = size(cor_tval,1)*size(cor_tval,2)*size(cor_tval,3);
     % cor_incor_totalSize = size(cor_incor_tval,1)*size(cor_incor_tval,2)*size(cor_incor_tval,3);
@@ -135,9 +130,9 @@ parfor n=1:nperm
     % cor_errcor_perm_t = reshape(cor_errcor_perm_t,[size(cor_errcor_tval,1) size(cor_errcor_tval,2) size(cor_errcor_tval,3)]);
 
     % updating waitbar only when running on rhea
-%     if strcmp(hostname(1:end-1),'rhea.wpic.upmc.edu')
-%         waitbar(n/nperm,f,sprintf('%d',n))
-%     end
+    if strcmp(hostname(1:end-1),'rhea.wpic.upmc.edu')
+        waitbar(n/nperm,f,sprintf('%d',n))
+    end
 
     % Run TFCE on permuted t-values/ F-values
     % limo_tfce inputs:
@@ -160,9 +155,9 @@ parfor n=1:nperm
     cor_max_perm_tfce_group(:,n) = oneiteration_group;
     % cor_max_perm_tfce_age(:,n) = max(cor_perm_tfce_score_age,[],[2,3]);
     cor_max_perm_tfce_ageinv(:,n) = oneiteration_ageinv;
-    toc
+    % toc
     savename = fullfile(tfcepath,'permutations_idv',sprintf('%s_%d.mat',cor_permtfcename,n));
-    save(savename,'oneiteration_group','oneiteration_ageinv','-fromstruct')
+    save(savename,'oneiteration_group','oneiteration_ageinv')
     % cor_incor_max_perm_tfce_group(:,n) = max(cor_incor_perm_tfce_score_group,[],[2 3]);
     % cor_errcor_max_perm_tfce_group(:,n) = max(cor_errcor_perm_tfce_score_group,[],[2 3]);
 end
