@@ -34,6 +34,7 @@ if strcmp(hostname(1:end-1),'rhea.wpic.upmc.edu')
     channeighbmatrix = chanStructure.channeighbmatrix;
     
 elseif exist('/ocean/projects/','dir')
+    limo_check_ppool_psc;
     % send NUMBER_OF_PROCESSORS to .bash script
     getenv('NUMBER_OF_PROCESSORS')
     
