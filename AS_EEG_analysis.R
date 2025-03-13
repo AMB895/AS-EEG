@@ -1,4 +1,4 @@
-# Correct Trials
+# Correct Trials Behavioral Data
 # loading error rate and latency table
 errorlatencydata <- read.csv('/Volumes/Hera/Abby/AS_EEG/7t_eegAS_ErrorLatency_20250310.csv')
 eegASdataCorrect <- read.csv('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/CorrectTrials/ID_info_correct_trials.csv')
@@ -21,6 +21,7 @@ library(ggplot2)
 # Latency
 ageLatModel <- lm(AverageLatencyCorrect ~ 1 + Age, data=viabledata)
 summary(ageLatModel)
+AIC(ageLatModel)
 ggplot(viabledata,aes(x=Age,y=AverageLatencyCorrect))+
   ggtitle('Average Correct Latency ~ 1 + Age')+
   geom_point() +
@@ -29,6 +30,7 @@ ggplot(viabledata,aes(x=Age,y=AverageLatencyCorrect))+
 
 invAgeLatModel <- lm(AverageLatencyCorrect ~ 1 + I(1/Age), data=viabledata)
 summary(invAgeLatModel)
+AIC(invAgeLatModel)
 ggplot(viabledata,aes(x=1/Age,y=AverageLatencyCorrect))+
   ggtitle('Average Correct Latency ~ 1 + 1/Age')+
   geom_point()+
@@ -44,6 +46,7 @@ summary(invAgeSexLatModel)
 # Latency Variability
 ageVarLatModel <- lm(VarLatCor ~ 1 + Age, data=viabledata)
 summary(ageVarLatModel)
+AIC(ageVarLatModel)
 ggplot(viabledata,aes(x=Age,y=VarLatCor))+
   ggtitle('Correct Latency Variability ~ 1 + Age')+
   geom_point() +
@@ -52,6 +55,7 @@ ggplot(viabledata,aes(x=Age,y=VarLatCor))+
 
 invAgeVarLatModel <- lm(VarLatCor ~ 1 + I(1/Age), data=viabledata)
 summary(invAgeVarLatModel)
+AIC(invAgeVarLatModel)
 ggplot(viabledata,aes(x=1/Age,y=VarLatCor))+
   ggtitle('Correct Latency Variability ~ 1 + 1/Age')+
   geom_point()+
@@ -67,6 +71,7 @@ summary(invAgeSexVarLatModel)
 # Error Rate
 ageErrRateModel <- lm(log1p(ErrorRate) ~ 1 + Age, data=viabledata)
 summary(ageErrRateModel)
+AIC(ageErrRateModel)
 ggplot(viabledata,aes(x=Age,y=log1p(ErrorRate)))+
   ggtitle('Error Rate ~ Age Linear Regression')+
   geom_point()+

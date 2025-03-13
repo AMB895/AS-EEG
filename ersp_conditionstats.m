@@ -82,28 +82,30 @@ clear p t
 % for some reason in my ersp_analysis.m it added an empty ersp data frame
 % to allerspdata
 % correct trials
-if (sum(squeeze(cor_ersp(:,:,:,1) ~=0),'all') == 0) && (length(cor_id) ~= size(cor_ersp,4))
-    fprintf('First subject in correct ersp data is empty\nDeleting cor_ersp(:,:,:,1)\n')
-    cor_ersp = cor_ersp(:,:,:,2:end);
-    erspdata1 = cor_ersp;
-else
-    fprintf('No empty subject in cor_ersp\n')
-    erspdata1 = cor_ersp;
-end
+% if (sum(squeeze(cor_ersp(:,:,:,1) ~=0),'all') == 0) && (length(cor_id) ~= size(cor_ersp,4))
+%     fprintf('First subject in correct ersp data is empty\nDeleting cor_ersp(:,:,:,1)\n')
+%     cor_ersp = cor_ersp(:,:,:,2:end);
+%     erspdata1 = cor_ersp;
+% else
+%     fprintf('No empty subject in cor_ersp\n')
+%     erspdata1 = cor_ersp;
+% end
+% 
+% % error corrected trials
+% if (sum(squeeze(errcor_ersp(:,:,:,1) ~=0),'all') == 0) && (length(errcor_id) ~= size(errcor_ersp,4))
+%     fprintf('First subject in error corrected ersp data is empty\nDeleting errcor_ersp(:,:,:,1)\n')
+%     errcor_ersp = errcor_ersp(:,:,:,2:end);
+%     erspdata2 = errcor_ersp;
+% else
+%     fprintf('No empty subject in errcor_ersp\n')
+%     erspdata2 = errcor_ersp;
+% end
 
-% error corrected trials
-if (sum(squeeze(errcor_ersp(:,:,:,1) ~=0),'all') == 0) && (length(errcor_id) ~= size(errcor_ersp,4))
-    fprintf('First subject in error corrected ersp data is empty\nDeleting errcor_ersp(:,:,:,1)\n')
-    errcor_ersp = errcor_ersp(:,:,:,2:end);
-    erspdata2 = errcor_ersp;
-else
-    fprintf('No empty subject in errcor_ersp\n')
-    erspdata2 = errcor_ersp;
-end
-
-numChans = size(cor_ersp,1);
-numFreqs = size(cor_ersp,2);
-numTimes = size(cor_ersp,3);
+numChans = size(cor_ersp,2);
+numFreqs = size(cor_ersp,3);
+numTimes = size(cor_ersp,4);
+erspdata1 = cor_ersp;
+erspdata2 = errcor_ersp;
 if exist('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/two_sample_ttest_cor_errcor.mat','file')
     fprintf('already computed two-sample t-test for correct and error corrected trials\n')
 else
@@ -114,8 +116,8 @@ else
         waitbar(i/numChans,f,sprintf('Channel %d/%d',i,numChans))
         for j = 1:numFreqs
             for k = 1:numTimes
-                data1 = squeeze(erspdata1(i,j,k,:));
-                data2 = squeeze(erspdata2(i,j,k,:));
+                data1 = squeeze(erspdata1(:,i,j,k));
+                data2 = squeeze(erspdata2(:,i,j,k));
                 [~,p(i,j,k),~,stats] = ttest2(data1,data2);
                 t(i,j,k) = stats.tstat;
             end

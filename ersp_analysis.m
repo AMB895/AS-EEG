@@ -17,9 +17,9 @@ task = 'anti';
 taskdirectory = [maindir '/' task]; 
 
 % Uncomment the type of trial you wish to run
-trialtype = 1; % correct trials
+% trialtype = 1; % correct trials
 % trialtype = 0; % incorrect trials
-% trialtype = 2; % error corrected trials
+trialtype = 2; % error corrected trials
 
 % Epoched data path
 epochedpath = [taskdirectory,'/AfterWhole/epochclean_homogenize/'];
@@ -56,23 +56,6 @@ totalEEGs = size(EEGfilenames,1);
 % Defining allerspdata and IDmatrix
 allerspdata = [];
 IDmatrix = [];
-% loading allerspdata matrix if it exists
-% if it don't exist setting them to empty matricies
-% if exist(fullfile(allerspdatapath,allerspdataname),'file')
-%     fprintf('loading all ersp data\n')
-%     load(fullfile(allerspdatapath,allerspdataname))
-% else
-%     allerspdata = [];
-% end
-% 
-% % loading ID matrix if it exists
-% % if it don't exist setting them to empty matricies
-% if exist(fullfile(allerspdatapath,'ID_info.mat'),'file')
-%     fprintf('loading ID info\n')
-%     load(fullfile(allerspdatapath,'ID_info.mat'))
-% else
-%     IDmatrix=[];
-% end
 
 % loading missing data matrix if exits
 % if they don't exist setting them to empty matricies
