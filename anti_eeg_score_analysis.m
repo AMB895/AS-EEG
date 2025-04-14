@@ -1,6 +1,9 @@
+% amb
 % 10/31/2024
 % Updated 1/30/25 bc now have error corrected trials
 % Updataed 2/18/25 
+% Updated 3/20/25 to calculate coefficient of latency variance and percent
+%   error corrected
 
 % adding paths
 addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/eeg/eog_cal/')
@@ -22,14 +25,14 @@ merged7t_eeg(noeeg_idx,:) = [];
 contents = dir(trialDataASpath);
 
 
-%% Calculating Error Rate and average Latency
-% Bea error rate = # err/(# cor + # err cor)
-% error rate = # err / (# cor + # err + # err cor)
+%% Calculating Percent error corrected trials, average correct latency and coefficent of latency variation
+% (% error corrected) = (# errcor) / (#errcor + #cor)
+% Coeff of variation = (subject's latency std)/(subject's avg correct lat)
 
 % Setting Error Latency table up
-varTypes = {'double','double','double','string','double','double','double','double','double','double','double','double','double','double','double','double','double','double'};
-varNames = {'LunaID','ScanDate','Age','Sex','ErrorRateBea','ErrorRate','AverageLatencyCorrect','VarLatCor','AvgerageLatencyIncorrect','VarLatIncor','AverageLatencyErrorCorrect','VarLatErrCor','Correct','ErrorCorrected','Incorrect','Dropped','Total','Viable'};
-tableSize = [length(contents) length(varTypes)];
+varTypes = {'double','double','double','string','double','double','double','double','double','double','double','double','double','double','double'};
+varNames = {'LunaID','ScanDate','Age','Sex','PercentErrCor','AvgLatCor','CVLatCor','AvgLatErrCor','CVLatErrCor','NumCor','NumErrCor','NumIncor','NumDrop','Total','Viable'};
+tableSize = [length(contents) length(varNames)];
 ErrorLatencyTable = table('Size',tableSize,'VariableTypes',varTypes,'VariableNames',varNames);
 
 missingMerged7t = [];
@@ -67,34 +70,35 @@ for currentSub=1:length(contents)
     incor_idx = find(subTable.Correct == 0);
     errcor_idx = find(subTable.Correct == 2);
     drop_idx = find(subTable.Correct == -1);
-
-    % Calculating Average Latency for correct trials
-    latency = subTable.Latency;
-    corLat = latency(cor_idx);
-    incorLat = latency(incor_idx);
-    errcorLat = latency(errcor_idx);
-    % allRemoveLat_idx = [incor_idx; errcor_idx; drop_idx];
-    % latency(allRemoveLat_idx) = [];
-        
-    % calculating average latency for correct trials
-    avgCorLat = mean(corLat);   
-    varCorLat = std(corLat);
-    avgIncorLat = mean(incorLat);
-    varIncorLat = std(incorLat);
-    avgErrCorLat = mean(errcorLat);
-    varErrCorLat = std(errcorLat);
-
-    % Error Rate Calculation
+    
+    % Total number of correct, error corrected, incorrect and droppped trials
     numCor = length(cor_idx);
-    numIncor = length(incor_idx);
     numErrCor = length(errcor_idx);
+    numIncor = length(incor_idx);
     numDrop = length(drop_idx);
-    ER_bea = numIncor/(numErrCor + numCor);
-    ER = numIncor / (numCor + numIncor + numErrCor);
-    totalTrials = numCor + numIncor + numErrCor + numDrop;
+    totalTrials = numCor + numErrCor + numIncor + numDrop;
+
+    % Latency for every correct and error corrected trial
+    latency = subTable.Latency;
+    corLats = latency(cor_idx);
+    errcorLats = latency(errcor_idx);
+        
+    % average latency for correct and error corrected trials
+    avgCorLat = mean(corLats);   
+    avgErrCorLat = mean(errcorLats);
+    
+    % SD of latency for correct and error corrected trials
+    SDcorLat = std(corLats);
+    SDerrcorLat = std(errcorLats);
+    
+    % Coefficient of Latency Variation for correct and error corrected trials
+    cvLatCor = SDcorLat/avgCorLat;
+    cvLatErrCor = SDerrcorLat/avgErrCorLat;
+    
+    % Percent Error Corrected Calculation
+    percentErrCor = numErrCor / (numErrCor + numCor);
     
     % Determining if subject is viable to use for stats
-    numViable = numCor+numIncor+numErrCor;
     numOnTask = numCor + numErrCor;
     if numOnTask >= totalTrials*0.5
         viable = 1;
@@ -102,34 +106,12 @@ for currentSub=1:length(contents)
         viable = 0;
     end
         
-    ErrorLatencyTable(currentSub,:) = {lunaID,scanDate,age,sex,ER_bea,ER,avgCorLat,varCorLat,avgIncorLat,varIncorLat,avgErrCorLat,varErrCorLat,numCor,numErrCor,numIncor,numDrop,totalTrials,viable};
+    ErrorLatencyTable(currentSub,:) = {lunaID,scanDate,age,sex,percentErrCor,avgCorLat,cvLatCor,avgErrCorLat,cvLatErrCor,numCor,numErrCor,numIncor,numDrop,totalTrials,viable};
 end
 
 idxMissingData = find(ErrorLatencyTable.LunaID == 0);
 ErrorLatencyTable(idxMissingData,:)=[];
 
 %% Save latency and error rate as .csv file
-save('/Volumes/Hera/Abby/AS_EEG/ErrorLatencyTable_20250310.mat','ErrorLatencyTable')
-writetable(ErrorLatencyTable,'/Volumes/Hera/Abby/AS_EEG/7t_eegAS_ErrorLatency_20250310.csv')
-
-%% Stats on latency and error rate
-% Viable subjects table
-viableSubsIdx = find(ErrorLatencyTable.Viable ==1);
-viableTable = ErrorLatencyTable(viableSubsIdx,:);
-
-% Latency- Linear Age
-age = [ones(size(viableTable,1),1),viableTable.Age];
-lat = viableTable.AverageLatencyCorrect;
-[b_lat,~,~,~,stats_lat] = regress(lat,age);
-% stats: [R squared, F stat, p-value,error variance]
-
-% Latency- Inverse Age
-invage = [ones(size(viableTable,1),1),1./viableTable.Age];
-[b_lat_inv,~,~,~,stats_lat_inv] = regress(lat,invage);
-
-% Error Rate- Linear Age
-er = viableTable.ErrorRate;
-[b_er,~,~,~,stats_er] = regress(er,age);
-
-% Error Rate- Inverse Age
-[b_er_inv,~,~,~,stats_er_inv] = regress(er,invage);
+save('/Volumes/Hera/Abby/AS_EEG/ErrorLatencyTable_20250320.mat','ErrorLatencyTable')
+writetable(ErrorLatencyTable,'/Volumes/Hera/Abby/AS_EEG/7t_eegAS_ErrorLatency_20250320.csv')
