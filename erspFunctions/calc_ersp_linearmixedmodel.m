@@ -1,7 +1,7 @@
 function [b,t,p] = calc_ersp_linearmixedmodel(T,erspdata1,erspdata2,numTimes,numFreqs)
 totalIterations = numTimes*numFreqs;
 % setting up waitbar
-f = waitbar(0,'Starting','Name','Group Activation');
+f = waitbar(0,'Starting','Name','Linear Mixed Model');
 for i = 1:numFreqs
     for j = 1:numTimes
         % getting current iteration

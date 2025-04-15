@@ -18,8 +18,6 @@ for i=1:numFreqs
         b_intercept(i,j) = double(coeftable(1,2));
         t(i,j) = double(coeftable(1,4));
         p(i,j) = double(coeftable(1,6));
-%         [~,p(i,j),~,stats] = ttest(data);
-%         t(i,j) = stats.tstat;
     end
 end
 close(f)

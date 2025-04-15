@@ -1,7 +1,7 @@
 function [b_age,t,p] = calc_ersp_invageeffects(T,erspdata,numTimes,numFreqs)
 totalIterations = numTimes*numFreqs;
 % setting up waitbar
-f = waitbar(0,'Starting','Name','Group Activation');
+f = waitbar(0,'Starting','Name','Inverse Age Effects');
 for i = 1:numFreqs
     for j = 1:numTimes
         % getting current iteration
