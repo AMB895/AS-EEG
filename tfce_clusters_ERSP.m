@@ -323,12 +323,12 @@ subtitle('F-row electrodes')
 corvgsIDmatrix = [];
 vgserspdata_corvgs = [];
 corerspdata_corvgs = [];
-for idxVGS = 1:size(vgsIDmat,1)
-   currentSub = vgsIDmat(idxVGS,1);
-   currentDate = vgsIDmat(idxVGS,2);
-   idxAS = find(corIDmat(:,1)==currentSub & corIDmat(:,2) == currentDate);
+for idxVGS = 1:size(vgsIDmatrix,1)
+   currentSub = vgsIDmatrix(idxVGS,1);
+   currentDate = vgsIDmatrix(idxVGS,2);
+   idxAS = find(corIDmatrix_viable(:,1)==currentSub & corIDmatrix_viable(:,2) == currentDate);
    if ~isempty(idxAS) % there is a matching ID and date
-       corvgsIDmatrix(end+1,:) = vgsIDmat(idxVGS,:);
+       corvgsIDmatrix(end+1,:) = vgsIDmatrix(idxVGS,:);
        vgserspdata_corvgs(end+1,:,:) = vgserspdata_frow(idxVGS,:,:);
        corerspdata_corvgs(end+1,:,:) = corerspdata_viable_frow(idxAS,:,:);
    end
@@ -384,25 +384,26 @@ T.trialtype = categorical(T.trialtype);
 % Run linear mixed model
 [b_corvgs_mixedmodel,t_corvgs_mixedmodel,p_corvgs_mixedmodel] = calc_ersp_linearmixedmodel(T,corerspdata_corvgs,vgserspdata_corvgs,numTimes,numFreqs);
 
+
 %% Correct vs. Error Trials
 % Match IDs from correct AS and erroc corrected AS trials
-corerrcorIDmat = [];
+corerrcorIDmatrix = [];
 corerspdata_corerrcor = [];
 errcorerspdata_corerrcor = [];
 for idxCOR = 1:size(corIDmatrix_viable,1)
    currentSub = corIDmatrix_viable(idxCOR,1);
    currentDate = corIDmatrix_viable(idxCOR,2);
-   idxERRCOR = find(errcorIDmat(:,1)==currentSub & errcorIDmat(:,2) == currentDate);
+   idxERRCOR = find(errcorIDmatrix(:,1)==currentSub & errcorIDmatrix(:,2) == currentDate);
    if ~isempty(idxERRCOR) % there is a matching ID and date
-       corerrcorIDmat(end+1,:) = corIDmatrix_viable(idxCOR,:);
+       corerrcorIDmatrix(end+1,:) = corIDmatrix_viable(idxCOR,:);
        corerspdata_corerrcor(end+1,:,:) = corerspdata_viable_frow(idxCOR,:,:);
        errcorerspdata_corerrcor(end+1,:,:) = errcorerspdata_viable_frow(idxERRCOR,:,:);
    end
 end
-T = table('Size',[size(corerrcorIDmat,1) 3],'VariableTypes',{'double','double','double'},...
+T = table('Size',[size(corerrcorIDmatrix,1) 3],'VariableTypes',{'double','double','double'},...
     'VariableNames',{'id','visit','power'});
-T.id = corerrcorIDmat(:,1);
-T.visit = corerrcorIDmat(:,4);
+T.id = corerrcorIDmatrix(:,1);
+T.visit = corerrcorIDmatrix(:,4);
 
 if exist('corerrcorGroupActClusters.mat','file')
     fprintf('Computed correct vs. error corrected group activation clusters; loading')
@@ -411,7 +412,7 @@ else
     % Difference ERSP data to run linear model on for activation
     differspdata_corerrcor = corerspdata_corerrcor - errcorerspdata_corerrcor;
     % Run group activation linear model
-    [b_corerrcor_groupact,t_corerrcor_groupact,~] = calc_ersp_groupact(T,differspdata_corerrcor,numTimes,numFreqs);
+    [b_corerrcor_groupact,t_corerrcor_groupact,p_corerrcor_groupact] = calc_ersp_groupact(T,differspdata_corerrcor,numTimes,numFreqs);
     % TFCE on t-values
     tfcescores_corerrcor_groupact = limo_tfce(2,t_corerrcor_groupact,[]);
     % Permute TFCE scores
@@ -438,12 +439,12 @@ subtitle('F-row electrodes')
 %% Inverse Age effects, Trial Type effects and Interaction for Correct vs. Error Trials
 % Power ~ TrialType + InvAge + TrialType*InvAge + (1 | ID) @ each time-frequency point
 % set up table for each time-frequency point
-T = table('Size',[2*size(corerrcorIDmat,1) 5],'VariableTypes',{'double','double','double','categorical','double'},...
+T = table('Size',[2*size(corerrcorIDmatrix,1) 5],'VariableTypes',{'double','double','double','categorical','double'},...
     'VariableNames',{'id','visit','invage','trialtype','power'});
-T.id = [corerrcorIDmat(:,1);corerrcorIDmat(:,1)];
-T.visit = [corerrcorIDmat(:,4);corerrcorIDmat(:,4)];
-T.invage = [1./corerrcorIDmat(:,3); 1./corerrcorIDmat(:,3)];
-T.trialtype =[repmat("cor",size(corerrcorIDmat,1),1);repmat("errcor",size(corerrcorIDmat,1),1)];
+T.id = [corerrcorIDmatrix(:,1);corerrcorIDmatrix(:,1)];
+T.visit = [corerrcorIDmatrix(:,4);corerrcorIDmatrix(:,4)];
+T.invage = [1./corerrcorIDmatrix(:,3); 1./corerrcorIDmatrix(:,3)];
+T.trialtype =[repmat("cor",size(corerrcorIDmatrix,1),1);repmat("errcor",size(corerrcorIDmatrix,1),1)];
 T.trialtype = categorical(T.trialtype);
 
 % Run linear mixed model
