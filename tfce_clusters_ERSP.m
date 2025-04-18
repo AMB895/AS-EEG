@@ -16,7 +16,10 @@ load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/CorrectTrials/corERSPdata.mat
 load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/CorrectTrials/corIDmatrix.mat')
 load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/CorrectTrials/cormissingdata.mat')
 
-%% First remove participants that are not viable
+% to plot PLOT = 1, no plots PLOT = 0
+PLOT = 0;
+% PLOT = 1;
+%% First remove participants that are not viable (Correct AS)
 numSubs = size(corIDmatrix,1);
 
 corerspdata_viable=[];
@@ -72,20 +75,21 @@ else
     save('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/corGroupActClusters.mat','t_cor_groupact','b_cor_groupact','p_cor_groupact','tfcescores_cor_groupact','mask_cor_groupact')
 end
 
-% Plot t-values with mask
-figure;
-surf(times,freqs,mask_cor_groupact.*t_cor_groupact,'EdgeColor','none')
-C = colorbar;
-C.Label.String = 't stat';
-view(2)
-hold on
-xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
-xlabel('Time (ms)')
-ylabel('Frequency (Hz)')
-title('Correct Trials Group Activation')
-subtitle('F-row electrodes')
-
-%% Inverse Age Effects
+if PLOT
+    % Plot t-values with mask
+    figure;
+    surf(times,freqs,mask_cor_groupact.*t_cor_groupact,'EdgeColor','none')
+    C = colorbar;
+    C.Label.String = 't stat';
+    view(2)
+    hold on
+    xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
+    xlabel('Time (ms)')
+    ylabel('Frequency (Hz)')
+    title('Correct AS Trials Group Activation')
+    subtitle('F-row electrodes')
+end
+%% Inverse Age Effects- Correct Trials
 T = table('Size',[size(corIDmatrix_viable,1) 4],'VariableTypes',{'double','double','double','double'},...
     'VariableNames',{'id','visit','invage','power'});
 T.id = corIDmatrix_viable(:,1);
@@ -108,25 +112,27 @@ else
     save('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/corAgeEffectClusters.mat','t_cor_invage','b_cor_invage','p_cor_invage','tfcescores_cor_invage','mask_cor_invage')
 end
 
-% Plot age coefficients with mask
-figure;
-surf(times,freqs,mask_cor_invage.*b_cor_invage,'EdgeColor','none')
-C = colorbar;
-C.Label.String = 'Age Coefficient (slope)';
-view(2)
-hold on
-xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
-xlabel('Time (ms)')
-ylabel('Frequency (Hz)')
-title('Correct Trials Age Effects')
-subtitle('F-row electrodes')
+if PLOT
+    % Plot age coefficients with mask
+    figure;
+    surf(times,freqs,mask_cor_invage.*b_cor_invage,'EdgeColor','none')
+    C = colorbar;
+    C.Label.String = 'Age Coefficient (slope)';
+    view(2)
+    hold on
+    xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
+    xlabel('Time (ms)')
+    ylabel('Frequency (Hz)')
+    title('Correct AS Trials Age Effects')
+    subtitle('F-row electrodes')
+end
 %% Error Corrected AS trials
 % load in ERSP data
 load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/ErrorCorrectTrials/errcorERSPdata.mat')
 load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/ErrorCorrectTrials/errcorIDmatrix.mat')
 load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/ErrorCorrectTrials/errcormissingdata.mat')
 
-%% First remove participants that are not viable
+%% First remove participants that are not viable (Error AS)
 numSubs = size(errcorIDmatrix,1);
 
 errcorerspdata_viable=[];
@@ -156,7 +162,7 @@ end
 % Average across F-row
 errcorerspdata_viable_frow = squeeze(mean(errcorerspdata_viable(:,[4 5 6 7 37 38 39 40],:,:),2));
 
-%% Group Activation- Error Correct Trials
+%% Group Activation- Error Trials
 numTimes = length(times);
 numFreqs = length(freqs);
 
@@ -180,20 +186,22 @@ else
     save('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/errcorGroupActClusters.mat','t_errcor_groupact','b_errcor_groupact','p_errcor_groupact','tfcescores_errcor_groupact','mask_errcor_groupact')
 end
 
-% Plot t-values with mask
-figure;
-surf(times,freqs,mask_errcor_groupact.*t_errcor_groupact,'EdgeColor','none')
-C = colorbar;
-C.Label.String = 't stat';
-view(2)
-hold on
-xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
-xlabel('Time (ms)')
-ylabel('Frequency (Hz)')
-title('Error Trials Group Activation')
-subtitle('F-row electrodes')
+if PLOT
+    % Plot t-values with mask
+    figure;
+    surf(times,freqs,mask_errcor_groupact.*t_errcor_groupact,'EdgeColor','none')
+    C = colorbar;
+    C.Label.String = 't stat';
+    view(2)
+    hold on
+    xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
+    xlabel('Time (ms)')
+    ylabel('Frequency (Hz)')
+    title('Error AS Trials Group Activation')
+    subtitle('F-row electrodes')
+end
 
-%% Inverse Age Effects- Error Correct Trials
+%% Inverse Age Effects- Error Trials
 T = table('Size',[size(errcorIDmatrix_viable,1) 4],'VariableTypes',{'double','double','double','double'},...
     'VariableNames',{'id','visit','invage','power'});
 T.id = errcorIDmatrix_viable(:,1);
@@ -201,7 +209,7 @@ T.visit = errcorIDmatrix_viable(:,4);
 T.invage = 1./errcorIDmatrix_viable(:,3);
 
 if exist('errcorAgeEffectClusters.mat','file')
-    fprintf('Computed error corrected age effect clusters; loading\n')
+    fprintf('Computed error corrected inverse age effect clusters; loading\n')
     load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/errcorAgeEffectClusters.mat')
 else
     % Run linear regression with inverse age
@@ -215,18 +223,21 @@ else
     % save outputs
     save('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/errcorAgeEffectClusters.mat','t_errcor_invage','b_errcor_invage','p_errcor_invage','tfcescores_errcor_invage','mask_errcor_invage')
 end
-% Plot age coefficients with mask
-figure;
-surf(times,freqs,mask_errcor_invage.*b_errcor_invage,'EdgeColor','none')
-C = colorbar;
-C.Label.String = 'Age Coefficient (slope)';
-view(2)
-hold on
-xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
-xlabel('Time (ms)')
-ylabel('Frequency (Hz)')
-title('Error Trials Age Effects')
-subtitle('F-row electrodes')
+
+if PLOT
+    % Plot age coefficients with mask
+    figure;
+    surf(times,freqs,mask_errcor_invage.*b_errcor_invage,'EdgeColor','none')
+    C = colorbar;
+    C.Label.String = 'Age Coefficient (slope)';
+    view(2)
+    hold on
+    xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
+    xlabel('Time (ms)')
+    ylabel('Frequency (Hz)')
+    title('Error AS Trials Age Effects')
+    subtitle('F-row electrodes')
+end
 %% VGS Trials
 % load in ERSP data
 load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/vgs/vgsERSPdata.mat')
@@ -270,18 +281,20 @@ else
     save('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/vgsGroupActClusters.mat','t_vgs_groupact','b_vgs_groupact','p_vgs_groupact','tfcescores_vgs_groupact','mask_vgs_groupact')
 end
 
-% Plot t-values with mask
-figure;
-surf(times,freqs,mask_vgs_groupact.*t_vgs_groupact,'EdgeColor','none')
-C = colorbar;
-C.Label.String = 't stat';
-view(2)
-hold on
-xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
-xlabel('Time (ms)')
-ylabel('Frequency (Hz)')
-title('VGS Trials Group Activation')
-subtitle('F-row electrodes')
+if PLOT
+    % Plot t-values with mask
+    figure;
+    surf(times,freqs,mask_vgs_groupact.*t_vgs_groupact,'EdgeColor','none')
+    C = colorbar;
+    C.Label.String = 't stat';
+    view(2)
+    hold on
+    xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
+    xlabel('Time (ms)')
+    ylabel('Frequency (Hz)')
+    title('VGS Trials Group Activation')
+    subtitle('F-row electrodes')
+end
 %% Inverse Age Effects- VGS Trials
 T = table('Size',[size(vgsIDmatrix,1) 4],'VariableTypes',{'double','double','double','double'},...
     'VariableNames',{'id','visit','invage','power'});
@@ -290,35 +303,37 @@ T.visit = vgsIDmatrix(:,4);
 T.invage = 1./vgsIDmatrix(:,3);
 
 if exist('vgsAgeEffectClusters.mat','file')
-    fprintf('Computed vgs age effect clusters; loading')
+    fprintf('Computed vgs inverse age effect clusters; loading\n')
     load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/vgsAgeEffectClusters.mat')
 else
-% Run linear regression with inverse age
-[b_vgs_invage,t_vgs_invage,p_vgs_invage]=calc_ersp_invageeffects(T,vgserspdata_frow,numTimes,numFreqs);
-% TFCE on F-values
-tfcescores_vgs_invage = limo_tfce(2,t_vgs_invage,[]);
-% Permute TFCE scores
-permtfcescores_vgs_invage = calc_perm_tfce_2d(t_vgs_invage,1000);
-% Find significant clusters
-[~,mask_vgs_invage]  = calc_thres_mask_tfclusters_2d(tfcescores_vgs_invage,permtfcescores_vgs_invage,0.05);
-% save oututs
-save('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/vgsAgeEffectClusters.mat','t_vgs_invage','b_vgs_invage','p_vgs_invage','tfcescores_vgs_invage','mask_vgs_invage')
+    % Run linear regression with inverse age
+    [b_vgs_invage,t_vgs_invage,p_vgs_invage]=calc_ersp_invageeffects(T,vgserspdata_frow,numTimes,numFreqs);
+    % TFCE on F-values
+    tfcescores_vgs_invage = limo_tfce(2,t_vgs_invage,[]);
+    % Permute TFCE scores
+    permtfcescores_vgs_invage = calc_perm_tfce_2d(t_vgs_invage,1000);
+    % Find significant clusters
+    [~,mask_vgs_invage]  = calc_thres_mask_tfclusters_2d(tfcescores_vgs_invage,permtfcescores_vgs_invage,0.05);
+    % save oututs
+    save('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/vgsAgeEffectClusters.mat','t_vgs_invage','b_vgs_invage','p_vgs_invage','tfcescores_vgs_invage','mask_vgs_invage')
 end
 
-% Plot f-values with mask
-figure;
-surf(times,freqs,mask_vgs_invage.*b_vgs_invage,'EdgeColor','none')
-C = colorbar;
-C.Label.String = 'Age Coefficient (slope)';
-view(2)
-hold on
-xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
-xlabel('Time (ms)')
-ylabel('Frequency (Hz)')
-title('VGS Trials Age Effects')
-subtitle('F-row electrodes')
+if PLOT
+    % Plot f-values with mask
+    figure;
+    surf(times,freqs,mask_vgs_invage.*b_vgs_invage,'EdgeColor','none')
+    C = colorbar;
+    C.Label.String = 'Age Coefficient (slope)';
+    view(2)
+    hold on
+    xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
+    xlabel('Time (ms)')
+    ylabel('Frequency (Hz)')
+    title('VGS Trials Age Effects')
+    subtitle('F-row electrodes')
+end
 
-%% Correct vs. VGS Trials
+%% Correct vs. VGS Trials 
 % Match IDs from correct AS and VGS trials
 corvgsIDmatrix = [];
 vgserspdata_corvgs = [];
@@ -334,44 +349,8 @@ for idxVGS = 1:size(vgsIDmatrix,1)
    end
 end
 
-T = table('Size',[size(corvgsIDmatrix,1) 3],'VariableTypes',{'double','double','double'},...
-    'VariableNames',{'id','visit','power'});
-T.id = corvgsIDmatrix(:,1);
-T.visit = corvgsIDmatrix(:,4);
-
-if exist('corvgsGroupActClusters.mat','file')
-    fprintf('Computed correct vs. vgs group activation; loading')
-    load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/corvgsGroupActClusters.mat')
-else
-    % Difference ERSP data to run linear model on for activation
-    differspdata_corvgs = corerspdata_corvgs - vgserspdata_corvgs;
-    % Run group activation linear model
-    [b_corvgs_groupact,t_corvgs_groupact,p_corvgs_groupact] = calc_ersp_groupact(T,differspdata_corvgs,numTimes,numFreqs);
-    % TFCE on t-values
-    tfcescores_corvgs_groupact = limo_tfce(2,t_corvgs_groupact,[]);
-    % Permute TFCE scores
-    permtfcescores_corvgs_groupact = limo_tfce(2,t_corvgs_groupact,[]);
-    % find significant clusters
-    [~,mask_corvgs_groupact] = calc_thres_mask_tfclusters_2d(tfcescores_corvgs_groupact,permtfcescores_corvgs_groupact,0.05);
-    % save outputs
-    save('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/corvgsGroupActClusters.mat','b_corvgs_groupact','t_corvgs_groupact','_p_corvgs_groupact','tfcescores_corvgs_groupact','mask_corvgs_groupact')
-end
-
-% Plot t-values with mask
-figure;
-surf(times,freqs,mask_corvgs_groupact.*t_corvgs_groupact,'EdgeColor','none')
-C = colorbar;
-C.Label.String = 't stat';
-view(2)
-hold on
-xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
-xlabel('Time (ms)')
-ylabel('Frequency (Hz)')
-title('Correct AS vs. VGS Trials Group Activation')
-subtitle('F-row electrodes')
-
-%% Inverse Age effects, Trial Type effects and Interaction for Correct vs. VGS
-% Power ~ TrialType + InvAge + TrialType*InvAge + (1 | ID) @ each time-frequency point
+%% Inverse Age effects, Trial Type effects and Interaction (Correct vs. VGS)
+% Power ~ 1+ TrialType + InvAge + TrialType*InvAge + (1 | ID) @ each time-frequency point
 % set up table for each time-frequency point
 T = table('Size',[2*size(corvgsIDmatrix,1) 5],'VariableTypes',{'double','double','double','categorical','double'},...
     'VariableNames',{'id','visit','invage','trialtype','power'});
@@ -381,9 +360,86 @@ T.invage = [1./corvgsIDmatrix(:,3); 1./corvgsIDmatrix(:,3)];
 T.trialtype =[repmat("cor",size(corvgsIDmatrix,1),1);repmat("vgs",size(corvgsIDmatrix,1),1)];
 T.trialtype = categorical(T.trialtype);
 
-% Run linear mixed model
-[b_corvgs_mixedmodel,t_corvgs_mixedmodel,p_corvgs_mixedmodel] = calc_ersp_linearmixedmodel(T,corerspdata_corvgs,vgserspdata_corvgs,numTimes,numFreqs);
+if exist('corvgsMixedModelClusters.mat','file')
+    fprintf('Computed Correct vs. VGS Mixed Model clusters; loading\n')
+    load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/corvgsMixedModelClusters.mat')
+    t_corvgs_MMtrialtype = t_corvgs_mixedmodel.trialtype;
+    t_corvgs_MMinteraction = t_corvgs_mixedmodel.interaction;
+    t_corvgs_MMintercept = t_corvgs_mixedmodel.intercept;
+    b_corvgs_MMage = b_corvgs_mixedmodel.age;
+else
+    % Run linear mixed model
+    [b_corvgs_mixedmodel,t_corvgs_mixedmodel,p_corvgs_mixedmodel] = calc_ersp_linearmixedmodel(T,corerspdata_corvgs,vgserspdata_corvgs,numTimes,numFreqs);
+    t_corvgs_MMage = t_corvgs_mixedmodel.age;
+    t_corvgs_MMtrialtype = t_corvgs_mixedmodel.trialtype;
+    t_corvgs_MMinteraction = t_corvgs_mixedmodel.interaction;
+    t_corvgs_MMintercept = t_corvgs_mixedmodel.intercept;
+    b_corvgs_MMage = b_corvgs_mixedmodel.age;
+    % TFCE on t-values
+    tfcescores_corvgs_MMage = limo_tfce(2,t_corvgs_MMage,[]);
+    tfcescores_corvgs_MMtrialtype = limo_tfce(2,t_corvgs_MMtrialtype,[]);
+    tfcescores_corvgs_MMinteraction = limo_tfce(2,t_corvgs_MMinteraction,[]);
+    tfcescores_corvgs_MMintercept = limo_tfce(2,t_corvgs_MMintercept,[]);
+    % Permute TFCE scores
+    permtfcescores_corvgs_MMage = calc_perm_tfce_2d(t_corvgs_MMage,1000);
+    permtfcescores_corvgs_MMtrialtype = calc_perm_tfce_2d(t_corvgs_MMtrialtype,1000);
+    permtfcescores_corvgs_MMinteraction = calc_perm_tfce_2d(t_corvgs_MMinteraction,1000);
+    permtfcescores_corvgs_MMintercept = calc_perm_tfce_2d(t_corvgs_MMintercept,1000);
+    % Find significant clusters
+    [~,mask_corvgs_MMage] = calc_thres_mask_tfclusters_2d(tfcescores_corvgs_MMage,permtfcescores_corvgs_MMage,0.05);
+    [~,mask_corvgs_MMtrialtype] = calc_thres_mask_tfclusters_2d(tfcescores_corvgs_MMtrialtype,permtfcescores_corvgs_MMtrialtype,0.05);
+    [~,mask_corvgs_MMinteraction] = calc_thres_mask_tfclusters_2d(tfcescores_corvgs_MMinteraction,permtfcescores_corvgs_MMinteraction,0.05);
+    [~,mask_corvgs_MMintercept] = calc_thres_mask_tfclusters_2d(tfcescores_corvgs_MMintercept,permtfcescores_corvgs_MMintercept,0.05);
+    % save outputs
+    save('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/corvgsMixedModelClusters.mat','b_corvgs_mixedmodel','t_corvgs_mixedmodel','p_corvgs_mixedmodel','tfcescores_corvgs_MMage',...
+        'tfcescores_corvgs_MMtrialtype','tfcescores_corvgs_MMinteraction','tfcescores_corvgs_MMintercept','mask_corvgs_MMage','mask_corvgs_MMtrialtype','mask_corvgs_MMinteraction','mask_corvgs_MMintercept')
+end
 
+if PLOT
+    figure;
+    surf(times,freqs,mask_corvgs_MMage.*b_corvgs_MMage,'EdgeColor','none')
+    view(2)
+    hold on
+    xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
+    C=colorbar;
+    C.Label.String = 'Age Coefficient (slope)';
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Correct AS & VGS: Main Effect of Age');
+    subtitle('F-row electrodes')
+
+    figure;
+    surf(times,freqs,mask_corvgs_MMtrialtype.*t_corvgs_MMtrialtype,'EdgeColor','none')
+    view(2)
+    hold on
+    xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
+    C=colorbar;
+    C.Label.String = 't stat';
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Correct AS & VGS: Main Effect of Trial Type');
+    subtitle('F-row electrodes')
+
+    figure;
+    surf(times,freqs,mask_corvgs_MMinteraction.*t_corvgs_MMinteraction,'EdgeColor','none')
+    view(2)
+    hold on
+    xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
+    C=colorbar;
+    C.Label.String = 't stat';
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Correct AS & VGS: Interaction Effect (Age*Trial Type)');
+    subtitle('F-row electrodes')
+    
+    figure;
+    surf(times,freqs,mask_corvgs_MMintercept.*t_corvgs_MMintercept,'EdgeColor','none')
+    view(2)
+    hold on
+    xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
+    C=colorbar;
+    C.Label.String = 't stat';
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Correct AS & VGS: Group Activation');
+    subtitle('F-row electrodes')
+end
 
 %% Correct vs. Error Trials
 % Match IDs from correct AS and erroc corrected AS trials
@@ -393,48 +449,13 @@ errcorerspdata_corerrcor = [];
 for idxCOR = 1:size(corIDmatrix_viable,1)
    currentSub = corIDmatrix_viable(idxCOR,1);
    currentDate = corIDmatrix_viable(idxCOR,2);
-   idxERRCOR = find(errcorIDmatrix(:,1)==currentSub & errcorIDmatrix(:,2) == currentDate);
+   idxERRCOR = find(errcorIDmatrix_viable(:,1)==currentSub & errcorIDmatrix_viable(:,2) == currentDate);
    if ~isempty(idxERRCOR) % there is a matching ID and date
        corerrcorIDmatrix(end+1,:) = corIDmatrix_viable(idxCOR,:);
        corerspdata_corerrcor(end+1,:,:) = corerspdata_viable_frow(idxCOR,:,:);
        errcorerspdata_corerrcor(end+1,:,:) = errcorerspdata_viable_frow(idxERRCOR,:,:);
    end
 end
-T = table('Size',[size(corerrcorIDmatrix,1) 3],'VariableTypes',{'double','double','double'},...
-    'VariableNames',{'id','visit','power'});
-T.id = corerrcorIDmatrix(:,1);
-T.visit = corerrcorIDmatrix(:,4);
-
-if exist('corerrcorGroupActClusters.mat','file')
-    fprintf('Computed correct vs. error corrected group activation clusters; loading')
-    load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/corerrcorGroupActClusters.mat')
-else
-    % Difference ERSP data to run linear model on for activation
-    differspdata_corerrcor = corerspdata_corerrcor - errcorerspdata_corerrcor;
-    % Run group activation linear model
-    [b_corerrcor_groupact,t_corerrcor_groupact,p_corerrcor_groupact] = calc_ersp_groupact(T,differspdata_corerrcor,numTimes,numFreqs);
-    % TFCE on t-values
-    tfcescores_corerrcor_groupact = limo_tfce(2,t_corerrcor_groupact,[]);
-    % Permute TFCE scores
-    permtfcescores_corerrcor_groupact = limo_tfce(2,t_corerrcor_groupact,[]);
-    % find significant clusters
-    [~,mask_corerrcor_groupact] = calc_thres_mask_tfclusters_2d(tfcescores_corerrcor_groupact,permtfcescores_corerrcor_groupact,0.05);
-    % save outputs
-    save('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/corerrcorGroupActClusters.mat','b_corerrcor_groupact','t_corerrcor_groupact','p_corerrcor_groupact','tfcescores_corerrcor_groupact','mask_corerrcor_groupact')
-end
-
-% Plot t-values with mask
-figure;
-surf(times,freqs,mask_corerrcor_groupact.*t_corerrcor_groupact,'EdgeColor','none')
-C = colorbar;
-C.Label.String = 't stat';
-view(2)
-hold on
-xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
-xlabel('Time (ms)')
-ylabel('Frequency (Hz)')
-title('Error AS vs. VGS Trials Group Activation')
-subtitle('F-row electrodes')
 
 %% Inverse Age effects, Trial Type effects and Interaction for Correct vs. Error Trials
 % Power ~ TrialType + InvAge + TrialType*InvAge + (1 | ID) @ each time-frequency point
@@ -447,6 +468,73 @@ T.invage = [1./corerrcorIDmatrix(:,3); 1./corerrcorIDmatrix(:,3)];
 T.trialtype =[repmat("cor",size(corerrcorIDmatrix,1),1);repmat("errcor",size(corerrcorIDmatrix,1),1)];
 T.trialtype = categorical(T.trialtype);
 
-% Run linear mixed model
-[b_corerrcor_mixedmodel,t_corerrcor_mixedmodel,p_corerrcor_mixedmodel] = calc_ersp_linearmixedmodel(T,corerspdata_corerrcor,errcorerspdata_corerrcor,numTimes,numFreqs);
+if exist('corerrcorMixedModelClusters.mat','file')
+    fprintf('Computed Correct vs. Error Mixed Model clusters; loading\n')
+    load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/corerrcorMixedModelClusters.mat')
+    t_corerrcor_MMage = t_corerrcor_mixedmodel.age;
+    t_corerrcor_MMtrialtype = t_corerrcor_mixedmodel.trialtype;
+    t_corerrcor_MMinteraction = t_corerrcor_mixedmodel.interaction;
+    b_corerrcor_MMage = b_corerrcor_mixedmodel.age;
+    t_corerrcor_MMintercept = t_corerrcor_mixedmodel.intercept;
+else
+    % Run linear mixed model
+    [b_corerrcor_mixedmodel,t_corerrcor_mixedmodel,p_corerrcor_mixedmodel] = calc_ersp_linearmixedmodel(T,corerspdata_corerrcor,errcorerspdata_corerrcor,numTimes,numFreqs);
+    t_corerrcor_MMage = t_corerrcor_mixedmodel.age;
+    t_corerrcor_MMtrialtype = t_corerrcor_mixedmodel.trialtype;
+    t_corerrcor_MMinteraction = t_corerrcor_mixedmodel.interaction;
+    t_corerrcor_MMintercept = t_corerrcor_mixedmodel.intercept;
+    b_corerrcor_MMage = b_corerrcor_mixedmodel.age;
+    % TFCE on t-values
+    tfcescores_corerrcor_MMage = limo_tfce(2,t_corerrcor_MMage,[]);
+    tfcescores_corerrcor_MMtrialtype = limo_tfce(2,t_corerrcor_MMtrialtype,[]);
+    tfcescores_corerrcor_MMinteraction = limo_tfce(2,t_corerrcor_MMinteraction,[]);
+    tfcescores_corerrcor_MMintercept = limo_tfce(2,t_corerrcor_MMintercept,[]);
+    % Permute TFCE scores
+    permtfcescores_corerrcor_MMage = calc_perm_tfce_2d(t_corerrcor_MMage,1000);
+    permtfcescores_corerrcor_MMtrialtype = calc_perm_tfce_2d(t_corerrcor_MMtrialtype,1000);
+    permtfcescores_corerrcor_MMinteraction = calc_perm_tfce_2d(t_corerrcor_MMinteraction,1000);
+    permtfcescores_corerrcor_MMintercept = calc_perm_tfce_2d(t_corerrcor_MMintercept,1000);
+    % Find significant clusters
+    [~,mask_corerrcor_MMage] = calc_thres_mask_tfclusters_2d(tfcescores_corerrcor_MMage,permtfcescores_corerrcor_MMage,0.05);
+    [~,mask_corerrcor_MMtrialtype] = calc_thres_mask_tfclusters_2d(tfcescores_corerrcor_MMtrialtype,permtfcescores_corerrcor_MMtrialtype,0.05);
+    [~,mask_corerrcor_MMinteraction] = calc_thres_mask_tfclusters_2d(tfcescores_corerrcor_MMinteraction,permtfcescores_corerrcor_MMinteraction,0.05);
+    [~,mask_corerrcor_MMintercept] = calc_thres_mask_tfclusters_2d(tfcescores_corerrcor_MMintercept,permtfcescores_corerrcor_MMintercept,0.05);
+    % save outputs
+    save('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/corerrcorMixedModelClusters.mat','b_corerrcor_mixedmodel','t_corerrcor_mixedmodel','p_corerrcor_mixedmodel','tfcescores_corerrcor_MMage',...
+        'tfcescores_corerrcor_MMtrialtype','tfcescores_corerrcor_MMinteraction','tfcescores_corerrcor_MMintercept','mask_corerrcor_MMage','mask_corerrcor_MMtrialtype','mask_corerrcor_MMinteraction','mask_corerrcorMMintercept')
+end
 
+if PLOT
+    figure;
+    surf(times,freqs,mask_corerrcor_MMage.*b_corerrcor_MMage,'EdgeColor','none')
+    view(2)
+    hold on
+    xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
+    C=colorbar;
+    C.Label.String = 'Age Coefficient (slope)';
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Correct AS & Error AS: Main Effect of Age');
+    subtitle('F-row electrodes')
+
+    figure;
+    surf(times,freqs,mask_corerrcor_MMtrialtype.*t_corerrcor_MMtrialtype,'EdgeColor','none')
+    view(2)
+    hold on
+    xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
+    C=colorbar;
+    C.Label.String = 't stat';
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Correct AS & Error AS: Main Effect of Trial Type');
+    subtitle('F-row electrodes')
+
+    figure;
+    surf(times,freqs,mask_corerrcor_MMinteraction.*t_corerrcor_MMinteraction,'EdgeColor','none')
+    view(2)
+    hold on
+    xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
+    C=colorbar;
+    C.Label.String = 't stat';
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Correct AS & Error AS: Interaction Effect (Age*Trial Type)');
+    subtitle('F-row electrodes')
+end
