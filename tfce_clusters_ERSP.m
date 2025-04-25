@@ -48,7 +48,7 @@ for currentSub = 1:length(corIDs)
 end
 
 % Average across F-row
-corerspdata_viable_frow = squeeze(mean(corerspdata_viable(:,[4 5 6 7 37 38 39 40],:,:),2));
+corerspdata_viable_frow = squeeze(mean(corerspdata_viable(:,[4 5 6 7 37 38 39 40 41],:,:),2));
 
 %% Group Activation- Correct Trials
 numTimes = length(times);
@@ -79,15 +79,21 @@ if PLOT
     % Plot t-values with mask
     figure;
     surf(times,freqs,mask_cor_groupact.*t_cor_groupact,'EdgeColor','none')
-    C = colorbar;
-    C.Label.String = 't stat';
-    view(2)
-    hold on
+    map = colormap('parula'); map(128:129,:) = repmat(0.5,2,3); colormap(map)
+    C = colorbar; caxis([-7 7]); C.Label.String = 't statistic';
+    view(2); hold on
     xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
-    xlabel('Time (ms)')
-    ylabel('Frequency (Hz)')
-    title('Correct AS Trials Group Activation')
-    subtitle('F-row electrodes')
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Correct AS Trials Group Activation'); subtitle('F-row electrodes')
+
+    % Plot t-values without mask
+    figure;
+    surf(times,freqs,t_cor_groupact,'EdgeColor','none')
+    C = colorbar; caxis([-7 7]); C.Label.String = 't statistic';
+    view(2); hold on
+    xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Correct AS Trials Group Activation'); subtitle('F-row electrodes')
 end
 %% Inverse Age Effects- Correct Trials
 T = table('Size',[size(corIDmatrix_viable,1) 4],'VariableTypes',{'double','double','double','double'},...
@@ -113,18 +119,24 @@ else
 end
 
 if PLOT
-    % Plot age coefficients with mask
+    % Plot t stat with mask
     figure;
-    surf(times,freqs,mask_cor_invage.*b_cor_invage,'EdgeColor','none')
-    C = colorbar;
-    C.Label.String = 'Age Coefficient (slope)';
-    view(2)
-    hold on
+    surf(times,freqs,mask_cor_invage.*t_cor_invage,'EdgeColor','none')
+    map = colormap('parula'); map(128:129,:) = repmat(0.5,2,3); colormap(map)
+    C = colorbar; C.Label.String = 't statistic'; caxis([-3.5 3.5])
+    view(2); hold on
     xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
-    xlabel('Time (ms)')
-    ylabel('Frequency (Hz)')
-    title('Correct AS Trials Age Effects')
-    subtitle('F-row electrodes')
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Correct AS Trials Age Effects'); subtitle('F-row electrodes')
+
+    % Plot t stat without mask
+    figure;
+    surf(times,freqs,t_cor_invage,'EdgeColor','none')
+    C = colorbar; C.Label.String = 't statistic'; caxis([-3.5 3.5])
+    view(2); hold on
+    xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Correct AS Trials Age Effects'); subtitle('F-row electrodes')
 end
 %% Error Corrected AS trials
 % load in ERSP data
@@ -160,7 +172,7 @@ for currentSub = 1:length(corIDs)
     end
 end
 % Average across F-row
-errcorerspdata_viable_frow = squeeze(mean(errcorerspdata_viable(:,[4 5 6 7 37 38 39 40],:,:),2));
+errcorerspdata_viable_frow = squeeze(mean(errcorerspdata_viable(:,[4 5 6 7 37 38 39 40 41],:,:),2));
 
 %% Group Activation- Error Trials
 numTimes = length(times);
@@ -190,15 +202,21 @@ if PLOT
     % Plot t-values with mask
     figure;
     surf(times,freqs,mask_errcor_groupact.*t_errcor_groupact,'EdgeColor','none')
-    C = colorbar;
-    C.Label.String = 't stat';
-    view(2)
-    hold on
+    map = colormap('parula');map(128:129,:) = repmat(0.5,2,3); colormap(map)
+    C = colorbar; C.Label.String = 't statistic'; caxis([-5 5])
+    view(2); hold on
     xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
-    xlabel('Time (ms)')
-    ylabel('Frequency (Hz)')
-    title('Error AS Trials Group Activation')
-    subtitle('F-row electrodes')
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Error AS Trials Group Activation'); subtitle('F-row electrodes')
+
+    % Plot t-values without mask
+    figure;
+    surf(times,freqs,t_errcor_groupact,'EdgeColor','none')
+    C = colorbar; C.Label.String = 't statistic'; caxis([-5 5])
+    view(2); hold on
+    xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Error AS Trials Group Activation'); subtitle('F-row electrodes')
 end
 
 %% Inverse Age Effects- Error Trials
@@ -225,18 +243,24 @@ else
 end
 
 if PLOT
-    % Plot age coefficients with mask
+    % Plot t stat with mask
     figure;
-    surf(times,freqs,mask_errcor_invage.*b_errcor_invage,'EdgeColor','none')
-    C = colorbar;
-    C.Label.String = 'Age Coefficient (slope)';
-    view(2)
-    hold on
+    surf(times,freqs,mask_errcor_invage.*t_errcor_invage,'EdgeColor','none')
+    map = colormap('parula'); map(128:129,:) = repmat(0.5,2,3); colormap(map)
+    C = colorbar; C.Label.String = 't statistic'; caxis([-2.5 2.5])
+    view(2); hold on
     xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
-    xlabel('Time (ms)')
-    ylabel('Frequency (Hz)')
-    title('Error AS Trials Age Effects')
-    subtitle('F-row electrodes')
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Error AS Trials Age Effects'); subtitle('F-row electrodes')
+
+    % Plot t stat without mask
+    figure;
+    surf(times,freqs,t_errcor_invage,'EdgeColor','none')
+    C = colorbar; C.Label.String = 't statistic'; caxis([-2.5 2.5])
+    view(2); hold on
+    xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Error AS Trials Age Effects'); subtitle('F-row electrodes')
 end
 %% VGS Trials
 % load in ERSP data
@@ -255,7 +279,7 @@ for currentSub = 1:length(vgsIDs)
     end
 end
 % Average across F-row
-vgserspdata_frow = squeeze(mean(vgserspdata(:,[4 5 6 7 37 38 39 40],:,:),2));
+vgserspdata_frow = squeeze(mean(vgserspdata(:,[4 5 6 7 37 38 39 40 41],:,:),2));
 %% Group Activation- VGS Trials
 numTimes = length(times);
 numFreqs = length(freqs);
@@ -285,15 +309,21 @@ if PLOT
     % Plot t-values with mask
     figure;
     surf(times,freqs,mask_vgs_groupact.*t_vgs_groupact,'EdgeColor','none')
-    C = colorbar;
-    C.Label.String = 't stat';
-    view(2)
-    hold on
+    map = colormap('parula'); map(128:129,:) = repmat(0.5,2,3);colormap(map)
+    C = colorbar; C.Label.String = 't statistic';caxis([-16 16])
+    view(2); hold on
     xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
-    xlabel('Time (ms)')
-    ylabel('Frequency (Hz)')
-    title('VGS Trials Group Activation')
-    subtitle('F-row electrodes')
+    xlabel('Time (ms)');ylabel('Frequency (Hz)')
+    title('VGS Trials Group Activation'); subtitle('F-row electrodes')
+
+    % Plot t-values without mask
+    figure;
+    surf(times,freqs,t_vgs_groupact,'EdgeColor','none')
+    C = colorbar; C.Label.String = 't statistic';caxis([-16 16])
+    view(2); hold on
+    xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
+    xlabel('Time (ms)');ylabel('Frequency (Hz)')
+    title('VGS Trials Group Activation'); subtitle('F-row electrodes')
 end
 %% Inverse Age Effects- VGS Trials
 T = table('Size',[size(vgsIDmatrix,1) 4],'VariableTypes',{'double','double','double','double'},...
@@ -319,18 +349,24 @@ else
 end
 
 if PLOT
-    % Plot f-values with mask
+    % Plot t-values with mask
     figure;
-    surf(times,freqs,mask_vgs_invage.*b_vgs_invage,'EdgeColor','none')
-    C = colorbar;
-    C.Label.String = 'Age Coefficient (slope)';
-    view(2)
-    hold on
+    surf(times,freqs,mask_vgs_invage.*t_vgs_invage,'EdgeColor','none')
+    map = colormap('parula'); map(128:129,:) = repmat(0.5,2,3);colormap(map)
+    C = colorbar; C.Label.String = 't statistic';caxis([-3 3])
+    view(2); hold on
     xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
-    xlabel('Time (ms)')
-    ylabel('Frequency (Hz)')
-    title('VGS Trials Age Effects')
-    subtitle('F-row electrodes')
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('VGS Trials Age Effects');subtitle('F-row electrodes')
+
+    % Plot t-values without mask
+    figure;
+    surf(times,freqs,t_vgs_invage,'EdgeColor','none')
+    C = colorbar; C.Label.String = 't statistic';caxis([-3 3])
+    view(2); hold on
+    xline(0,'--r','LineWidth',1.5);xline(500,'--k','LineWidth',1.5)
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('VGS Trials Age Effects');subtitle('F-row electrodes')
 end
 
 %% Correct vs. VGS Trials 
@@ -348,7 +384,53 @@ for idxVGS = 1:size(vgsIDmatrix,1)
        corerspdata_corvgs(end+1,:,:) = corerspdata_viable_frow(idxAS,:,:);
    end
 end
+%% Linear mixed effects model for differences in activation between correct and vgs
+% Power ~ 1 + TrialType + (1 | ID) @ each time-frequency point
+% set up table for each time-frequency point
+T = table('Size',[2*size(corvgsIDmatrix,1) 4],'VariableTypes',{'double','double','categorical','double'},...
+    'VariableNames',{'id','visit','trialtype','power'});
+T.id = [corvgsIDmatrix(:,1);corvgsIDmatrix(:,1)];
+T.visit = [corvgsIDmatrix(:,4);corvgsIDmatrix(:,4)];
+T.trialtype =[repmat("cor",size(corvgsIDmatrix,1),1);repmat("vgs",size(corvgsIDmatrix,1),1)];
+T.trialtype = categorical(T.trialtype);
+if exist('corvgsGroupActClusters.mat','file')
+    fprintf('Computed Correct vs. VGS Group Act clusters; loading\n')
+    load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/corvgsGroupActClusters.mat')
+else
+    % Run linear mixed model
+    [b_corvgs_groupact,t_corvgs_groupact,p_corvgs_groupact] = calc_ersp_trialtype_groupact(T,corerspdata_corvgs,vgserspdata_corvgs,numTimes,numFreqs);
+    % TFCE on t-values and F-values (anova)
+    tfcescores_corvgs_groupact.trialtype = limo_tfce(2,t_corvgs_groupact.trialtype,[]);
+    % Permute TFCE scores
+    permtfcescores_corvgs_groupact.trialtype = calc_perm_tfce_2d(t_corvgs_groupact.trialtype,1000);
+    % Find significant clusters
+    [~,mask_corvgs_groupact.trialtype] = calc_thres_mask_tfclusters_2d(tfcescores_corvgs_groupact.trialtype,permtfcescores_corvgs_groupact.trialtype,0.05);
+    % save outputs
+    save('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/corvgsGroupActClusters.mat','b_corvgs_groupact','t_corvgs_groupact','p_corvgs_groupact','tfcescores_corvgs_groupact',...
+        'mask_corvgs_groupact')
+end
 
+if PLOT
+    % plot trial type t-vals with mask
+    figure;
+    surf(times,freqs,mask_corvgs_groupact.trialtype.*t_corvgs_groupact.trialtype,'EdgeColor','none')
+    map = colormap('parula'); map(128:129,:) = repmat(0.5,2,3); colormap(map)
+    view(2); hold on
+    xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
+    C=colorbar; C.Label.String = 't statistic';caxis([-5 5])
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Correct AS vs. VGS: Group Activation');subtitle('F-row electrodes')
+
+    % plot trial type t-vals without mask
+    figure;
+    surf(times,freqs,t_corvgs_groupact.trialtype,'EdgeColor','none')
+    view(2); hold on
+    xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
+    C=colorbar; C.Label.String = 't statistic';caxis([-5 5])
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Correct AS vs. VGS: Group Activation');subtitle('F-row electrodes')
+end
+    
 %% Inverse Age effects, Trial Type effects and Interaction (Correct vs. VGS)
 % Power ~ 1+ TrialType + InvAge + TrialType*InvAge + (1 | ID) @ each time-frequency point
 % set up table for each time-frequency point
@@ -363,82 +445,83 @@ T.trialtype = categorical(T.trialtype);
 if exist('corvgsMixedModelClusters.mat','file')
     fprintf('Computed Correct vs. VGS Mixed Model clusters; loading\n')
     load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/corvgsMixedModelClusters.mat')
-    t_corvgs_MMtrialtype = t_corvgs_mixedmodel.trialtype;
-    t_corvgs_MMinteraction = t_corvgs_mixedmodel.interaction;
-    t_corvgs_MMintercept = t_corvgs_mixedmodel.intercept;
-    b_corvgs_MMage = b_corvgs_mixedmodel.age;
 else
     % Run linear mixed model
     [b_corvgs_mixedmodel,t_corvgs_mixedmodel,p_corvgs_mixedmodel] = calc_ersp_linearmixedmodel(T,corerspdata_corvgs,vgserspdata_corvgs,numTimes,numFreqs);
-    t_corvgs_MMage = t_corvgs_mixedmodel.age;
-    t_corvgs_MMtrialtype = t_corvgs_mixedmodel.trialtype;
-    t_corvgs_MMinteraction = t_corvgs_mixedmodel.interaction;
-    t_corvgs_MMintercept = t_corvgs_mixedmodel.intercept;
-    b_corvgs_MMage = b_corvgs_mixedmodel.age;
     % TFCE on t-values
-    tfcescores_corvgs_MMage = limo_tfce(2,t_corvgs_MMage,[]);
-    tfcescores_corvgs_MMtrialtype = limo_tfce(2,t_corvgs_MMtrialtype,[]);
-    tfcescores_corvgs_MMinteraction = limo_tfce(2,t_corvgs_MMinteraction,[]);
-    tfcescores_corvgs_MMintercept = limo_tfce(2,t_corvgs_MMintercept,[]);
+    tfcescores_corvgs_mixedmodel.age = limo_tfce(2,t_corvgs_mixedmodel.age,[]);
+    tfcescores_corvgs_mixedmodel.trialtype = limo_tfce(2,t_corvgs_mixedmodel.trialtype,[]);
+    tfcescores_corvgs_mixedmodel.interaction = limo_tfce(2,t_corvgs_mixedmodel.interaction,[]);
     % Permute TFCE scores
-    permtfcescores_corvgs_MMage = calc_perm_tfce_2d(t_corvgs_MMage,1000);
-    permtfcescores_corvgs_MMtrialtype = calc_perm_tfce_2d(t_corvgs_MMtrialtype,1000);
-    permtfcescores_corvgs_MMinteraction = calc_perm_tfce_2d(t_corvgs_MMinteraction,1000);
-    permtfcescores_corvgs_MMintercept = calc_perm_tfce_2d(t_corvgs_MMintercept,1000);
+    permtfcescores_corvgs_mixedmodel.age = calc_perm_tfce_2d(t_corvgs_mixedmodel.age,1000);
+    permtfcescores_corvgs_mixedmodel.trialtype = calc_perm_tfce_2d(t_corvgs_mixedmodel.trialtype,1000);
+    permtfcescores_corvgs_mixedmodel.interaction = calc_perm_tfce_2d(t_corvgs_mixedmodel.interaction,1000);
     % Find significant clusters
-    [~,mask_corvgs_MMage] = calc_thres_mask_tfclusters_2d(tfcescores_corvgs_MMage,permtfcescores_corvgs_MMage,0.05);
-    [~,mask_corvgs_MMtrialtype] = calc_thres_mask_tfclusters_2d(tfcescores_corvgs_MMtrialtype,permtfcescores_corvgs_MMtrialtype,0.05);
-    [~,mask_corvgs_MMinteraction] = calc_thres_mask_tfclusters_2d(tfcescores_corvgs_MMinteraction,permtfcescores_corvgs_MMinteraction,0.05);
-    [~,mask_corvgs_MMintercept] = calc_thres_mask_tfclusters_2d(tfcescores_corvgs_MMintercept,permtfcescores_corvgs_MMintercept,0.05);
+    [~,mask_corvgs_mixedmodel.age] = calc_thres_mask_tfclusters_2d(tfcescores_corvgs_mixedmodel.age,permtfcescores_corvgs_mixedmodel.age,0.05);
+    [~,mask_corvgs_mixedmodel.trialtype] = calc_thres_mask_tfclusters_2d(tfcescores_corvgs_mixedmodel.trialtype,permtfcescores_corvgs_mixedmodel.trialtype,0.05);
+    [~,mask_corvgs_mixedmodel.interaction] = calc_thres_mask_tfclusters_2d(tfcescores_corvgs_mixedmodel.interaction,permtfcescores_corvgs_mixedmodel.interaction,0.05);
     % save outputs
-    save('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/corvgsMixedModelClusters.mat','b_corvgs_mixedmodel','t_corvgs_mixedmodel','p_corvgs_mixedmodel','tfcescores_corvgs_MMage',...
-        'tfcescores_corvgs_MMtrialtype','tfcescores_corvgs_MMinteraction','tfcescores_corvgs_MMintercept','mask_corvgs_MMage','mask_corvgs_MMtrialtype','mask_corvgs_MMinteraction','mask_corvgs_MMintercept')
+    save('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/corvgsMixedModelClusters.mat','b_corvgs_mixedmodel','t_corvgs_mixedmodel','p_corvgs_mixedmodel','tfcescores_corvgs_mixedmodel',...
+        'mask_corvgs_mixedmodel')
 end
 
 if PLOT
+    % plot age t-vals with mask
     figure;
-    surf(times,freqs,mask_corvgs_MMage.*b_corvgs_MMage,'EdgeColor','none')
-    view(2)
-    hold on
+    surf(times,freqs,mask_corvgs_mixedmodel.age.*t_corvgs_mixedmodel.age,'EdgeColor','none')
+    map = colormap('parula'); map(128:129,:) = repmat(0.5,2,3);colormap(map)
+    view(2); hold on
     xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
-    C=colorbar;
-    C.Label.String = 'Age Coefficient (slope)';
+    C=colorbar; C.Label.String = 't statistic';caxis([-3.5 3.5])
     xlabel('Time (ms)'); ylabel('Frequency (Hz)')
-    title('Correct AS & VGS: Main Effect of Age');
-    subtitle('F-row electrodes')
+    title('Correct AS & VGS: Main Effect of Age'); subtitle('F-row electrodes')
 
+    % plot age t-vals without mask
     figure;
-    surf(times,freqs,mask_corvgs_MMtrialtype.*t_corvgs_MMtrialtype,'EdgeColor','none')
-    view(2)
-    hold on
+    surf(times,freqs,t_corvgs_mixedmodel.age,'EdgeColor','none')
+    view(2); hold on
     xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
-    C=colorbar;
-    C.Label.String = 't stat';
+    C=colorbar; C.Label.String = 't statistic';caxis([-3.5 3.5])
     xlabel('Time (ms)'); ylabel('Frequency (Hz)')
-    title('Correct AS & VGS: Main Effect of Trial Type');
-    subtitle('F-row electrodes')
+    title('Correct AS & VGS: Main Effect of Age'); subtitle('F-row electrodes')
 
+    % plot trial type t-vals with mask
     figure;
-    surf(times,freqs,mask_corvgs_MMinteraction.*t_corvgs_MMinteraction,'EdgeColor','none')
-    view(2)
-    hold on
+    surf(times,freqs,mask_corvgs_mixedmodel.trialtype.*t_corvgs_mixedmodel.trialtype,'EdgeColor','none')
+    map = colormap('parula'); map(128:129,:) = repmat(0.5,2,3); colormap(map)
+    view(2); hold on
     xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
-    C=colorbar;
-    C.Label.String = 't stat';
+    C=colorbar; C.Label.String = 't statistic';caxis([-5 5])
     xlabel('Time (ms)'); ylabel('Frequency (Hz)')
-    title('Correct AS & VGS: Interaction Effect (Age*Trial Type)');
-    subtitle('F-row electrodes')
+    title('Correct AS & VGS: Main Effect of Trial Type');subtitle('F-row electrodes')
+
+    % plot trial type t-vals without mask
+    figure;
+    surf(times,freqs,t_corvgs_mixedmodel.trialtype,'EdgeColor','none')
+    view(2); hold on
+    xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
+    C=colorbar; C.Label.String = 't statistic';caxis([-5 5])
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Correct AS & VGS: Main Effect of Trial Type');subtitle('F-row electrodes')
     
+    % plot interaction t-vals with mask
     figure;
-    surf(times,freqs,mask_corvgs_MMintercept.*t_corvgs_MMintercept,'EdgeColor','none')
-    view(2)
-    hold on
+    surf(times,freqs,mask_corvgs_mixedmodel.interaction.*t_corvgs_mixedmodel.interaction,'EdgeColor','none')
+    map = colormap('parula'); map(128:129,:) = repmat(0.5,2,3);colormap(map)
+    view(2); hold on
     xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
-    C=colorbar;
-    C.Label.String = 't stat';
+    C=colorbar;C.Label.String = 't statistic'; caxis([-3 3])
     xlabel('Time (ms)'); ylabel('Frequency (Hz)')
-    title('Correct AS & VGS: Group Activation');
-    subtitle('F-row electrodes')
+    title('Correct AS & VGS: Interaction Effect (Inverse Age*Trial Type)');subtitle('F-row electrodes')
+
+    % plot interaction t-vals without mask
+    figure;
+    surf(times,freqs,t_corvgs_mixedmodel.interaction,'EdgeColor','none')
+    view(2); hold on
+    xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
+    C=colorbar;C.Label.String = 't statistic'; caxis([-3 3])
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Correct AS & VGS: Interaction Effect (Inverse Age*Trial Type)');subtitle('F-row electrodes')
 end
 
 %% Correct vs. Error Trials
@@ -456,7 +539,52 @@ for idxCOR = 1:size(corIDmatrix_viable,1)
        errcorerspdata_corerrcor(end+1,:,:) = errcorerspdata_viable_frow(idxERRCOR,:,:);
    end
 end
+%% Trial Type Group Activation Correct vs. Error Trials
+% Power ~ TrialType + InvAge + TrialType*InvAge + (1 | ID) @ each time-frequency point
+% set up table for each time-frequency point
+T = table('Size',[2*size(corerrcorIDmatrix,1) 4],'VariableTypes',{'double','double','categorical','double'},...
+    'VariableNames',{'id','visit','trialtype','power'});
+T.id = [corerrcorIDmatrix(:,1);corerrcorIDmatrix(:,1)];
+T.visit = [corerrcorIDmatrix(:,4);corerrcorIDmatrix(:,4)];
+T.trialtype =[repmat("cor",size(corerrcorIDmatrix,1),1);repmat("errcor",size(corerrcorIDmatrix,1),1)];
+T.trialtype = categorical(T.trialtype);
+if exist('corerrcorGroupActClusters.mat','file')
+    fprintf('Computed Correct vs. Error Group Activation clusters; loading\n')
+    load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/corerrcorGroupActClusters.mat')
+else
+    % Run linear mixed model
+    [b_corerrcor_groupact,t_corerrcor_groupact,p_corerrcor_groupact] = calc_ersp_trialtype_groupact(T,corerspdata_corerrcor,errcorerspdata_corerrcor,numTimes,numFreqs);
+    % TFCE on t-values
+    tfcescores_corerrcor_groupact.trialtype = limo_tfce(2,t_corerrcor_groupact.trialtype,[]);
+    % Permute TFCE scores
+    permtfcescores_corerrcor_groupact.trialtype = calc_perm_tfce_2d(t_corerrcor_groupact.trialtype,1000);
+    % Find significant clusters
+    [~,mask_corerrcor_groupact.trialtype] = calc_thres_mask_tfclusters_2d(tfcescores_corerrcor_groupact.trialtype,permtfcescores_corerrcor_groupact.trialtype,0.05);
+    % save outputs
+    save('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/corerrcorGroupActClusters.mat','b_corerrcor_groupact','t_corerrcor_groupact','p_corerrcor_groupact','tfcescores_corerrcor_groupact',...
+        'mask_corerrcor_groupact')
+end
 
+if PLOT
+    % trial type effect with mask
+    figure;
+    surf(times,freqs,mask_corerrcor_groupact.trialtype.*t_corerrcor_groupact.trialtype,'EdgeColor','none')
+    map = colormap('parula'); map(128:129,:) = repmat(0.5,2,3); colormap(map)
+    view(2); hold on
+    xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
+    C=colorbar;C.Label.String = 't statistic';caxis([-3 3])
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Correct AS vs. Error AS: Group Activation');subtitle('F-row electrodes')
+    
+    % trial type effect w/o mask
+    figure;
+    surf(times,freqs,t_corerrcor_groupact.trialtype,'EdgeColor','none')
+    view(2); hold on
+    xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
+    C=colorbar; C.Label.String = 't statistic'; caxis([-3 3])
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Correct AS vs. Error AS: Group Activation'); subtitle('F-row electrodes')
+end
 %% Inverse Age effects, Trial Type effects and Interaction for Correct vs. Error Trials
 % Power ~ TrialType + InvAge + TrialType*InvAge + (1 | ID) @ each time-frequency point
 % set up table for each time-frequency point
@@ -471,70 +599,82 @@ T.trialtype = categorical(T.trialtype);
 if exist('corerrcorMixedModelClusters.mat','file')
     fprintf('Computed Correct vs. Error Mixed Model clusters; loading\n')
     load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/corerrcorMixedModelClusters.mat')
-    t_corerrcor_MMage = t_corerrcor_mixedmodel.age;
-    t_corerrcor_MMtrialtype = t_corerrcor_mixedmodel.trialtype;
-    t_corerrcor_MMinteraction = t_corerrcor_mixedmodel.interaction;
-    b_corerrcor_MMage = b_corerrcor_mixedmodel.age;
-    t_corerrcor_MMintercept = t_corerrcor_mixedmodel.intercept;
 else
     % Run linear mixed model
     [b_corerrcor_mixedmodel,t_corerrcor_mixedmodel,p_corerrcor_mixedmodel] = calc_ersp_linearmixedmodel(T,corerspdata_corerrcor,errcorerspdata_corerrcor,numTimes,numFreqs);
-    t_corerrcor_MMage = t_corerrcor_mixedmodel.age;
-    t_corerrcor_MMtrialtype = t_corerrcor_mixedmodel.trialtype;
-    t_corerrcor_MMinteraction = t_corerrcor_mixedmodel.interaction;
-    t_corerrcor_MMintercept = t_corerrcor_mixedmodel.intercept;
-    b_corerrcor_MMage = b_corerrcor_mixedmodel.age;
     % TFCE on t-values
-    tfcescores_corerrcor_MMage = limo_tfce(2,t_corerrcor_MMage,[]);
-    tfcescores_corerrcor_MMtrialtype = limo_tfce(2,t_corerrcor_MMtrialtype,[]);
-    tfcescores_corerrcor_MMinteraction = limo_tfce(2,t_corerrcor_MMinteraction,[]);
-    tfcescores_corerrcor_MMintercept = limo_tfce(2,t_corerrcor_MMintercept,[]);
+    tfcescores_corerrcor_mixedmodel.age = limo_tfce(2,t_corerrcor_mixedmodel.age,[]);
+    tfcescores_corerrcor_mixedmodel.trialtype = limo_tfce(2,t_corerrcor_mixedmodel.trialtype,[]);
+    tfcescores_corerrcor_mixedmodel.interaction = limo_tfce(2,t_corerrcor_mixedmodel.interaction,[]);
     % Permute TFCE scores
-    permtfcescores_corerrcor_MMage = calc_perm_tfce_2d(t_corerrcor_MMage,1000);
-    permtfcescores_corerrcor_MMtrialtype = calc_perm_tfce_2d(t_corerrcor_MMtrialtype,1000);
-    permtfcescores_corerrcor_MMinteraction = calc_perm_tfce_2d(t_corerrcor_MMinteraction,1000);
-    permtfcescores_corerrcor_MMintercept = calc_perm_tfce_2d(t_corerrcor_MMintercept,1000);
+    permtfcescores_corerrcor_mixedmodel.age = calc_perm_tfce_2d(t_corerrcor_mixedmodel.age,1000);
+    permtfcescores_corerrcor_mixedmodel.trialtype = calc_perm_tfce_2d(t_corerrcor_mixedmodel.trialtype,1000);
+    permtfcescores_corerrcor_mixedmodel.interaction = calc_perm_tfce_2d(t_corerrcor_mixedmodel.interaction,1000);
     % Find significant clusters
-    [~,mask_corerrcor_MMage] = calc_thres_mask_tfclusters_2d(tfcescores_corerrcor_MMage,permtfcescores_corerrcor_MMage,0.05);
-    [~,mask_corerrcor_MMtrialtype] = calc_thres_mask_tfclusters_2d(tfcescores_corerrcor_MMtrialtype,permtfcescores_corerrcor_MMtrialtype,0.05);
-    [~,mask_corerrcor_MMinteraction] = calc_thres_mask_tfclusters_2d(tfcescores_corerrcor_MMinteraction,permtfcescores_corerrcor_MMinteraction,0.05);
-    [~,mask_corerrcor_MMintercept] = calc_thres_mask_tfclusters_2d(tfcescores_corerrcor_MMintercept,permtfcescores_corerrcor_MMintercept,0.05);
+    [~,mask_corerrcor_mixedmodel.age] = calc_thres_mask_tfclusters_2d(tfcescores_corerrcor_mixedmodel.age,permtfcescores_corerrcor_mixedmodel.age,0.05);
+    [~,mask_corerrcor_mixedmodel.trialtype] = calc_thres_mask_tfclusters_2d(tfcescores_corerrcor_mixedmodel.trialtype,permtfcescores_corerrcor_mixedmodel.trialtype,0.05);
+    [~,mask_corerrcor_mixedmodel.interaction] = calc_thres_mask_tfclusters_2d(tfcescores_corerrcor_mixedmodel.interaction,permtfcescores_corerrcor_mixedmodel.interaction,0.05);
     % save outputs
-    save('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/corerrcorMixedModelClusters.mat','b_corerrcor_mixedmodel','t_corerrcor_mixedmodel','p_corerrcor_mixedmodel','tfcescores_corerrcor_MMage',...
-        'tfcescores_corerrcor_MMtrialtype','tfcescores_corerrcor_MMinteraction','tfcescores_corerrcor_MMintercept','mask_corerrcor_MMage','mask_corerrcor_MMtrialtype','mask_corerrcor_MMinteraction','mask_corerrcorMMintercept')
+    save('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/corerrcorMixedModelClusters.mat','b_corerrcor_mixedmodel','t_corerrcor_mixedmodel','p_corerrcor_mixedmodel','tfcescores_corerrcor_mixedmodel',...
+        'mask_corerrcor_mixedmodel')
 end
 
 if PLOT
+    % age effects with mask
     figure;
-    surf(times,freqs,mask_corerrcor_MMage.*b_corerrcor_MMage,'EdgeColor','none')
-    view(2)
-    hold on
+    surf(times,freqs,mask_corerrcor_mixedmodel.age.*t_corerrcor_mixedmodel.age,'EdgeColor','none')
+    map = colormap('parula');
+    map(128:129,:) = repmat(0.5,2,3);colormap(map)
+    view(2); hold on
     xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
-    C=colorbar;
-    C.Label.String = 'Age Coefficient (slope)';
+    C=colorbar; C.Label.String = 't statistic'; caxis([-2 2])
     xlabel('Time (ms)'); ylabel('Frequency (Hz)')
-    title('Correct AS & Error AS: Main Effect of Age');
-    subtitle('F-row electrodes')
+    title('Correct AS & Error AS: Main Effect of Age');subtitle('F-row electrodes')
+    
+    % age effects w/o mask
+    figure;
+    surf(times,freqs,t_corerrcor_mixedmodel.age,'EdgeColor','none')
+    view(2); hold on
+    xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
+    C=colorbar; C.Label.String = 't statistic';caxis([-2 2])
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Correct AS & Error AS: Main Effect of Age');subtitle('F-row electrodes')
+    
+    % trial type effect with mask
+    figure;
+    surf(times,freqs,mask_corerrcor_mixedmodel.trialtype.*t_corerrcor_mixedmodel.trialtype,'EdgeColor','none')
+    map = colormap('parula'); map(128:129,:) = repmat(0.5,2,3); colormap(map)
+    view(2); hold on
+    xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
+    C=colorbar;C.Label.String = 't statistic';caxis([-3 3])
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Correct AS & Error AS: Main Effect of Trial Type');subtitle('F-row electrodes')
+    
+    % trial type effect w/o mask
+    figure;
+    surf(times,freqs,t_corerrcor_mixedmodel.trialtype,'EdgeColor','none')
+    view(2); hold on
+    xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
+    C=colorbar; C.Label.String = 't statistic'; caxis([-3 3])
+    xlabel('Time (ms)'); ylabel('Frequency (Hz)')
+    title('Correct AS & Error AS: Main Effect of Trial Type'); subtitle('F-row electrodes')
 
+    % interaction effect with mask
     figure;
-    surf(times,freqs,mask_corerrcor_MMtrialtype.*t_corerrcor_MMtrialtype,'EdgeColor','none')
-    view(2)
-    hold on
+    surf(times,freqs,mask_corerrcor_mixedmodel.interaction.*t_corerrcor_mixedmodel.interaction,'EdgeColor','none')
+    map = colormap('parula'); map(128:129,:) = repmat(0.5,2,3);colormap(map)
+    view(2);hold on
     xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
-    C=colorbar;
-    C.Label.String = 't stat';
+    C=colorbar;C.Label.String = 't statistic';caxis([-2.5 2.5])
     xlabel('Time (ms)'); ylabel('Frequency (Hz)')
-    title('Correct AS & Error AS: Main Effect of Trial Type');
-    subtitle('F-row electrodes')
-
+    title('Correct AS & Error AS: Interaction Effect (Inverse Age*Trial Type)');subtitle('F-row electrodes')
+    
+    % interaction effect w/o mask
     figure;
-    surf(times,freqs,mask_corerrcor_MMinteraction.*t_corerrcor_MMinteraction,'EdgeColor','none')
-    view(2)
-    hold on
+    surf(times,freqs,t_corerrcor_mixedmodel.interaction,'EdgeColor','none')
+    view(2); hold on
     xline(0,'--r','LineWidth',1.5); xline(500,'--k','LineWidth',1.5)
-    C=colorbar;
-    C.Label.String = 't stat';
+    C=colorbar; C.Label.String = 't statistic'; caxis([-2.5 2.5])
     xlabel('Time (ms)'); ylabel('Frequency (Hz)')
-    title('Correct AS & Error AS: Interaction Effect (Age*Trial Type)');
-    subtitle('F-row electrodes')
+    title('Correct AS & Error AS: Interaction Effect (Inverse Age*Trial Type)');subtitle('F-row electrodes')
 end

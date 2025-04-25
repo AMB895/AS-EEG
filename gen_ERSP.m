@@ -44,8 +44,8 @@ epochedname = '*_epochs_kept_cor.set';
 % Save ERSP path
 corerspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/CorrectTrials';
 corerspdataname = 'corERSPdata.mat';
+coritcdataname = 'corITCdata.mat';
 corsuberspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/CorrectTrials/SubjectERSP/';
-coridmatsavename = 'corIDinfo.csv';
 
 % Getting all epoched data files
 EEGfilenames = dir([epochedpath,epochedname]);
@@ -55,11 +55,14 @@ if exist(fullfile(corerspdatapath,corerspdataname),'file')
     fprintf('Already computed ERSP from all subjects; load from %s/%s\n',corerspdatapath,corerspdataname)
 else
     % setting up progress bar
-    f = waitbar(0,'Starting','Name','ERSP Progress');
+    f = waitbar(0,'Starting','Name','Correct AS ERSP Progress');
     % Defining allerspdata and IDmatrix and missing data array
     corerspdata = [];
     corIDmatrix = [];
     cormissingdata = [];
+    corpowbase = [];
+    coritcdata = [];
+    corsignalchange = [];
     for currentEEG = 1:size(EEGfilenames)
         % defining input into calc_ersp()
         filename = [EEGfilenames(currentEEG).name];
@@ -75,24 +78,34 @@ else
         subTable = merged7t_eeg(subIdx,:);
         
         % running calc_ersp for subject
-        [corsuberspdata,times,freqs,failcode,subID,scanDate,age,suberspdataname] = calc_ersp(epochedpath,filename,corsuberspdatapath,subTable,tempChanLabels,task);
+        [suberspdata,subitcdata,subpowbase,subsignalchange,times,freqs,failcode,subID,scanDate,age,suberspdataname,subitcdataname] = calc_ersp(epochedpath,filename,corsuberspdatapath,subTable,tempChanLabels);
         if isnan(failcode)
-            save(fullfile(corsuberspdatapath,suberspdataname),'corsuberspdata','times','freqs')
-            corerspdata(end+1,:,:,:) = corsuberspdata;
+            save(fullfile(corsuberspdatapath,suberspdataname),'suberspdata','subsignalchange','subpowbase','times','freqs')
+            save(fullfile(corsuberspdatapath,subitcdataname),'subitcdata')
+            corerspdata(end+1,:,:,:) = suberspdata;
+            coritcdata(end+1,:,:,:) = subitcdata;
+            corpowbase(end+1,:,:) = subpowbase;
+            corsignalchange(end+1,:,:,:) = subsignalchange;
             corIDmatrix(end+1,:) = [str2double(subID),str2double(scanDate),age];
         else
             cormissingdata(end+1,:) = [str2double(subID),str2double(scanDate),failcode];
         end
-        clear suberspdata
+        clear suberspdata subitcdata subpowbase subsignalchange
     end
     % Close waitbar
     close(f)
     
     % Save outputs
-    save(fullfile(corerspdatapath,corerspdataname),"corerspdata","times","freqs")
+    save(fullfile(corerspdatapath,corerspdataname),"corerspdata","corsignalchange","corpowbase","times","freqs")
     save(fullfile(corerspdatapath,'corIDmatrix.mat'),"corIDmatrix")
-    writematrix(corIDmatrix,fullfile(corerspdatapath,coridmatsavename))
     save(fullfile(corerspdatapath,'cormissingdata.mat'),'cormissingdata')
+    
+    % ITC data takes up much more memory, it may fail
+    try
+        save(fullfile(corerspdatapath,coritcdataname),"coritcdata")
+    catch e
+        fprintf('Failed saving Correct ITC data\n%s\n',e.message)
+    end
 end
 
 %% Error AS Trials
@@ -109,8 +122,8 @@ epochedname = '*_epochs_kept_errcor.set';
 % Save ERSP path
 errcorerspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/ErrorCorrectTrials';
 errcorerspdataname = 'errcorERSPdata.mat';
+errcoritcdataname = 'errcorITCdata.mat';
 errcorsuberspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/ErrorCorrectTrials/SubjectERSP/';
-errcoridmatsavename = 'errcorIDinfo.csv';
 
 % Getting all epoched data files
 EEGfilenames = dir([epochedpath,epochedname]);
@@ -120,12 +133,15 @@ if exist(fullfile(errcorerspdatapath,errcorerspdataname),'file')
     fprintf('Already computed ERSP from all subjects; load from %s/%s\n',errcorerspdatapath,errcorerspdataname)
 else
     % setting up progress bar
-    f = waitbar(0,'Starting','Name','ERSP Progress');
+    f = waitbar(0,'Starting','Name','Error AS ERSP Progress');
     
     % Defining allerspdata and IDmatrix and missing data array
     errcorerspdata = [];
     errcorIDmatrix = [];
     errcormissingdata = [];
+    errcorpowbase = [];
+    errcoritcdata = [];
+    errcorsignalchange = [];
     for currentEEG = 1:size(EEGfilenames)
         % defining input into calc_ersp()
         filename = [EEGfilenames(currentEEG).name];
@@ -141,24 +157,34 @@ else
         subTable = merged7t_eeg(subIdx,:);
         
         % running calc_ersp for subject
-        [errcorsuberspdata,times,freqs,failcode,subID,scanDate,age,suberspdataname] = calc_ersp(epochedpath,filename,errcorsuberspdatapath,subTable,tempChanLabels,task);
+        [suberspdata,subitcdata,subpowbase,subsignalchange,times,freqs,failcode,subID,scanDate,age,suberspdataname,subitcdataname] = calc_ersp(epochedpath,filename,errcorsuberspdatapath,subTable,tempChanLabels);
         if isnan(failcode)
-            save(fullfile(errcorsuberspdatapath,suberspdataname),'errcorsuberspdata','times','freqs')
-            errcorerspdata(end+1,:,:,:) = errcorsuberspdata;
+            save(fullfile(errcorsuberspdatapath,suberspdataname),'suberspdata','subsignalchange','subpowbase','times','freqs')
+            save(fullfile(errcorsuberspdatapath,subitcdataname),'subitcdata')
+            errcorerspdata(end+1,:,:,:) = suberspdata;
+            errcorpowbase(end+1,:,:) = subpowbase;
+            errcorsignalchange(end+1,:,:,:) = subsignalchange;
+            errcoritcdata(end+1,:,:,:,:) = subitcdata;
             errcorIDmatrix(end+1,:) = [str2double(subID),str2double(scanDate),age];
         else
             errcormissingdata(end+1,:) = [str2double(subID),str2double(scanDate),failcode];
         end
-        clear suberspdata
+        clear suberspdata subitcdata subpowbase subsignalchange
     end
     % Close waitbar
     close(f)
     
     % Save outputs
-    save(fullfile(errcorerspdatapath,errcorerspdataname),"errcorerspdata","times","freqs")
+    save(fullfile(errcorerspdatapath,errcorerspdataname),"errcorerspdata","errcorsignalchange","errcorpowbase","times","freqs")
     save(fullfile(errcorerspdatapath,'errcorIDmatrix.mat'),"errcorIDmatrix")
-    writematrix(errcorIDmatrix,fullfile(errcorerspdatapath,errcoridmatsavename))
     save(fullfile(errcorerspdatapath,'errcormissingdata.mat'),'errcormissingdata')
+    
+    % ITC data takes up much more memory, it may fail
+    try
+        save(fullfile(errcorerspdatapath,errcoritcdataname),"errcoritcdata")
+    catch e
+        fprintf('Failed saving Error ITC data\n%s\n',e.message)
+    end
 end
 
 %% VGS Trials
@@ -175,8 +201,8 @@ epochedname = '*_epochs_kept.set';
 % Save ERSP path
 vgserspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/vgs';
 vgserspdataname = 'vgsERSPdata.mat';
+vgsitcdataname = 'vgsITCdata.mat';
 vgssuberspdatapath = '/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/vgs/SubjectERSP/';
-vgsidmatsavename = 'vgsIDinfo.csv';
 
 % Getting all epoched data files
 EEGfilenames = dir([epochedpath,epochedname]);
@@ -186,11 +212,14 @@ if exist(fullfile(vgserspdatapath,vgserspdataname),'file')
     fprintf('Already computed ERSP from all subjects; load from %s/%s\n',vgserspdatapath,vgserspdataname)
 else
     % setting up progress bar
-    f = waitbar(0,'Starting','Name','ERSP Progress');
+    f = waitbar(0,'Starting','Name','VGS ERSP Progress');
     % Defining allerspdata and IDmatrix and missing data array
     vgserspdata = [];
     vgsIDmatrix = [];
     vgsmissingdata = [];
+    vgspowbase = [];
+    vgsitcdata = [];
+    vgssignalchange = [];
     for currentEEG = 1:size(EEGfilenames)
         % defining input into calc_ersp()
         filename = [EEGfilenames(currentEEG).name];
@@ -206,22 +235,32 @@ else
         subTable = merged7t_eeg(subIdx,:);
         
         % running calc_ersp for subject
-        [vgssuberspdata,times,freqs,failcode,subID,scanDate,age,suberspdataname] = calc_ersp(epochedpath,filename,vgssuberspdatapath,subTable,tempChanLabels,task);
+        [suberspdata,subitcdata,subpowbase,subsignalchange,times,freqs,failcode,subID,scanDate,age,suberspdataname,subitcdataname] = calc_ersp(epochedpath,filename,vgssuberspdatapath,subTable,tempChanLabels);
         if isnan(failcode)
-            save(fullfile(vgssuberspdatapath,suberspdataname),'vgssuberspdata','times','freqs')
-            vgserspdata(end+1,:,:,:) = vgssuberspdata;
+            save(fullfile(vgssuberspdatapath,suberspdataname),'suberspdata','subsignalchange','subpowbase','times','freqs')
+            save(fullfile(vgssuberspdatapath,subitcdataname),'subitcdata')
+            vgserspdata(end+1,:,:,:) = suberspdata;
+            vgspowbase(end+1,:,:) = subpowbase;
+            vgsitcdata(end+1,:,:,:) = subitcdata;
+            vgssignalchange(end+1,:,:,:) = subsignalchange;
             vgsIDmatrix(end+1,:) = [str2double(subID),str2double(scanDate),age];
         else
             vgsmissingdata(end+1,:) = [str2double(subID),str2double(scanDate),failcode];
         end
-        clear suberspdata
+        clear suberspdata subitcdata subpowbase signalchange
     end
     % Close waitbar
     close(f)
     
     % Save outputs
-    save(fullfile(vgserspdatapath,vgserspdataname),"vgserspdata","times","freqs")
+    save(fullfile(vgserspdatapath,vgserspdataname),"vgserspdata","vgssignalchange","vgspowbase","times","freqs")
     save(fullfile(vgserspdatapath,'vgsIDmatrix.mat'),"vgsIDmatrix")
-    writematrix(vgsIDmatrix,fullfile(vgserspdatapath,vgsidmatsavename))
     save(fullfile(vgserspdatapath,'vgsmissingdata.mat'),'vgsmissingdata')
+    
+    % ITC data takes up much more memory, it may fail
+    try
+        save(fullfile(vgserspdatapath,vgsitcdataname),"vgsitcdata")
+    catch e
+        fprintf('Failed saving VGS ITC data\n%s\n',e.message)
+    end
 end
