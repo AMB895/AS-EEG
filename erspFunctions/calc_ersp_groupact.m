@@ -1,13 +1,9 @@
 function [b_intercept,t,p] = calc_ersp_groupact(T,erspdata,numTimes,numFreqs)
-totalIterations = numTimes*numFreqs;
 % setting up waitbar
 f = waitbar(0,'Starting','Name','Group Activation');
 for i=1:numFreqs
+    waitbar(i/numFreqs,f,sprintf('%d out of %d frequency points',i,numFreqs))
     for j = 1:numTimes
-        % getting current iteration
-        currentIteration = i*j;
-        % updating waitbar
-        waitbar(currentIteration/totalIterations,f,sprintf('%d out of %d iterations',currentIteration,totalIterations))
         
         data = squeeze(erspdata(:,i,j));
         T.power = data;
