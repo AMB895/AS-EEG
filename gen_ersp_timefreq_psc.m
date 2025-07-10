@@ -131,7 +131,7 @@ for currentTask = 1:length(tasks_str)
                 end
                 
                 % run calc_ersp_timefreq()
-                [sub_ersp,sub_ers,sub_evokedpreppower,sub_spontaneouspreppower,times,freqs,preptimes] = calc_ersp_timefreq_WIP(EEG);
+                [sub_ersp,sub_ers,sub_evokedpreppower,sub_spontaneouspreppower,times,freqs,preptimes] = calc_ersp_timefreq(EEG);
                 idmatrix(end+1,:) = [str2double(subID) str2double(scanDate) age];
                 
                 % save subject's data
