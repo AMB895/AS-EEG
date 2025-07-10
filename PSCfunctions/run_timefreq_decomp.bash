@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 
-#SBATCH --partition=RM
+#SBATCH --partition=RM-shared
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=128
+#SBATCH --ntasks-per-node=32
 
-#SBATCH --time 01:00:00
+#SBATCH --time 50:00:00
+
 echo  "[$(date)] STARTING JOB"
 module load matlab
 cd /ocean/projects/soc230004p/shared/antisaccade_eeg/code/
