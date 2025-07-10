@@ -37,7 +37,7 @@ elseif exist('/ocean/projects/','dir')
 
 for currentTask = 1:length(tasks_str)
     % defining current task and total eegs for that task
-    taskfilenames = EEGfilenames{currentTask};add
+    taskfilenames = EEGfilenames{currentTask};
     tasktotalEEGs = length(taskfilenames);
     currenttask_str = tasks_str(currentTask);
     
