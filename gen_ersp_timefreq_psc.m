@@ -17,14 +17,14 @@ elseif exist('/ocean/projects/','dir')
     [ALLEEG,EEG,CURRENTSET,ALLCOM]=eeglab;
     
     % Names and paths of data to be loaded
-    merge7t_eeg = readtable('merge7t_eeg.csv');
+    merge7t_eeg = readtable('/ocean/projects/soc230004p/shared/antisaccade_eeg/merge7t_eeg.csv');
 
     % finding subjects who did not do not have an eeg scan and removing them from merge7t_eeg
     noeeg_idx = find(isnan(merge7t_eeg.eeg_date));
     merge7t_eeg(noeeg_idx,:) = [];
 
     % loading template of channel labels
-    load('templatechannellabels.mat')
+    load('/ocean/projects/soc230004p/shared/antisaccade_eeg/templatechannellabels.mat')
 
     % adding path to correct AS trials and VGS trials
     preprocesseddir='/ocean/projects/soc230004p/shared/antisaccade_eeg/preprocessed_data/';
