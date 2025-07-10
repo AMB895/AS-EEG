@@ -4,7 +4,7 @@ addpath('/Volumes/Hera/Abby/AS_EEG/')
 addpath('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/CorrectTrials')
 addpath('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/ErrorCorrectTrials')
 addpath('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/vgs')
-addpath('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/')
+addpath('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/ClusterStats/')
 
 %% Loading in ERSP data and significance mask for interaction effect (Correct  AS vs. VGS)
 clear; close all;
@@ -149,17 +149,29 @@ for currentCluster = 1:numClusters
         subcorersp_cluster = cluster_mask_corvgs.*subcorersp;
         subvgsersp_cluster = cluster_mask_corvgs.*subvgsersp;
         
-        % average power within the cluster
-        avgcorclusterpow = mean(nonzeros(subcorersp_cluster));
-        avgvgsclusterpow = mean(nonzeros(subvgsersp_cluster));
+        % get overall power of ERSP image
+        overallcorpow = mean(subcorersp,'all');
+        overallvgspow = mean(subvgsersp,'all');
         
-        % add average power to matrix
-        Tdata_pow(currentSub,3+currentCluster) = avgcorclusterpow;
-        Tdata_pow(currentSub,3+numClusters+currentCluster) = avgvgsclusterpow;
+        % average power within the cluster (total cluster power)
+        totcorclusterpow = mean(nonzeros(subcorersp_cluster));
+        totvgsclusterpow = mean(nonzeros(subvgsersp_cluster));
+        
+        % relative cluster power
+        relcorclusterpow = totcorclusterpow/overallcorpow;
+        relvgsclusterpow = totvgsclusterpow/overallvgspow;
+        
+        % add total cluster power to matrix
+        Tdata_pow(currentSub,3+currentCluster) = totcorclusterpow;
+        Tdata_pow(currentSub,11+currentCluster) = totvgsclusterpow;
+        
+        % add relative cluster power to matrix
+        Tdata_pow(currentSub,7+currentCluster) = relcorclusterpow;
+        Tdata_pow(currentSub,15+currentCluster) = relvgsclusterpow;
         
         % calculate % signal change from baseline
-        corsigchange = avgcorclusterpow/subavgcorpowbase;
-        vgssigchange = avgvgsclusterpow/subavgvgspowbase;
+        corsigchange = totcorclusterpow/subavgcorpowbase;
+        vgssigchange = totvgsclusterpow/subavgvgspowbase;
         
         % add % signal change to matrix
         Tdata_sigchange(currentSub,3+currentCluster) = corsigchange;
@@ -172,20 +184,35 @@ end
 % C1 Signal Change, C2 Signal Change,C3 Signal Change,C4 Signal change]
 
 % setting up tables
-varNames = {'ID','VisitNum','Age','corC1Pow','corC2Pow','corC3Pow','corC4Pow','vgsC1Pow','vgsC2Pow','vgsC3Pow','vgsC4Pow'};
-T_pow = table('Size',[numSubs 3+2*numClusters],'VariableTypes',repmat("double",[1 3+2*numClusters]),...
+varNames = {'ID','VisitNum','Age','totcorC1Pow','totcorC2Pow','totcorC3Pow','totcorC4Pow',...
+    'relcorC1Pow','relcorC2Pow','relcorC3Pow','relcorC4Pow',...
+    'totvgsC1Pow','totvgsC2Pow','totvgsC3Pow','totvgsC4Pow',...
+    'relvgsC1Pow','relvgsC2Pow','relvgsC3Pow','relvgsC4Pow'};
+T_pow = table('Size',[numSubs 3+4*numClusters],'VariableTypes',repmat("double",[1 3+4*numClusters]),...
     'VariableNames',varNames);
 T_pow.ID = Tdata_pow(:,1); 
 T_pow.VisitNum = Tdata_pow(:,2);
 T_pow.Age = Tdata_pow(:,3);
-T_pow.corC1Pow = Tdata_pow(:,4); 
-T_pow.corC2Pow = Tdata_pow(:,5); 
-T_pow.corC3Pow = Tdata_pow(:,6);
-T_pow.corC4Pow = Tdata_pow(:,7);
-T_pow.vgsC1Pow = Tdata_pow(:,8);
-T_pow.vgsC2Pow = Tdata_pow(:,9);
-T_pow.vgsC3Pow = Tdata_pow(:,10);
-T_pow.vgsC4Pow = Tdata_pow(:,11);
+% add correct total and relative power to table
+T_pow.totcorC1Pow = Tdata_pow(:,4); 
+T_pow.totcorC2Pow = Tdata_pow(:,5); 
+T_pow.totcorC3Pow = Tdata_pow(:,6);
+T_pow.totcorC4Pow = Tdata_pow(:,7);
+T_pow.relcorC1Pow = Tdata_pow(:,8); 
+T_pow.relcorC2Pow = Tdata_pow(:,9); 
+T_pow.relcorC3Pow = Tdata_pow(:,10);
+T_pow.relcorC4Pow = Tdata_pow(:,11);
+
+% add vgs total and relative power to table
+T_pow.totvgsC1Pow = Tdata_pow(:,12);
+T_pow.totvgsC2Pow = Tdata_pow(:,13);
+T_pow.totvgsC3Pow = Tdata_pow(:,14);
+T_pow.totvgsC4Pow = Tdata_pow(:,15);
+
+T_pow.relvgsC1Pow = Tdata_pow(:,16);
+T_pow.relvgsC2Pow = Tdata_pow(:,17);
+T_pow.relvgsC3Pow = Tdata_pow(:,18);
+T_pow.relvgsC4Pow = Tdata_pow(:,19);
 
 varNames = {'ID','VisitNum','Age','corC1SigChange','corC2SigChange','corC3SigChange','corC4SigChange','vgsC1SigChange','vgsC2SigChange','vgsC3SigChange','vgsC4SigChange'};
 T_sigchange = table('Size',[numSubs 3+2*numClusters],'VariableTypes',repmat("double",[1 3+2*numClusters]),...
@@ -332,15 +359,15 @@ for currentCluster = 1:numClusters
         suberrcorersp_cluster = cluster_mask_corerrcor.*suberrcorersp;
         
         % average power within the cluster
-        avgcorclusterpow = mean(nonzeros(subcorersp_cluster));
+        totcorclusterpow = mean(nonzeros(subcorersp_cluster));
         avgerrcorclusterpow = mean(nonzeros(suberrcorersp_cluster));
         
         % add average power to matrix
-        Tdata_pow(currentSub,3+currentCluster) = avgcorclusterpow;
+        Tdata_pow(currentSub,3+currentCluster) = totcorclusterpow;
         Tdata_pow(currentSub,3+numClusters+currentCluster) = avgerrcorclusterpow;
         
         % calculate % signal change from baseline
-        corsigchange = avgcorclusterpow/subavgcorpowbase;
+        corsigchange = totcorclusterpow/subavgcorpowbase;
         errcorsigchange = avgerrcorclusterpow/subavgerrcorpowbase;
         
         % add % signal change to matrix

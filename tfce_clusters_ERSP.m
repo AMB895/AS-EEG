@@ -6,19 +6,17 @@ addpath('/Volumes/Hera/Abby/Resources/eeglab_current/eeglab2024.2/')
 addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/eeg/Shane/Preprocessing_Functions/')
 addpath('/Volumes/Hera/Abby/preprocessed_data/anti/AfterWhole/epochclean_homogenize/')
 addpath('/Volumes/Hera/Abby/AS_EEG/erspFunctions/')
-addpath('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/')
 
 %% Correct AS trials
 clear; close all;
 % load in ERSP data
 load('/Volumes/Hera/Abby/AS_EEG/ErrorLatencyTable_20250320.mat')
-load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/CorrectTrials/corERSPdata.mat')
-load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/CorrectTrials/corIDmatrix.mat')
-load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/CorrectTrials/cormissingdata.mat')
+load('/Volumes/Hera/Abby/AS_EEG/ERSPtimefreqAnalysis/PrepCorASersp.mat')
+load('/Volumes/Hera/Abby/AS_EEG/ERSPtimefreqAnalysis/CorASidmatrix.mat')
 
 % to plot PLOT = 1, no plots PLOT = 0
-PLOT = 0;
-% PLOT = 1;
+% PLOT = 0;
+PLOT = 1;
 %% First remove participants that are not viable (Correct AS)
 numSubs = size(corIDmatrix,1);
 
@@ -444,7 +442,7 @@ T.trialtype = categorical(T.trialtype);
 
 if exist('corvgsMixedModelClusters.mat','file')
     fprintf('Computed Correct vs. VGS Mixed Model clusters; loading\n')
-    load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/corvgsMixedModelClusters.mat')
+    load('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/ClusterStats/corvgsMixedModelClusters.mat')
 else
     % Run linear mixed model
     [b_corvgs_mixedmodel,t_corvgs_mixedmodel,p_corvgs_mixedmodel] = calc_ersp_linearmixedmodel(T,corerspdata_corvgs,vgserspdata_corvgs,numTimes,numFreqs);

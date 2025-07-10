@@ -7,79 +7,155 @@ library(tidyr)
 clusterpowerdata <- read.csv('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/clusterpower_corvgsinteraction.csv');
 signalchangedata <- read.csv('/Volumes/Hera/Abby/AS_EEG/PrepPeriodAnalysis/signalchange_corvgsinteraction.csv');
 # cluster 1
-data_long_c1pow <- pivot_longer(clusterpowerdata,cols=c(corC1Pow,vgsC1Pow),names_to='TrialType',values_to='C1Power')
-p <- ggplot(data_long_c1pow,aes(x=Age,y=C1Power,color=TrialType))+
+# total power
+data_long_totc1pow <- clusterpowerdata %>% 
+  select(ID,VisitNum,Age,totcorC1Pow,totvgsC1Pow) %>%
+  pivot_longer(cols = c(totcorC1Pow,totvgsC1Pow),names_to = "TrialType", values_to="C1Power") %>%
+  mutate(
+    TrialType = sub("tot(.*)C1Pow","\\1",TrialType),
+    TrialType = as.factor(TrialType))
+totC1PowerModel <- lmerTest::lmer(C1Power ~ 1 + InvAge + TrialType + InvAge:TrialType + (1 | ID), data = data_long_totc1pow %>% mutate(InvAge = 1/Age))
+summary(totC1PowerModel)
+p <- ggplot(data_long_totc1pow ,aes(x=Age,y=C1Power,color=TrialType))+
   geom_point(alpha=0.5)+
   geom_line(alpha=0.25,aes(group=interaction(ID,TrialType)))+
   geom_smooth(method='lm',se=FALSE)+
-  labs(x='Age',y='Power (dB)',color='TrialType')+
-  ggtitle('Cluster 1 (43.7 Hz)')
+  labs(x='Age',y='Total Power (dB)',color='TrialType')+
+  ggtitle('Gamma Cluster (43.7 Hz)')
 lunaize(p)
 
+# relative power
+data_long_relc1pow <- pivot_longer(clusterpowerdata,cols=c(relcorC1Pow,relvgsC1Pow),names_to='TrialType',values_to='C1Power')
+p <- ggplot(data_long_relc1pow %>% mutate(power_z = scale(C1Power)[,1]) %>% filter(abs(power_z)<3),aes(x=Age,y=C1Power,color=TrialType))+
+  #geom_point(alpha=0.5)+
+  #geom_line(alpha=0.25,aes(group=interaction(ID,TrialType)))+
+  geom_smooth(method='lm',se=FALSE)+
+  labs(x='Age',y='Relative Power (dB)',color='TrialType')+
+  ggtitle('Gamma Cluster (43.7 Hz)')
+lunaize(p)
+
+# signal change from baseline
 data_long_c1sigchange <- pivot_longer(signalchangedata,cols=c(corC1SigChange,vgsC1SigChange),names_to='TrialType',values_to='C1SigChange')
-p <- ggplot(data_long_c1sigchange,aes(x=Age,y=C1SigChange,color=TrialType))+
+p <- ggplot(data_long_c1sigchange %>% mutate(power_z = scale(C1SigChange)[,1]) %>% filter(abs(power_z)<3),aes(x=Age,y=C1SigChange,color=TrialType))+
   geom_point(alpha=0.5)+
   geom_line(alpha=0.25,aes(group=interaction(ID,TrialType)))+
   geom_smooth(method='lm',se=FALSE)+
   labs(x='Age',y='% Signal Change from Baseline',color='TrialType')+
-  ggtitle('Cluster 1 (43.7 Hz)')
+  ggtitle('Gamma Cluster (43.7 Hz)')
 lunaize(p)
 
 # cluster 2
-data_long_c2pow <- pivot_longer(clusterpowerdata,cols=c(corC2Pow,vgsC2Pow),names_to='TrialType',values_to='C2Power')
-p <- ggplot(data_long_c2pow,aes(x=Age,y=C2Power,color=TrialType))+
+# total power
+data_long_totc2pow <- clusterpowerdata %>% 
+  select(ID,VisitNum,Age,totcorC2Pow,totvgsC2Pow) %>%
+  pivot_longer(cols = c(totcorC2Pow,totvgsC2Pow),names_to = "TrialType", values_to="C2Power") %>%
+  mutate(
+    TrialType = sub("tot(.*)C2Pow","\\1",TrialType),
+    TrialType = as.factor(TrialType))
+totC2PowerModel <- lmerTest::lmer(C2Power ~ 1 + InvAge + TrialType + InvAge:TrialType + (1 | ID), data = data_long_totc2pow %>% mutate(InvAge = 1/Age))
+summary(totC2PowerModel)
+p <- ggplot(data_long_totc2pow, aes(x=Age,y=C2Power,color=TrialType))+
   geom_point(alpha=0.5)+
   geom_line(alpha=0.25,aes(group=interaction(ID,TrialType)))+
-  geom_smooth(method='lm',se=FALSE)+
-  labs(x='Age',y='Power (dB)',color='TrialType')+
-  ggtitle('Cluster 2 (24.7-30.4 Hz)')
+  geom_smooth(method='lm',formula = y~I(1/x))+
+  labs(x='Age',y='Total Power (dB)',color='TrialType')+
+  ggtitle('High Beta Cluster (24.7-30.4 Hz)')
 lunaize(p)
 
+# relative power
+data_long_relc2pow <- pivot_longer(clusterpowerdata,cols=c(relcorC2Pow,relvgsC2Pow),names_to='TrialType',values_to='C2Power')
+p <- ggplot(data_long_relc2pow %>% mutate(power_z = scale(C2Power)[,1]) %>% filter(abs(power_z)<3),aes(x=Age,y=C2Power,color=TrialType))+
+  #geom_point(alpha=0.5)+
+  #geom_line(alpha=0.25,aes(group=interaction(ID,TrialType)))+
+  geom_smooth(method='lm',se=FALSE)+
+  labs(x='Age',y='Relative Power (dB)',color='TrialType')+
+  ggtitle('High Beta Cluster (24.7-30.4 Hz)')
+lunaize(p)
+
+# signal change from baseline
 data_long_c2sigchange <- pivot_longer(signalchangedata,cols=c(corC2SigChange,vgsC2SigChange),names_to='TrialType',values_to='C2SigChange')
-p <- ggplot(data_long_c2sigchange,aes(x=Age,y=C2SigChange,color=TrialType))+
+p <- ggplot(data_long_c2sigchange %>% mutate(power_z = scale(C2SigChange)[,1]) %>% filter(abs(power_z)<3),aes(x=Age,y=C2SigChange,color=TrialType))+
   geom_point(alpha=0.5)+
   geom_line(alpha=0.25,aes(group=interaction(ID,TrialType)))+
   geom_smooth(method='lm',se=FALSE)+
   labs(x='Age',y='% Signal Change from Baseline',color='TrialType')+
-  ggtitle('Cluster 2 (24.7-30.4 Hz)')
+  ggtitle('High Beta Cluster (24.7-30.4 Hz)')
 lunaize(p)
 
 # cluster 3
-data_long_c3pow <- pivot_longer(clusterpowerdata,cols=c(corC3Pow,vgsC3Pow),names_to='TrialType',values_to='C3Power')
-p <- ggplot(data_long_c3pow,aes(x=Age,y=C3Power,color=TrialType))+
+# total power
+data_long_totc3pow <- clusterpowerdata %>% 
+  select(ID,VisitNum,Age,totcorC3Pow,totvgsC3Pow) %>%
+  pivot_longer(cols = c(totcorC3Pow,totvgsC3Pow),names_to = "TrialType", values_to="C3Power") %>%
+  mutate(
+    TrialType = sub("tot(.*)C3Pow","\\1",TrialType),
+    TrialType = as.factor(TrialType))
+totC3PowerModel <- lmerTest::lmer(C3Power ~ 1 + InvAge + TrialType + InvAge:TrialType + (1 | ID), data = data_long_totc3pow %>% mutate(InvAge = 1/Age))
+summary(totC3PowerModel)
+p <- ggplot(data_long_totc3pow,aes(x=Age,y=C3Power,color=TrialType))+
   geom_point(alpha=0.5)+
   geom_line(alpha=0.25,aes(group=interaction(ID,TrialType)))+
-  geom_smooth(method='lm',se=FALSE)+
-  labs(x='Age',y='Power (dB)',color='TrialType')+
-  ggtitle('Cluster 3 (7.4-12.0 Hz)')
+  geom_smooth(method='lm',formula=y~I(1/x),se=FALSE)+
+  labs(x='Age (years)',y='Total Power (dB)',color='TrialType')+
+  ggtitle('Alpha Cluster (7.4-12.0 Hz)')
 lunaize(p)
 
+# relative power
+data_long_relc3pow <- pivot_longer(clusterpowerdata,cols=c(relcorC3Pow,relvgsC3Pow),names_to='TrialType',values_to='C3Power')
+p <- ggplot(data_long_c3pow %>% mutate(power_z = scale(C3Power)[,1]) %>% filter(abs(power_z)<3),aes(x=Age,y=C3Power,color=TrialType))+
+  #geom_point(alpha=0.5)+
+  #geom_line(alpha=0.25,aes(group=interaction(ID,TrialType)))+
+  geom_smooth(method='lm',se=FALSE)+
+  labs(x='Age (years)',y='Relative Power (dB)',color='TrialType')+
+  ggtitle('Alpha Cluster (7.4-12.0 Hz)')
+lunaize(p)
+
+# signal change from baseline
 data_long_c3sigchange <- pivot_longer(signalchangedata,cols=c(corC3SigChange,vgsC3SigChange),names_to='TrialType',values_to='C3SigChange')
-p <- ggplot(data_long_c3sigchange,aes(x=Age,y=C3SigChange,color=TrialType))+
+p <- ggplot(data_long_c3sigchange %>% mutate(power_z = scale(C3SigChange)[,1]) %>% filter(abs(power_z)<3),aes(x=Age,y=C3SigChange,color=TrialType))+
   geom_point(alpha=0.5)+
   geom_line(alpha=0.25,aes(group=interaction(ID,TrialType)))+
   geom_smooth(method='lm',se=FALSE)+
   labs(x='Age',y='% Signal Change from Baseline',color='TrialType')+
-  ggtitle('Cluster 3 (7.4-12.0 Hz)')
+  ggtitle('Alpha Cluster (7.4-12.0 Hz)')
 lunaize(p)
 
 # cluster 4
-data_long_c4pow <- pivot_longer(clusterpowerdata,cols=c(corC4Pow,vgsC4Pow),names_to='TrialType',values_to='C4Power')
-p <- ggplot(data_long_c4pow,aes(x=Age,y=C4Power,color=TrialType))+
+# total power
+data_long_totc4pow <- clusterpowerdata %>% 
+  select(ID,VisitNum,Age,totcorC4Pow,totvgsC4Pow) %>%
+  pivot_longer(cols = c(totcorC4Pow,totvgsC4Pow),names_to = "TrialType", values_to="C4Power") %>%
+  mutate(
+    TrialType = sub("tot(.*)C4Pow","\\1",TrialType),
+    TrialType = as.factor(TrialType))
+totC4PowerModel <- lmerTest::lmer(C4Power ~ 1 + InvAge + TrialType + InvAge:TrialType + (1 | ID), data = data_long_totc4pow %>% mutate(InvAge = 1/Age))
+summary(totC4PowerModel)
+p <- ggplot(data_long_totc4pow ,aes(x=Age,y=C4Power,color=TrialType))+
+  geom_point(alpha=0.5)+
+  geom_line(alpha=0.25,aes(group=interaction(ID,TrialType)))+
+  geom_smooth(method='lm',formula=y~I(1/x))+
+  labs(x='Age',y='Total Power (dB)',color='TrialType')+
+  ggtitle('Delta Cluster (3.3-4.1 Hz)')
+lunaize(p)
+
+# relative power
+data_long_relc4pow <- pivot_longer(clusterpowerdata,cols=c(relcorC4Pow,relvgsC4Pow),names_to='TrialType',values_to='C4Power')
+p <- ggplot(data_long_relc4pow  %>% mutate(power_z = scale(C4Power)[,1]) %>% filter(abs(power_z)<3),aes(x=Age,y=C4Power,color=TrialType))+
   geom_point(alpha=0.5)+
   geom_line(alpha=0.25,aes(group=interaction(ID,TrialType)))+
   geom_smooth(method='lm',se=FALSE)+
-  labs(x='Age',y='Power (dB)',color='TrialType')+
-  ggtitle('Cluster 4 (3.3-4.1 Hz)')
+  labs(x='Age',y='Relative Power (dB)',color='TrialType')+
+  ggtitle('Delta Cluster (3.3-4.1 Hz)')
 lunaize(p)
 
+# signal change from baseline
 data_long_c4sigchange <- pivot_longer(signalchangedata,cols=c(corC4SigChange,vgsC4SigChange),names_to='TrialType',values_to='C4SigChange')
-p <- ggplot(data_long_c4sigchange,aes(x=Age,y=C4SigChange,color=TrialType))+
+p <- ggplot(data_long_c4sigchange  %>% mutate(power_z = scale(C4SigChange)[,1]) %>% filter(abs(power_z)<3),aes(x=Age,y=C4SigChange,color=TrialType))+
   geom_point(alpha=0.5)+
   geom_line(alpha=0.25,aes(group=interaction(ID,TrialType)))+
   geom_smooth(method='lm',se=FALSE)+
   labs(x='Age',y='% Signal Change from Baseline',color='TrialType')+
-  ggtitle('Cluster 4 (3.3-4.1 Hz)')
+  ggtitle('Delta Cluster (3.3-4.1 Hz)')
 lunaize(p)
 #################################
 # Correct AS vs. Error AS Interaction Effect
