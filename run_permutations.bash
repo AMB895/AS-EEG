@@ -4,7 +4,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=128
 
-#SBATCH --time 60:00:00
+#SBATCH --time 72:00:00
 echo  "[$(date)] STARTING JOB"
 module load matlab
 export NUMBER_OF_PROCESSORS=128
