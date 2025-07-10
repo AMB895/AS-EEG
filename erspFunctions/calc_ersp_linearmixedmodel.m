@@ -1,4 +1,4 @@
-function [b,t,p] = calc_ersp_linearmixedmodel(T,erspdata1,erspdata2,numTimes,numFreqs)
+function [b,t] = calc_ersp_linearmixedmodel(T,erspdata1,erspdata2,numTimes,numFreqs)
 % setting up waitbar
 f = waitbar(0,'Starting','Name','Linear Mixed Model');
 for i = 1:numFreqs
@@ -6,8 +6,10 @@ for i = 1:numFreqs
     for j = 1:numTimes
         data1 = squeeze(erspdata1(:,i,j));
         data2 = squeeze(erspdata2(:,i,j));
-        T.power = [data1;data2];
-        lme = fitlme(T,'power ~ invage*trialtype + (1 | id)');
+        T.ersp = [data1;data2];
+        lme = fitlme(T,'ersp ~ invage*trialtype + (1 | id)');
+        % can include people that have one or the other and not do weird
+        % matching thing
         coeftable = lme.Coefficients;
         interceptcoeftable = coeftable(1,:);
         agecoeftable = coeftable(2,:);
@@ -26,11 +28,6 @@ for i = 1:numFreqs
         t_trialtype(i,j) = double(trialtypecoeftable(1,4));
         t_interaction(i,j) = double(interactioncoeftable(1,4));
         t_intercept(i,j) = double(interceptcoeftable(1,4));
-
-        p_age(i,j) = double(agecoeftable(1,6));
-        p_trialtype(i,j) = double(trialtypecoeftable(1,6));
-        p_interaction(i,j) = double(interactioncoeftable(1,6));
-        p_intercept(i,j) = double(interceptcoeftable(1,6));
     end
 end
 % saving coefficient values to single structure
@@ -43,10 +40,5 @@ t.age = t_age;
 t.trialtype = t_trialtype;
 t.interaction = t_interaction;
 t.intercept = t_intercept;
-% saving p values to single structure
-p.age = p_age;
-p.trialtype = p_trialtype;
-p.interaction = p_interaction;
-p.intercept = p_intercept;
 close(f)
 end
