@@ -87,7 +87,7 @@ for currentTask = 1:length(tasks_str)
                 idmatrix(end+1,:) = [str2double(subID) str2double(scanDate) age];
             else
                 % defining subject's error latency table
-                subIdx = find(merge7t_eeg.LunaID==str2double(subID) & merge7t_eeg.ScanDate==str2double(scanDate));
+                subIdx = find(merge7t_eeg.lunaid==str2double(subID) & merge7t_eeg.eeg_date==str2double(scanDate));
                 subTable = merge7t_eeg(subIdx,:);
                 
                 % skipping if not in Merge 7t
