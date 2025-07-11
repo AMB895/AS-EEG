@@ -26,14 +26,18 @@ elseif exist('/ocean/projects/','dir')
     % loading template of channel labels
     load('/ocean/projects/soc230004p/shared/antisaccade_eeg/templatechannellabels.mat')
 
-    % adding path to correct AS trials and VGS trials
-    preprocesseddir='/ocean/projects/soc230004p/shared/antisaccade_eeg/preprocessed_data/';
+    % adding path to correct AS trials and VGS trials for prep period
+    preprocesseddir_prep='/ocean/projects/soc230004p/shared/antisaccade_eeg/preprocessed_data/prep/';
+    preprocesseddir_stim = '/ocean/projects/soc230004p/shared/antisaccade_eeg/preprocessed_data/stim/';    
+    % FIX ME!! add stim onset epochs and fix folders and rsync stimonset eegs
     
     % Add all eeg files to one big structure
-    EEGfilenames = {dir([preprocesseddir,'*_epochs_kept_cor.set']),...
-        dir([preprocesseddir,'*_epochs_kept.set']),...
-        dir([preprocesseddir,'*_epochs_kept_errcor.set'])};
-    tasks_str = ["CorAS","VGS","ErrCorAS"];
+    EEGfilenames = {dir([preprocesseddir_prep,'*_epochs_kept_cor.set']),...
+        dir([preprocesseddir_prep,'*_epochs_kept.set']),...
+        dir([preprocesseddir_prep,'*_epochs_kept_errcor.set']),...
+        dir([preprocesseddir_stim,'*_epochs_kept_cor.set']),...
+        dir([preprocesseddir_stim,'*_epochs_kept.set'])};
+    tasks_str = ["CorAS","VGS","ErrCorAS","CorASstim","VGSstim"];
 
 for currentTask = 1:length(tasks_str)
     % defining current task and total eegs for that task
