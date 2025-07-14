@@ -2,13 +2,9 @@
 clear; close all
 % adding necessary paths
 addpath('/ocean/projects/soc230004p/shared/antisaccade_eeg/tools/')
-% FIX ME!! add ersp stats functions to PSC
 addpath('/ocean/projects/soc230004p/shared/antisaccade_eeg/functions/')
 addpath('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/')
 addpath('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats')
-
-% addpath('/Volumes/Hera/Abby/AS_EEG/ERSPdata/')
-% addpath('/Volumes/Hera/Abby/AS_EEG/ERSPdata/ClusterStats/')
 %% Load in correct, vgs, and error data
 % Correct AS Trials
 % load in ersp data
@@ -22,7 +18,6 @@ coridmatstruct = load('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/Co
 coridmat = coridmatstruct.idmatrix;
 % load('/Volumes/Hera/Abby/AS_EEG/Results/ErrorLatencyTable_20250320.mat')
 load('/ocean/projects/soc230004p/shared/antisaccade_eeg/ErrorLatencyTable_20250320.mat')
-% FIX ME!! add error latency table to PSC
 
 % Remove subjects that are not viable
 numSubs = size(coridmat,1);
