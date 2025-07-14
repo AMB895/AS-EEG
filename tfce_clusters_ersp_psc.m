@@ -129,21 +129,22 @@ trialtypenames = ["CorAS","VGS","ErrCorAS"];
 % big cell for all ersp data
 % dimensions: 3x2 columns=[frow prow] rows=[cor vgs errcor]
 allerspcell = {corersp_viable_frow corersp_viable_prow;vgsersp_frow vgsersp_prow;errcorersp_viable_frow errcorersp_viable_prow};
+allidmatcell = {coridmat_viable;vgsidmat;errcoridmat_viable};
 
 %% First looping through F row and P rows
 for currentRow = 1:length(rownames)
     % looping through each trial type
     for currentTrialType = 1:length(trialtypenames)
-        % updating progress
-        fprintf('Group Activation for %s for %s\n',trialtypenames(currentTrialType),rownames(currentRow))
         % define current electrode row and trial type
         currentERSPdata = allerspcell{currentTrialType,currentRow};
+        % define current id matrix 
+        currentidmat = allidmatcell{currentTrialType};
         % set up table for Group Act lme and inverse age lme
-        T = table('Size',[size(coridmat_viable,1) 4],'VariableTypes',{'double','double','double','double'},...
+        T = table('Size',[size(currentidmat,1) 4],'VariableTypes',{'double','double','double','double'},...
             'VariableNames',{'id','visit','invage','ersp'});
-        T.id = coridmat_viable(:,1);
-        T.invage = 1./coridmat_viable(:,3);
-        T.visit = coridmat_viable(:,4);
+        T.id = currentidmat(:,1);
+        T.invage = 1./currentidmat(:,3);
+        T.visit = currentidmat(:,4);
         
         %% Group Activation
         % define save names
@@ -153,6 +154,8 @@ for currentRow = 1:length(rownames)
         if exist(groupact_savename,'file')
             fprintf('Computed %s group activation clusters\n',trialtypenames(currentTrialType))
         else
+            % updating progress
+            fprintf('Computing group Activation for %s for %s\n',trialtypenames(currentTrialType),rownames(currentRow))
             % Run linear mixed effects model for group activation
             [b,t] = calc_ersp_groupact_psc(T,currentERSPdata,numTimes,numFreqs);
             % TFCE on t-values
@@ -169,14 +172,14 @@ for currentRow = 1:length(rownames)
         end
         
         %% Inverse Age effects
-        % updating progress
-        fprintf('Inverse Age Effects for %s for %s\n',trialtypenames(currentTrialType),rownames(currentRow))
         inverseage_savename = sprintf('%s_inverseage_%s.mat',trialtypenames(currentTrialType),rownames(currentRow));
         
         % check if inverse age clusters are already computed
         if exist(inverseage_savename,'file')
             fprintf('Computed %s inverse age clusters\n',trialtypenames(currentTrialType))
         else
+            % updating progress
+            fprintf('Inverse Age Effects for %s for %s\n',trialtypenames(currentTrialType),rownames(currentRow))
             % Run linear mixed effects 
             [b,t] = calc_ersp_invageeffects_psc(T,currentERSPdata,numTimes,numFreqs);
             % TFCE on t-values
