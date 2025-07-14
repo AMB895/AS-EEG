@@ -134,6 +134,8 @@ allerspcell = {corersp_viable_frow corersp_viable_prow;vgsersp_frow vgsersp_prow
 for currentRow = 1:length(rownames)
     % looping through each trial type
     for currentTrialType = 1:length(trialtypenames)
+        % updating progress
+        fprintf('Group Activation for %s for %s',trialtypenames(currentTrialType),rownames(currentRow))
         % define current electrode row and trial type
         currentERSPdata = allerspcell{currentTrialType,currentRow};
         % set up table for Group Act lme and inverse age lme
