@@ -2,9 +2,9 @@
 #
 #SBATCH --partition=RM-shared
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=32
+#SBATCH --ntasks-per-node=64
 #
-#SBATCH --time 30:00:00
+#SBATCH --time 00:07:00
 #
 # 20250714WF - init
 #
