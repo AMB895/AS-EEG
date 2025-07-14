@@ -4,7 +4,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=64
 #
-#SBATCH --time 00:07:00
+#SBATCH --time 07:00:00
 #
 # 20250714WF - init
 #
