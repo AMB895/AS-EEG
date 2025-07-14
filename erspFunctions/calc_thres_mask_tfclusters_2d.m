@@ -1,4 +1,4 @@
-function [thres,mask] = calc_thres_mask_tfclusters_2d(tfce_scores,perm_tfcescores,p_thres)
+function mask = calc_thres_mask_tfclusters_2d(tfce_scores,perm_tfcescores,p_thres)
 % determine pth percentile
 percentile = 1-p_thres;
 
