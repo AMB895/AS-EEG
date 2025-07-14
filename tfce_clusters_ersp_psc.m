@@ -135,7 +135,7 @@ for currentRow = 1:length(rownames)
     % looping through each trial type
     for currentTrialType = 1:length(trialtypenames)
         % updating progress
-        fprintf('Group Activation for %s for %s',trialtypenames(currentTrialType),rownames(currentRow))
+        fprintf('Group Activation for %s for %s\n',trialtypenames(currentTrialType),rownames(currentRow))
         % define current electrode row and trial type
         currentERSPdata = allerspcell{currentTrialType,currentRow};
         % set up table for Group Act lme and inverse age lme
@@ -169,6 +169,8 @@ for currentRow = 1:length(rownames)
         end
         
         %% Inverse Age effects
+        % updating progress
+        fprintf('Inverse Age Effects for %s for %s\n',trialtypenames(currentTrialType),rownames(currentRow))
         inverseage_savename = sprintf('%s_inverseage_%s.mat',trialtypenames(currentTrialType),rownames(currentRow));
         
         % check if inverse age clusters are already computed
@@ -225,6 +227,8 @@ for currentRow = 1:length(rownames)
     if exist(corvgs_groupact_savename,'file')
         fprintf('Computed correct AS vs. VGS group activation not controlling for age\n')
     else
+        % updating progress
+        fprintf('Computing effect of trial type for Correct AS vs. VGS (not controlling for age) for %s\n',rownames(currentRow))
         % Run linear mixed effects model
         [b,t] = calc_ersp_trialtype_groupact_psc(Tcorvgs,allerspcell{1,currentRow},allerspcell{2,currentRow},numTimes,numFreqs,0);
         % TFCE on t-values
@@ -247,6 +251,8 @@ for currentRow = 1:length(rownames)
     if exist(corerrcor_groupact_savename,'file')
         fprintf('Computed group activation by trial type for Correct AS vs. Error Corrected AS not controlling for age\n')
     else
+        % updating progress
+        fprintf('Computing effect of trial type for Correct AS vs. Error Corrected AS (not controlling for age) for %s\n',rownames(currentRow))
         % Run linear mixed effects model
         [b,t] = calc_ersp_trialtype_groupact_psc(Tcorerrcor,allerspcell{1,currentRow},allerspcell{3,currentRow},numTimes,numFreqs,0);
         % TFCE on t-values
@@ -269,6 +275,8 @@ for currentRow = 1:length(rownames)
     if exist(corvgs_groupactctrl4age_savename,'file')
         fprintf('Computed correct AS vs. VGS group activation controlling for age\n')
     else
+        % updating progress
+        fprintf('Computing effect of trial type for Correct AS vs. VGS (controlling for age) for %s\n',rownames(currentRow))
         % Run linear mixed effects model
         [b,t] = calc_ersp_trialtype_groupact_psc(Tcorvgs,allerspcell{1,currentRow},allerspcell{2,currentRow},numTimes,numFreqs,1);
         % TFCE on t-values
@@ -290,6 +298,8 @@ for currentRow = 1:length(rownames)
     if exist(corerrcor_groupactctrl4age_savename,'file')
         fprintf('Computed group activation by trial type for Correct AS vs. Error Corrected AS controlling for age\n')
     else
+        % updating progress
+        fprintf('Computing effect of trial type for Correct AS vs. Error Corrected AS (controlling for age) for %s\n',rownames(currentRow))
         % Run linear mixed effects model
         [b,t] = calc_ersp_trialtype_groupact_psc(Tcorerrcor,allerspcell{1,currentRow},allerspcell{3,currentRow},numTimes,numFreqs,1);
         % TFCE on t-values
@@ -312,6 +322,8 @@ for currentRow = 1:length(rownames)
     if exist(corvgs_fullLME_savename,'file')
         fprintf('Computed full LME for Correct AS vs. VGS\n')
     else
+        % updating progress
+        fprintf('Computing full LME for correct AS vs. VGS for %s\n',rownames(currentRow))
         % Run linear mixed effects model
         [b,t] = calc_ersp_fullLME_psc(Tcorvgs,allerspcell{1,currentRow},allerspcell{2,currentRow},numTimes,numFreqs);
         % TFCE on t-values
@@ -338,6 +350,8 @@ for currentRow = 1:length(rownames)
     if exist(corerrcor_fullLME_savename,'file')
         fprintf('Computed full LME for Correct AS vs. Errcor Corrected AS\n')
     else
+       % updating progress
+        fprintf('Computing full LME for correct AS vs. error corrected AS for %s\n',rownames(currentRow)) 
         % Run linear mixed effects model
         [b,t] = calc_ersp_fullLME_psc(Tcorerrcor,allerspcell{1,currentRow},allerspcell{3,currentRow},numTimes,numFreqs);
         % TFCE on t-values
