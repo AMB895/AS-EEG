@@ -224,7 +224,7 @@ for currentRow = 1:length(rownames)
         fprintf('Computed correct AS vs. VGS group activation not controlling for age\n')
     else
         % Run linear mixed effects model
-        [b,t] = calc_ersp_trialtype_groupact_psc(Tcorvgs,allerspcell(1,currentRow),allerspcell(2,currentRow),numTimes,numFreqs,0);
+        [b,t] = calc_ersp_trialtype_groupact_psc(Tcorvgs,allerspcell{1,currentRow},allerspcell{2,currentRow},numTimes,numFreqs,0);
         % TFCE on t-values
         tfcescores.trialtype = limo_tfce(2,t.trialtype,[]);
         % Permute t-values
@@ -246,7 +246,7 @@ for currentRow = 1:length(rownames)
         fprintf('Computed group activation by trial type for Correct AS vs. Error Corrected AS not controlling for age\n')
     else
         % Run linear mixed effects model
-        [b,t] = calc_ersp_trialtype_groupact_psc(Tcorerrcor,allerspcell(1,currentRow),allerspcell(3,currentRow),numTimes,numFreqs,0);
+        [b,t] = calc_ersp_trialtype_groupact_psc(Tcorerrcor,allerspcell{1,currentRow},allerspcell{3,currentRow},numTimes,numFreqs,0);
         % TFCE on t-values
         tfcescores.trialtype = limo_tfce(2,t.trialtype,[]);
         % Permute t-values
@@ -268,7 +268,7 @@ for currentRow = 1:length(rownames)
         fprintf('Computed correct AS vs. VGS group activation controlling for age\n')
     else
         % Run linear mixed effects model
-        [b,t] = calc_ersp_trialtype_groupact_psc(Tcorvgs,allerspcell(1,currentRow),allerspcell(2,currentRow),numTimes,numFreqs,1);
+        [b,t] = calc_ersp_trialtype_groupact_psc(Tcorvgs,allerspcell{1,currentRow},allerspcell{2,currentRow},numTimes,numFreqs,1);
         % TFCE on t-values
         tfcescores.trialtype_ctrl4age = limo_tfce(2,t.trialtype,[]);
         % Permute t values
@@ -289,7 +289,7 @@ for currentRow = 1:length(rownames)
         fprintf('Computed group activation by trial type for Correct AS vs. Error Corrected AS controlling for age\n')
     else
         % Run linear mixed effects model
-        [b,t] = calc_ersp_trialtype_groupact_psc(Tcorerrcor,allerspcell(1,currentRow),allerspcell(3,currentRow),numTimes,numFreqs,1);
+        [b,t] = calc_ersp_trialtype_groupact_psc(Tcorerrcor,allerspcell{1,currentRow},allerspcell{3,currentRow},numTimes,numFreqs,1);
         % TFCE on t-values
         tfcescores.trialtype_ctrl4age = limo_tfce(2,t.trialtype,[]);
         % Permute t values
@@ -311,7 +311,7 @@ for currentRow = 1:length(rownames)
         fprintf('Computed full LME for Correct AS vs. VGS\n')
     else
         % Run linear mixed effects model
-        [b,t] = calc_ersp_fullLME_psc(Tcorvgs,allerspcell(1,currentRow),allerspcell(2,currentRow),numTimes,numFreqs);
+        [b,t] = calc_ersp_fullLME_psc(Tcorvgs,allerspcell{1,currentRow},allerspcell{2,currentRow},numTimes,numFreqs);
         % TFCE on t-values
         tfcescores.age = limo_tfce(2,t.age,[]);
         tfcescores.trialtype = limo_tfce(2,t.trialtype,[]);
@@ -337,7 +337,7 @@ for currentRow = 1:length(rownames)
         fprintf('Computed full LME for Correct AS vs. Errcor Corrected AS\n')
     else
         % Run linear mixed effects model
-        [b,t] = calc_ersp_fullLME_psc(Tcorerrcor,allerspcell(1,currentRow),allerspcell(3,currentRow),numTimes,numFreqs);
+        [b,t] = calc_ersp_fullLME_psc(Tcorerrcor,allerspcell{1,currentRow},allerspcell{3,currentRow},numTimes,numFreqs);
         % TFCE on t-values
         tfcescores.age = limo_tfce(2,t.age,[]);
         tfcescores.trialtype = limo_tfce(2,t.trialtype,[]);
