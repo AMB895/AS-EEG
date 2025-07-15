@@ -15,7 +15,7 @@ for n=1:nPerm
     tF = reshape(tF,[size1,size2]);
     
     % display permutation number
-    disp(n)
+%     disp(n)
     
     % run limo_tfce on permuted t/F values
     perm_tfce_scores = limo_tfce(2,tF,[],0);
