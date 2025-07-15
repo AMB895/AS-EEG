@@ -2,7 +2,6 @@
 clear; close all
 % adding necessary paths
 addpath('/ocean/projects/soc230004p/shared/antisaccade_eeg/tools/')
-addpath('/ocean/projects/soc230004p/shared/antisaccade_eeg/functions/')
 addpath('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/')
 addpath('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats')
 %% Load in correct, vgs, and error data
