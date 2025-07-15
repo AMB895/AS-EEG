@@ -342,6 +342,7 @@ for currentRow = 1:length(rownames)
         sigmask.interaction = calc_thres_mask_tfclusters_2d(tfcescores.interaction,permtfcescores.interaction,0.01);
         % save outputs
         savepath = sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',corvgs_fullLME_savename);
+        save(savepath,'t','b','tfcescores','permtfcescores','sigmask')
         % clear t, b, tfcescores, permtfcescores, and sigmask for next lme
         clear t b tfcescores permtfcescores sigmask
     end
@@ -370,6 +371,7 @@ for currentRow = 1:length(rownames)
         sigmask.interaction = calc_thres_mask_tfclusters_2d(tfcescores.interaction,permtfcescores.interaction,0.01);
         % save outputs
         savepath = sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',corerrcor_fullLME_savename);
+        save(savepath,'t','b','tfcescores','permtfcescores','sigmask')
         % clear t, b, tfcescores, permtfcescores, and sigmask for next lme
         clear t b tfcescores permtfcescores sigmask
     end
