@@ -14,13 +14,12 @@ for i = 1:numFreqs
             trialtypecoeftable = coeftable(3,:);
             % Coefficient Tables with rows: 
     % Name, Estimate, SE, tStat, DF, pValue, Lower, Upper
-            % Flip sign of age coefficient because input was inverse age
             b_trialtype(i,j) = double(trialtypecoeftable(1,2));
-            b_age(i,j) = -1*double(agecoeftable(1,2));
+            b_age(i,j) = double(agecoeftable(1,2));
             b_intercept(i,j) = double(interceptcoeftable(1,2));
 
             t_trialtype(i,j) = double(trialtypecoeftable(1,4));
-            t_age(i,j) = -1*double(agecoeftable(1,4));
+            t_age(i,j) = double(agecoeftable(1,4));
             t_intercept(i,j) = double(interceptcoeftable(1,4));
         else
             lme = fitlme(T,'ersp ~ trialtype + (1 | id)');

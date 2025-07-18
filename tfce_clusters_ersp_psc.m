@@ -255,7 +255,7 @@ for currentRow = 1:length(rownames)
     corerrcor_groupact_savename = sprintf('CorASErrCorAS_trialTypeGroupAct_%s.mat',rownames(currentRow));
     % check if file exists
     if exist(corerrcor_groupact_savename,'file')
-        fprintf('Computed group activation by trial type for Correct AS vs. Error Corrected AS not controlling for age\n')
+        fprintf('Computed Correct AS vs. Error Corrected AS group activation not controlling for age\n')
     else
         % updating progress
         fprintf('Computing effect of trial type for Correct AS vs. Error Corrected AS (not controlling for age) for %s\n',rownames(currentRow))
@@ -302,7 +302,7 @@ for currentRow = 1:length(rownames)
     corerrcor_groupactctrl4age_savename = sprintf('CorASErrCorAS_trialTypeGroupAct_ctrl4age_%s.mat',rownames(currentRow));
     % check if file exists
     if exist(corerrcor_groupactctrl4age_savename,'file')
-        fprintf('Computed group activation by trial type for Correct AS vs. Error Corrected AS controlling for age\n')
+        fprintf('Computed Correct AS vs. Error Corrected AS group activation controlling for age\n')
     else
         % updating progress
         fprintf('Computing effect of trial type for Correct AS vs. Error Corrected AS (controlling for age) for %s\n',rownames(currentRow))
@@ -323,7 +323,7 @@ for currentRow = 1:length(rownames)
     
     %% LME for effects of inverse age, trial type and interaction
     % Correct AS vs. VGS
-    corvgs_fullLME_savename = sprintf('CorASVGS_fullGLM_%s',rownames(currentRow));
+    corvgs_fullLME_savename = sprintf('CorASVGS_fullLME_%s',rownames(currentRow));
     % check if file exists
     if exist(corvgs_fullLME_savename,'file')
         fprintf('Computed full LME for Correct AS vs. VGS\n')
@@ -352,7 +352,7 @@ for currentRow = 1:length(rownames)
     end
     
      % Correct AS vs. Error correct AS
-    corerrcor_fullLME_savename = sprintf('CorASErrCorAS_fullGLM_%s',rownames(currentRow));
+    corerrcor_fullLME_savename = sprintf('CorASErrCorAS_fullLME_%s',rownames(currentRow));
     % check if file exists
     if exist(corerrcor_fullLME_savename,'file')
         fprintf('Computed full LME for Correct AS vs. Errcor Corrected AS\n')
