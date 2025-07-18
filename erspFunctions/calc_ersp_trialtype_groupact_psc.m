@@ -7,7 +7,7 @@ for i = 1:numFreqs
         T.ersp = [data1;data2];
         if ctrl4age
             % control for linear age (not looking at developmental age effects)
-            lme = fitlme(T,'ersp ~ trialtype + eeg_age + (1 | id)');
+            lme = fitlme(T,'ersp ~ trialtype + age + (1 | id)');
             coeftable = lme.Coefficients;
             interceptcoeftable = coeftable(1,:);
             agecoeftable = coeftable(2,:);
