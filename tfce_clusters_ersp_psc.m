@@ -201,24 +201,27 @@ for currentRow = 1:length(rownames)
     
     %% Models looking at effect of trial type
     % setting up tables
-    Tcor = table('Size',[size(coridmat_viable,1) 5],'VariableTypes',{'double','double','double','categorical','double'},...
-        'VariableNames',{'id','visit','invage','trialtype','ersp'});
+    Tcor = table('Size',[size(coridmat_viable,1) 6],'VariableTypes',{'double','double','double','double','categorical','double'},...
+        'VariableNames',{'id','visit','age','invage','trialtype','ersp'});
     Tcor.id = coridmat_viable(:,1);
     Tcor.visit = coridmat_viable(:,4);
+    Tcor.age = coridmat_viable(:,3);
     Tcor.invage = 1./coridmat_viable(:,3);
     Tcor.trialtype = repmat("cor",size(coridmat_viable,1),1);
     
-    Tvgs = table('Size',[size(vgsidmat,1) 5],'VariableTypes',{'double','double','double','categorical','double'},...
-        'VariableNames',{'id','visit','invage','trialtype','ersp'});
+    Tvgs = table('Size',[size(vgsidmat,1) 6],'VariableTypes',{'double','double','double','double','categorical','double'},...
+        'VariableNames',{'id','visit','age','invage','trialtype','ersp'});
     Tvgs.id = vgsidmat(:,1);
     Tvgs.visit = vgsidmat(:,4);
+    Tvgs.age = vgsidmat(:,3);
     Tvgs.invage = 1./vgsidmat(:,4);
     Tvgs.trialtype = repmat("vgs",size(vgsidmat,1),1);
     
-    Terrcor = table('Size',[size(errcoridmat_viable,1) 5],'VariableTypes',{'double','double','double','categorical','double'},...
-        'VariableNames',{'id','visit','invage','trialtype','ersp'});
+    Terrcor = table('Size',[size(errcoridmat_viable,1) 6],'VariableTypes',{'double','double','double','double','categorical','double'},...
+        'VariableNames',{'id','visit','age','invage','trialtype','ersp'});
     Terrcor.id = errcoridmat_viable(:,1);
     Terrcor.visit = errcoridmat_viable(:,4);
+    Terrcor.age = errcoridmat_viable(:,3);
     Terrcor.invage = 1./errcoridmat_viable(:,3);
     Terrcor.trialtype = repmat("errcor",size(errcoridmat_viable,1),1);
     
