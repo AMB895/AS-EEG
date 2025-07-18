@@ -1,10 +1,10 @@
 %% Significant Clusters on ERSP
 clear; close all
 % adding necessary paths
-addpath('/ocean/projects/soc230004p/shared/antisaccade_eeg/tools/')
-addpath('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/')
-addpath('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/')
-addpath('/ocean/projects/soc230004p/shared/antisaccade_eeg/code/erspFunctions/')
+addpath(genpath('/ocean/projects/soc230004p/shared/antisaccade_eeg/tools/'))
+addpath(genpath('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/'))
+addpath(genpath('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/'))
+addpath(genpath('/ocean/projects/soc230004p/shared/antisaccade_eeg/code/erspFunctions/'))
 %% Load in correct, vgs, and error data
 % Correct AS Trials
 % load in ersp data
