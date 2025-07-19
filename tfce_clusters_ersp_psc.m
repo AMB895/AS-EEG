@@ -123,8 +123,8 @@ trialtypenames = ["CorAS","VGS"];
 
 % big cell for all ersp data SKIPPING ERROR FOR NOW
 % dimensions: 3x2 columns=[frow prow] rows=[cor vgs errcor]
-allerspcell = {corersp_viable_frow corersp_viable_prow;vgsersp_frow vgsersp_prow;errcorersp_viable_frow errcorersp_viable_prow};
-allidmatcell = {coridmat_viable;vgsidmat;errcoridmat_viable};
+% allerspcell = {corersp_viable_frow corersp_viable_prow;vgsersp_frow vgsersp_prow;errcorersp_viable_frow errcorersp_viable_prow};
+% allidmatcell = {coridmat_viable;vgsidmat;errcoridmat_viable};
 
 % dimensions: 2x2 columns=[frow prow] rows=[cor vgs]
 allerspcell = {corersp_viable_frow corersp_viable_prow;vgsersp_frow vgsersp_prow};
