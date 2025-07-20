@@ -212,7 +212,7 @@ for currentRow = 1:length(rownames)
             permtfcescores.intercept = calc_perm_tfce_2d(t.intercept,1000);
             % Find significant clusters
             sigmask.age = calc_thres_mask_tfclusters_2d(tfcescores.age,permtfcescores.age,0.01);
-            sigmask.intercept = calc_thres_mask_tfclusters_2d(tfcescores.intercept,permtfcescores.groupact_ctrl4age,0.01);
+            sigmask.intercept = calc_thres_mask_tfclusters_2d(tfcescores.intercept,permtfcescores.intercept,0.01);
             % save outputs
             savepath = sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',ageeffects_savename);
             save(savepath,'t','b','tfcescores','permtfcescores','sigmask')
