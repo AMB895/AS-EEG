@@ -72,7 +72,7 @@ vgsersp_frow = squeeze(mean(vgsersp(:,[4 5 6 7 37 38 39 40 41],:,:),2));
 vgsersp_prow = squeeze(mean(vgsersp(:,[19 20 21 22 23 55 56 57 58 59 31],:,:),2));
 
 % Error corrected AS trials
-load in error data
+% load in error data
 errcorerspstruct = load('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ErrCorAS/ErrCorASersp.mat');
 errcorersp = errcorerspstruct.allersp;
 times = errcorerspstruct.preptimes;
