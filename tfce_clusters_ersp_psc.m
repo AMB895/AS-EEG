@@ -190,7 +190,7 @@ for currentRow = 1:length(rownames)
             fprintf('skipping; Computed %s %s effect clusters\n',trialtypenames(currentTrialType),currentagetype)
         else
             % updating progress
-            fprintf('Inverse Age Effects for %s for %s\n',trialtypenames(currentTrialType),rownames(currentRow))
+            fprintf('Age Effects for %s for %s\n',trialtypenames(currentTrialType),rownames(currentRow))
             % Run linear mixed effects 
             [b,t] = calc_ersp_ageeffects_psc(T,currentERSPdata,numTimes,numFreqs);
             % flip sign of b.age and t.age if age type is inverse
@@ -360,7 +360,7 @@ for currentRow = 1:length(rownames)
         % Run linear mixed effects model
         [b,t] = calc_ersp_trialtype_groupact_psc(Tcorerrcor,allerspcell{1,currentRow},allerspcell{3,currentRow},numTimes,numFreqs,1);
         % flip sign of b.age and t.age if inverse age
-        if strcmp(currentage,"invage")
+        if strcmp(currentagetype,"invage")
             b.age = -1.*b.age;
             t.age = -1.*t.age;
         end
