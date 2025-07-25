@@ -1,4 +1,4 @@
-function [b,t] = calc_ersp_trialtype_groupact_psc(T,erspdata1,erspdata2,numTimes,numFreqs,ctrl4age)
+function [b,t,AIC] = calc_ersp_trialtype_groupact_psc(T,erspdata1,erspdata2,numTimes,numFreqs,ctrl4age)
 % erspdata is (subjects,freqs,times)
 for i = 1:numFreqs
     for j = 1:numTimes
@@ -7,7 +7,7 @@ for i = 1:numFreqs
         T.ersp = [data1;data2];
         if ctrl4age
             % control for linear age (not looking at developmental age effects)
-            lme = fitlme(T,'ersp ~ trialtype + age + (1 | id)');
+            lme = fitlme(T,'ersp ~ age + trialtype + (1 | id)');
             coeftable = lme.Coefficients;
             interceptcoeftable = coeftable(1,:);
             agecoeftable = coeftable(2,:);
@@ -21,6 +21,9 @@ for i = 1:numFreqs
             t_trialtype(i,j) = double(trialtypecoeftable(1,4));
             t_age(i,j) = double(agecoeftable(1,4));
             t_intercept(i,j) = double(interceptcoeftable(1,4));
+            
+            % get AIC
+            AIC(i,j) = lme.ModelCriterion.AIC;
         else
             lme = fitlme(T,'ersp ~ trialtype + (1 | id)');
             coeftable = lme.Coefficients;
