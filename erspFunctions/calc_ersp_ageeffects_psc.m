@@ -1,10 +1,15 @@
-function [b,t] = calc_ersp_ageeffects_psc(T,erspdata,numTimes,numFreqs)
+function [b,t,AIC] = calc_ersp_ageeffects_psc(T,erspdata,numTimes,numFreqs)
 % erspdata is (subjects,freqs,times)
 for i = 1:numFreqs
     for j = 1:numTimes
          % time,freq point data across subjects
         data = squeeze(erspdata(:,i,j));
         T.ersp = data;
+        % ensure id is categorical variable
+        if ~isa(T.id,'categorical')
+            T.id = categorical(T.id);
+        end
+        % run lmer
         lme = fitlme(T,'ersp ~ 1 + age + (1 | id)');
         coeftable = lme.Coefficients;
         agecoeftable = coeftable(2,:);
@@ -15,6 +20,9 @@ for i = 1:numFreqs
         b_intercept(i,j) = double(intercepttable(1,2));
         t_age(i,j) = double(agecoeftable(1,4));
         t_intercept(i,j) = double(intercepttable(1,4));
+        
+        % get AIC
+        AIC(i,j) = lme.ModelCriterion.AIC;
     end
 end
 % add b values to struct

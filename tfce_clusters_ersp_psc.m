@@ -124,11 +124,6 @@ trialtypenames = ["CorAS","VGS","ErrCorAS"];
 allerspcell = {corersp_viable_frow corersp_viable_prow;vgsersp_frow vgsersp_prow;errcorersp_viable_frow errcorersp_viable_prow};
 allidmatcell = {coridmat_viable;vgsidmat;errcoridmat_viable};
 
-% look at models with linear age and inverse age
-agetypestrs = ["linage","invage"];
-
-%% looping through linear age and inverse age
-for agetype = 1:length(agetypestrs)
 %% looping through F row and P rows
 for currentRow = 1:length(rownames)
     %% looping through each trial type
@@ -137,28 +132,17 @@ for currentRow = 1:length(rownames)
         currentERSPdata = allerspcell{currentTrialType,currentRow};
         % define current id matrix 
         currentidmat = allidmatcell{currentTrialType};
-        % define current age type
-        currentagetype = agetypestrs(agetype);
-        if strcmp(currentagetype,"linage")
-            % set up table for Group Act lme and linear age lme
-            % id should be a categorical variable
-            T = table('Size',[size(currentidmat,1) 4],'VariableTypes',{'categorical','double','double','double'},...
-                'VariableNames',{'id','visit','age','ersp'});
-            T.id = currentidmat(:,1);
-            T.age = currentidmat(:,3);
-            T.visit = currentidmat(:,4);
-        elseif strcmp(currentagetype,"invage")
-            % set up table for Group Act lme and inverse age lme
-            T = table('Size',[size(currentidmat,1) 4],'VariableTypes',{'categorical','double','double','double'},...
-                'VariableNames',{'id','visit','age','ersp'});
-            T.id = currentidmat(:,1);
-            T.age = 1./currentidmat(:,3);
-            T.visit = currentidmat(:,4);
-        end
+        
+        % set up table for Group Act lme and linear age lme
+        % id should be a categorical variable
+        T = table('Size',[size(currentidmat,1) 4],'VariableTypes',{'categorical','double','double','double'},...
+            'VariableNames',{'id','visit','age','ersp'});
+        T.id = currentidmat(:,1);
+        T.age = currentidmat(:,3);
+        T.visit = currentidmat(:,4);
         
         %% Group Activation
         % define save name
-        % only compute once (no age effects in model)
         groupact_savename = sprintf('%s_groupAct_%s.mat',trialtypenames(currentTrialType),rownames(currentRow));
         
         % check if group activation clusters are already computed
@@ -168,7 +152,7 @@ for currentRow = 1:length(rownames)
             % updating progress
             fprintf('Group Activation for %s for %s\n',trialtypenames(currentTrialType),rownames(currentRow))
             % Run linear mixed effects model for group activation
-            [b,t] = calc_ersp_groupact_psc(T,currentERSPdata,numTimes,numFreqs);
+            [b,t,AIC] = calc_ersp_groupact_psc(T,currentERSPdata,numTimes,numFreqs);
             % TFCE on t-values
             tfcescores = limo_tfce(2,t,[]);
             % Permute TFCE scores
@@ -177,27 +161,23 @@ for currentRow = 1:length(rownames)
             sigmask = calc_thres_mask_tfclusters_2d(tfcescores,permtfcescores,0.01);
             % save outputs
             savepath = sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',groupact_savename);
-            save(savepath,'t','b','tfcescores','permtfcescores','sigmask')
+            save(savepath,'t','b','AIC','tfcescores','permtfcescores','sigmask')
             % clear t, b, tfcescores, permtfcescores, and sigmask for next lme
-            clear t b tfcescores permtfcescores sigmask
+            clear t b tfcescores permtfcescores sigmask AIC
         end
         
-        %% Age effects (linear or inverse)
-        ageeffects_savename = sprintf('%s_%seffect_%s.mat',trialtypenames(currentTrialType),currentagetype,rownames(currentRow));
+        %% Age effects
+        ageeffects_savename = sprintf('%s_effect_%s.mat',trialtypenames(currentTrialType),rownames(currentRow));
         
-        % check if inverse age clusters are already computed
+        % check if age clusters are already computed
         if exist(sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',ageeffects_savename),'file')
-            fprintf('skipping; Computed %s %s effect clusters\n',trialtypenames(currentTrialType),currentagetype)
+            fprintf('skipping; Computed %s effect clusters\n',trialtypenames(currentTrialType))
         else
             % updating progress
             fprintf('Age Effects for %s for %s\n',trialtypenames(currentTrialType),rownames(currentRow))
             % Run linear mixed effects 
-            [b,t] = calc_ersp_ageeffects_psc(T,currentERSPdata,numTimes,numFreqs);
-            % flip sign of b.age and t.age if age type is inverse
-            if strcmp(currentagetype,"invage")
-                b.age = -1.*b.age;
-                t.age = -1.*t.age;
-            end
+            [b,t,AIC] = calc_ersp_ageeffects_psc(T,currentERSPdata,numTimes,numFreqs);
+            
             % TFCE on t-values
             tfcescores.age = limo_tfce(2,t.age,[]);
             tfcescores.intercept = limo_tfce(2,t.intercept,[]);
@@ -209,183 +189,40 @@ for currentRow = 1:length(rownames)
             sigmask.intercept = calc_thres_mask_tfclusters_2d(tfcescores.intercept,permtfcescores.intercept,0.01);
             % save outputs
             savepath = sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',ageeffects_savename);
-            save(savepath,'t','b','tfcescores','permtfcescores','sigmask')
+            save(savepath,'t','b','AIC','tfcescores','permtfcescores','sigmask')
             % clear t, b, tfcescores, permtfcescores, and sigmask for next lme
-            clear t b tfcescores permtfcescores sigmask
+            clear t b tfcescores permtfcescores sigmask AIC
         end
     end
     
-    %% Models looking at effect of trial type
-    % determine age type
-    if strcmp(currentagetype,"linage")
-        % setting up tables
-        Tcor = table('Size',[size(coridmat_viable,1) 5],'VariableTypes',{'categorical','double','double','categorical','double'},...
-            'VariableNames',{'id','visit','age','trialtype','ersp'});
-        Tcor.id = coridmat_viable(:,1);
-        Tcor.visit = coridmat_viable(:,4);
-        Tcor.age = coridmat_viable(:,3);
-        Tcor.trialtype = repmat("cor",size(coridmat_viable,1),1);
+    %% Models for age, trial type, and interaction effects for CorAS vs. VGS and CorAS vs. ErrCorAS
 
-        Tvgs = table('Size',[size(vgsidmat,1) 5],'VariableTypes',{'categorical','double','double','categorical','double'},...
-            'VariableNames',{'id','visit','age','trialtype','ersp'});
-        Tvgs.id = vgsidmat(:,1);
-        Tvgs.visit = vgsidmat(:,4);
-        Tvgs.age = vgsidmat(:,3);
-        Tvgs.trialtype = repmat("vgs",size(vgsidmat,1),1);
+    % setting up tables
+    Tcor = table('Size',[size(coridmat_viable,1) 5],'VariableTypes',{'categorical','double','double','categorical','double'},...
+        'VariableNames',{'id','visit','age','trialtype','ersp'});
+    Tcor.id = coridmat_viable(:,1);
+    Tcor.visit = coridmat_viable(:,4);
+    Tcor.age = coridmat_viable(:,3);
+    Tcor.trialtype = repmat("cor",size(coridmat_viable,1),1);
 
-        Terrcor = table('Size',[size(errcoridmat_viable,1) 5],'VariableTypes',{'categorical','double','double','categorical','double'},...
-            'VariableNames',{'id','visit','age','trialtype','ersp'});
-        Terrcor.id = errcoridmat_viable(:,1);
-        Terrcor.visit = errcoridmat_viable(:,4);
-        Terrcor.age = errcoridmat_viable(:,3);
-        Terrcor.trialtype = repmat("errcor",size(errcoridmat_viable,1),1);
-    
-    elseif strcmp(currentagetype,"invage")
-        % setting up tables
-        Tcor = table('Size',[size(coridmat_viable,1) 5],'VariableTypes',{'categorical','double','double','categorical','double'},...
-            'VariableNames',{'id','visit','age','trialtype','ersp'});
-        Tcor.id = coridmat_viable(:,1);
-        Tcor.visit = coridmat_viable(:,4);
-        Tcor.age = 1./coridmat_viable(:,3);
-        Tcor.trialtype = repmat("cor",size(coridmat_viable,1),1);
+    Tvgs = table('Size',[size(vgsidmat,1) 5],'VariableTypes',{'categorical','double','double','categorical','double'},...
+        'VariableNames',{'id','visit','age','trialtype','ersp'});
+    Tvgs.id = vgsidmat(:,1);
+    Tvgs.visit = vgsidmat(:,4);
+    Tvgs.age = vgsidmat(:,3);
+    Tvgs.trialtype = repmat("vgs",size(vgsidmat,1),1);
 
-        Tvgs = table('Size',[size(vgsidmat,1) 5],'VariableTypes',{'categorical','double','double','categorical','double'},...
-            'VariableNames',{'id','visit','age','trialtype','ersp'});
-        Tvgs.id = vgsidmat(:,1);
-        Tvgs.visit = vgsidmat(:,4);
-        Tvgs.age = 1./vgsidmat(:,3);
-        Tvgs.trialtype = repmat("vgs",size(vgsidmat,1),1);
+    Terrcor = table('Size',[size(errcoridmat_viable,1) 5],'VariableTypes',{'categorical','double','double','categorical','double'},...
+        'VariableNames',{'id','visit','age','trialtype','ersp'});
+    Terrcor.id = errcoridmat_viable(:,1);
+    Terrcor.visit = errcoridmat_viable(:,4);
+    Terrcor.age = errcoridmat_viable(:,3);
+    Terrcor.trialtype = repmat("errcor",size(errcoridmat_viable,1),1);
 
-        Terrcor = table('Size',[size(errcoridmat_viable,1) 5],'VariableTypes',{'categorical','double','double','categorical','double'},...
-            'VariableNames',{'id','visit','age','trialtype','ersp'});
-        Terrcor.id = errcoridmat_viable(:,1);
-        Terrcor.visit = errcoridmat_viable(:,4);
-        Terrcor.age = 1./errcoridmat_viable(:,3);
-        Terrcor.trialtype = repmat("errcor",size(errcoridmat_viable,1),1);
-    end
-    
-    %% Effect of trial type on group activation (not controlling for age)
+    %% LMER for effects of inverse age, trial type and interaction
+    % ERSP ~ Age + TrialType + Age:TrialType + (1 | id)
     % Correct AS vs. VGS
-    Tcorvgs = [Tcor;Tvgs];
-    % checking if file exists
-    % only run once b/c no age in model
-    corvgs_groupact_savename = sprintf('CorASVGS_trialTypeGroupAct_%s.mat',rownames(currentRow));
-    if exist(corvgs_groupact_savename,'file')
-        fprintf('skipping; Computed correct AS vs. VGS group activation not controlling for age\n')
-    else
-        % updating progress
-        fprintf('Trial type effect for Correct AS vs. VGS (not controlling for age) for %s\n',rownames(currentRow))
-        % Run linear mixed effects model
-        [b,t] = calc_ersp_trialtype_groupact_psc(Tcorvgs,allerspcell{1,currentRow},allerspcell{2,currentRow},numTimes,numFreqs,0);
-        % TFCE on t-values
-        tfcescores.trialtype = limo_tfce(2,t.trialtype,[]);
-        % Permute t-values
-        permtfcescores.trialtype = calc_perm_tfce_2d(t.trialtype,1000);
-        % Find significant clusters
-        sigmask.trialtype = calc_thres_mask_tfclusters_2d(tfcescores.trialtype,permtfcescores.trialtype,0.01);
-        % save outputs
-        savepath = sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',corvgs_groupact_savename);
-        save(savepath,'t','b','tfcescores','permtfcescores','sigmask')
-        % clear t, b, tfcescores, permtfcescores, and sigmask for next lme
-        clear t b tfcescores permtfcescores sigmask
-    end
-    
-    % Correct AS vs. Error Correct AS
-    Tcorerrcor = [Tcor;Terrcor];
-    corerrcor_groupact_savename = sprintf('CorASErrCorAS_trialTypeGroupAct_%s.mat',rownames(currentRow));
-    % check if file exists
-    if exist(sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',corerrcor_groupact_savename),'file')
-        fprintf('skipping; Computed Correct vs. Error Corrected AS group activation not controlling for age\n')
-    else
-        % updating progress
-        fprintf('Trial type effect for Correct vs. Error Corrected AS (not controlling for age) for %s\n',rownames(currentRow))
-        % Run linear mixed effects model
-        [b,t] = calc_ersp_trialtype_groupact_psc(Tcorerrcor,allerspcell{1,currentRow},allerspcell{3,currentRow},numTimes,numFreqs,0);
-        % TFCE on t-values
-        tfcescores.trialtype = limo_tfce(2,t.trialtype,[]);
-        % Permute t-values
-        permtfcescores.trialtype = calc_perm_tfce_2d(t.trialtype,1000);
-        % Find significant clusters
-        sigmask.trialtype = calc_thres_mask_tfclusters_2d(tfcescores.trialtype,permtfcescores.trialtype,0.01);
-        % save outputs
-        savepath = sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',corerrcor_groupact_savename);
-        save(savepath,'t','b','tfcescores','permtfcescores','sigmask')
-        % clear t, b, tfcescores, permtfcescores, and sigmask for next lme
-        clear t b tfcescores permtfcescores sigmask
-    end
-    
-    %% Effect of trial type on group activation (controlling for age)
-    % Correct AS vs. VGS
-    % checking if file exists
-    corvgs_groupactctrl4age_savename = sprintf('CorASVGS_%s_trialTypeGroupAct_%s.mat',currentagetype,rownames(currentRow));
-    if exist(sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',corvgs_groupactctrl4age_savename),'file')
-        fprintf('skipping; Computed correct AS vs. VGS group activation controlling for age\n')
-    else
-        % updating progress
-        fprintf('Trial type effect for Correct AS vs. VGS (controlling for %s) for %s\n',currentagetype,rownames(currentRow))
-        % Run linear mixed effects model
-        [b,t] = calc_ersp_trialtype_groupact_psc(Tcorvgs,allerspcell{1,currentRow},allerspcell{2,currentRow},numTimes,numFreqs,1);
-        % if inverse age flip sign of b.age and t.age
-        if strcmp(currentagetype,"invage")
-            b.age = -1.*b.age;
-            t.age = -1.*t.age;
-        end
-        % TFCE on t-values
-        tfcescores.trialtype = limo_tfce(2,t.trialtype,[]);
-        tfcescores.age = limo_tfce(2,t.age,[]);
-        tfcescores.intercept = limo_tfce(2,t.intercept,[]);
-        % Permute t values
-        permtfcescores.trialtype = calc_perm_tfce_2d(t.trialtype,1000);
-        permtfcescores.age = calc_perm_tfce_2d(t.age,1000);
-        permtfcescores.intercept = calc_perm_tfce_2d(t.intercept,1000);
-        % Find significant clusters
-        sigmask.trialtype = calc_thres_mask_tfclusters_2d(tfcescores.trialtype, permtfcescores.trialtype,0.01);
-        sigmask.age = calc_thres_mask_tfclusters_2d(tfcescores.age, permtfcescores.age,0.01);
-        sigmask.intercept = calc_thres_mask_tfclusters_2d(tfcescores.intercept, permtfcescores.intercept, 0.01);
-        % save outputs
-        savepath = sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',corvgs_groupactctrl4age_savename);
-        save(savepath,'t','b','tfcescores','permtfcescores','sigmask')
-        % clear t, b, tfcescores, permtfcescores, and sigmask for next lme
-        clear t b tfcescores permtfcescores sigmask
-    end
-    
-    % Correct AS vs. Error Correct AS
-    corerrcor_groupactctrl4age_savename = sprintf('CorASErrCorAS_%s_trialTypeGroupAct_%s.mat',currentagetype,rownames(currentRow));
-    % check if file exists
-    if exist(sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',corerrcor_groupactctrl4age_savename),'file')
-        fprintf('skipping; Computed Correct AS vs. Error Corrected AS group activation controlling for age\n')
-    else
-        % updating progress
-        fprintf('Trial type for Correct vs. Error Corrected AS (controlling for %s) for %s\n',currentagetype,rownames(currentRow))
-        % Run linear mixed effects model
-        [b,t] = calc_ersp_trialtype_groupact_psc(Tcorerrcor,allerspcell{1,currentRow},allerspcell{3,currentRow},numTimes,numFreqs,1);
-        % flip sign of b.age and t.age if inverse age
-        if strcmp(currentagetype,"invage")
-            b.age = -1.*b.age;
-            t.age = -1.*t.age;
-        end
-        % TFCE on t-values
-        tfcescores.trialtype = limo_tfce(2,t.trialtype,[]);
-        tfcescores.age = limo_tfce(2,t.age,[]);
-        tfcescores.intercept = limo_tfce(2, t.intercept,[]);
-        % Permute t values
-        permtfcescores.trialtype = calc_perm_tfce_2d(t.trialtype,1000);
-        permtfcescores.age = calc_perm_tfce_2d(t.age, 1000);
-        permtfcescores.intercept = calc_perm_tfce_2d(t.intercept, 1000);
-        % Find significant clusters
-        sigmask.trialtype = calc_thres_mask_tfclusters_2d(tfcescores.trialtype, permtfcescores.trialtype,0.01);
-        sigmask.age = calc_thres_mask_tfclusters_2d(tfcescores.age, permtfcescores.age, 0.01);
-        sigmask.intercept = calc_thres_mask_tfclusters_2d(tfcescores.intercept, permtfcescores.intercept, 0.01);
-        % save outputs
-        savepath = sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',corerrcor_groupactctrl4age_savename);
-        save(savepath,'t','b','tfcescores','permtfcescores','sigmask')
-        % clear t, b, tfcescores, permtfcescores, and sigmask for next lme
-        clear t b tfcescores permtfcescores sigmask
-    end
-    
-    %% LME for effects of inverse age, trial type and interaction
-    % Correct AS vs. VGS
-    corvgs_fullLME_savename = sprintf('CorASVGS_fullLME_%s_%s',currentagetype,rownames(currentRow));
+    corvgs_fullLME_savename = sprintf('CorASVGS_fullLME_%s',rownames(currentRow));
     % check if file exists
     if exist(sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',corvgs_fullLME_savename),'file')
         fprintf('skipping; Computed full LME for Correct AS vs. VGS\n')
@@ -393,32 +230,31 @@ for currentRow = 1:length(rownames)
         % updating progress
         fprintf('Computing full LME for correct AS vs. VGS for %s\n',rownames(currentRow))
         % Run linear mixed effects model
-        [b,t] = calc_ersp_fullLME_psc(Tcorvgs,allerspcell{1,currentRow},allerspcell{2,currentRow},numTimes,numFreqs);
-        % if inverse age flip sign of b.age and t.age
-        if strcmp(currentagetype,"invage")
-            b.age = -1.*b.age;
-            t.age = -1.*t.age;
-        end
+        [b,t,AIC] = calc_ersp_fullLME_psc(Tcorvgs,allerspcell{1,currentRow},allerspcell{2,currentRow},numTimes,numFreqs);
+
         % TFCE on t-values
         tfcescores.age = limo_tfce(2,t.age,[]);
         tfcescores.trialtype = limo_tfce(2,t.trialtype,[]);
         tfcescores.interaction = limo_tfce(2,t.interaction,[]);
+        tfcescores.intercept = limo_tfce(2,t.intercept,[]);
         % Permute tfce
         permtfcescores.age = calc_perm_tfce_2d(t.age,1000);
         permtfcescores.trialtype = calc_perm_tfce_2d(t.trialtype,1000);
         permtfcescores.interaction = calc_perm_tfce_2d(t.interaction,1000);
+        permtfcescores.intercept = calc_perm_tfce_2d(t.intercept,1000);
         % Find significant clusters
         sigmask.age = calc_thres_mask_tfclusters_2d(tfcescores.age,permtfcescores.age,0.01);
         sigmask.trialtype = calc_thres_mask_tfclusters_2d(tfcescores.trialtype,permtfcescores.trialtype,0.01);
         sigmask.interaction = calc_thres_mask_tfclusters_2d(tfcescores.interaction,permtfcescores.interaction,0.01);
+        sigmask.intercept = calc_thres_mask_tfclusters_2d(tfcescores.intercept,permtfcescores.intercept,0.01);
         % save outputs
         savepath = sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',corvgs_fullLME_savename);
-        save(savepath,'t','b','tfcescores','permtfcescores','sigmask')
+        save(savepath,'t','b','AIC','tfcescores','permtfcescores','sigmask')
         % clear t, b, tfcescores, permtfcescores, and sigmask for next lme
-        clear t b tfcescores permtfcescores sigmask
+        clear t b tfcescores permtfcescores sigmask AIC
     end
     
-     % Correct AS vs. Error correct AS skipping for now
+     % Correct AS vs. Error correct AS
     corerrcor_fullLME_savename = sprintf('CorASErrCorAS_fullLME_%s',rownames(currentRow));
     % check if file exists
     if exist(sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',corerrcor_fullLME_savename),'file')
@@ -427,29 +263,27 @@ for currentRow = 1:length(rownames)
        % updating progress
         fprintf('Computing full LME for correct AS vs. error corrected AS for %s\n',rownames(currentRow)) 
         % Run linear mixed effects model
-        [b,t] = calc_ersp_fullLME_psc(Tcorerrcor,allerspcell{1,currentRow},allerspcell{3,currentRow},numTimes,numFreqs);
-        % if inverse age flip sign of b.age and t.age
-        if strcmp(currentagetype,"invage")
-            b.age = -1.*b.age;
-            t.age = -1.*t.age;
-        end
+        [b,t,AIC] = calc_ersp_fullLME_psc(Tcorerrcor,allerspcell{1,currentRow},allerspcell{3,currentRow},numTimes,numFreqs);
+        
         % TFCE on t-values
         tfcescores.age = limo_tfce(2,t.age,[]);
         tfcescores.trialtype = limo_tfce(2,t.trialtype,[]);
         tfcescores.interaction = limo_tfce(2,t.interaction,[]);
+        tfcescores.intercept = limo_tfce(2,t.intercept,[]);
         % Permute tfce
         permtfcescores.age = calc_perm_tfce_2d(t.age,1000);
         permtfcescores.trialtype = calc_perm_tfce_2d(t.trialtype,1000);
         permtfcescores.interaction = calc_perm_tfce_2d(t.interaction,1000);
+        permtfcescores.intercept = calc_perm_tfce_2d(t.intercept,1000);
         % Find significant clusters
         sigmask.age = calc_thres_mask_tfclusters_2d(tfcescores.age,permtfcescores.age,0.01);
         sigmask.trialtype = calc_thres_mask_tfclusters_2d(tfcescores.trialtype,permtfcescores.trialtype,0.01);
         sigmask.interaction = calc_thres_mask_tfclusters_2d(tfcescores.interaction,permtfcescores.interaction,0.01);
+        sigmask.intercept = calc_thres_mask_tf_clusters_2d(tfcescores.intercept,permtfcescores.intercept,0.01);
         % save outputs
         savepath = sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',corerrcor_fullLME_savename);
-        save(savepath,'t','b','tfcescores','permtfcescores','sigmask')
+        save(savepath,'t','b','AIC','tfcescores','permtfcescores','sigmask')
         % clear t, b, tfcescores, permtfcescores, and sigmask for next lme
-        clear t b tfcescores permtfcescores sigmask
+        clear t b tfcescores permtfcescores sigmask AIC
     end
-end
 end

@@ -5,6 +5,15 @@ for i = 1:numFreqs
         data1 = squeeze(erspdata1(:,i,j));
         data2 = squeeze(erspdata2(:,i,j));
         T.ersp = [data1;data2];
+        % ensure id and trial type are categorical variables
+        if ~isa(T.id,'categorical')
+            T.id = categorical(T.id);
+        end
+        
+        if ~isa(T.trialtype,'cateforical')
+            T.trialtype = categorical(T.trialtype);
+        end
+        % run lmer
         lme = fitlme(T,'ersp ~ age*trialtype + (1 | id)');
         coeftable = lme.Coefficients;
         interceptcoeftable = coeftable(1,:);
