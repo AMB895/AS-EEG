@@ -196,7 +196,6 @@ for currentRow = 1:length(rownames)
     end
     
     %% Models for age, trial type, and interaction effects for CorAS vs. VGS and CorAS vs. ErrCorAS
-
     % setting up tables
     Tcor = table('Size',[size(coridmat_viable,1) 5],'VariableTypes',{'categorical','double','double','categorical','double'},...
         'VariableNames',{'id','visit','age','trialtype','ersp'});
@@ -222,6 +221,7 @@ for currentRow = 1:length(rownames)
     %% LMER for effects of inverse age, trial type and interaction
     % ERSP ~ Age + TrialType + Age:TrialType + (1 | id)
     % Correct AS vs. VGS
+    Tcorvgs = [Tcor;Tvgs];
     corvgs_fullLME_savename = sprintf('CorASVGS_fullLME_%s',rownames(currentRow));
     % check if file exists
     if exist(sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',corvgs_fullLME_savename),'file')
@@ -256,6 +256,7 @@ for currentRow = 1:length(rownames)
     
      % Correct AS vs. Error correct AS
     corerrcor_fullLME_savename = sprintf('CorASErrCorAS_fullLME_%s',rownames(currentRow));
+    Tcorerrcor = [Tcor; Terrcor];
     % check if file exists
     if exist(sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',corerrcor_fullLME_savename),'file')
         fprintf('skipping; Computed full LME for Correct AS vs. Errcor Corrected AS\n')
