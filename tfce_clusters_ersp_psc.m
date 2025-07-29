@@ -147,7 +147,7 @@ for currentRow = 1:length(rownames)
         
         % check if group activation clusters are already computed
         if exist(sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',groupact_savename),'file')
-            fprintf('skipping; Computed %s group activation clusters\n',trialtypenames(currentTrialType))
+            fprintf('skipping; Computed %s group activation clusters for %s\n',trialtypenames(currentTrialType),rownames(currentRow))
         else
             % updating progress
             fprintf('Group Activation for %s for %s\n',trialtypenames(currentTrialType),rownames(currentRow))
@@ -171,7 +171,7 @@ for currentRow = 1:length(rownames)
         
         % check if age clusters are already computed
         if exist(sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',ageeffects_savename),'file')
-            fprintf('skipping; Computed %s effect clusters\n',trialtypenames(currentTrialType))
+            fprintf('skipping; Computed %s age effect clusters for %s\n',trialtypenames(currentTrialType),rownames(currentRow))
         else
             % updating progress
             fprintf('Age Effects for %s for %s\n',trialtypenames(currentTrialType),rownames(currentRow))
@@ -225,7 +225,7 @@ for currentRow = 1:length(rownames)
     corvgs_fullLME_savename = sprintf('CorASVGS_fullLME_%s',rownames(currentRow));
     % check if file exists
     if exist(sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',corvgs_fullLME_savename),'file')
-        fprintf('skipping; Computed full LME for Correct AS vs. VGS\n')
+        fprintf('skipping; Computed full LME for Correct AS vs. VGS for %s\n',rownames(currentRow))
     else
         % updating progress
         fprintf('Computing full LME for correct AS vs. VGS for %s\n',rownames(currentRow))
@@ -259,7 +259,7 @@ for currentRow = 1:length(rownames)
     Tcorerrcor = [Tcor; Terrcor];
     % check if file exists
     if exist(sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',corerrcor_fullLME_savename),'file')
-        fprintf('skipping; Computed full LME for Correct AS vs. Errcor Corrected AS\n')
+        fprintf('skipping; Computed full LME for Correct AS vs. Errcor Corrected AS for %s\n',rownames(currentRow))
     else
        % updating progress
         fprintf('Computing full LME for correct AS vs. error corrected AS for %s\n',rownames(currentRow)) 
@@ -277,10 +277,10 @@ for currentRow = 1:length(rownames)
         permtfcescores.interaction = calc_perm_tfce_2d(t.interaction,1000);
         permtfcescores.intercept = calc_perm_tfce_2d(t.intercept,1000);
         % Find significant clusters
-        sigmask.age = calc_thres_mask_tfclusters_2d(tfcescores.age,permtfcescores.age,0.01);
-        sigmask.trialtype = calc_thres_mask_tfclusters_2d(tfcescores.trialtype,permtfcescores.trialtype,0.01);
-        sigmask.interaction = calc_thres_mask_tfclusters_2d(tfcescores.interaction,permtfcescores.interaction,0.01);
-        sigmask.intercept = calc_thres_mask_tf_clusters_2d(tfcescores.intercept,permtfcescores.intercept,0.01);
+        sigmask.age = calc_thres_mask_tfclusters_2d(tfcescores.age, permtfcescores.age,0.01);
+        sigmask.trialtype = calc_thres_mask_tfclusters_2d(tfcescores.trialtype, permtfcescores.trialtype,0.01);
+        sigmask.interaction = calc_thres_mask_tfclusters_2d(tfcescores.interaction, permtfcescores.interaction,0.01);
+        sigmask.intercept = calc_thres_mask_tfclusters_2d(tfcescores.intercept, permtfcescores.intercept,0.01);
         % save outputs
         savepath = sprintf('/ocean/projects/soc230004p/shared/antisaccade_eeg/data/ClusterStats/%s',corerrcor_fullLME_savename);
         save(savepath,'t','b','AIC','tfcescores','permtfcescores','sigmask')
