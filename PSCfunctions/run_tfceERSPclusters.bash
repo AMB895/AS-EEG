@@ -2,7 +2,7 @@
 #
 #SBATCH --partition=RM-shared
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=64
+#SBATCH --ntasks-per-node=12
 #
 #SBATCH --time 07:00:00
 #
