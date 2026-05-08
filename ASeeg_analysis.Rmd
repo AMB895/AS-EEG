@@ -1,0 +1,666 @@
+---
+title: "AS EEG analysis"
+author: "Abby Beatty"
+date: "2026-05-08"
+output: pdf_document
+editor_options: 
+  chunk_output_type: console
+---
+
+general figure theme:
+axis line size = .3
+axis title size = 6
+axis text size = 5
+line size = .4 or .5
+alpha ribbon = 0.3
+alpha points = 0.25
+alpha line for lunaid = 0.25
+marker = 16
+marker size = 0.5
+
+
+## Functions
+```{r functions}
+# convert power in uV^2 to dB
+uV2_to_dB <- function(uV2){
+  dB <- 10*log10(uV2)
+}
+
+# outlier detection of lmer models
+outlier_modelresiduals <- function(df, model_residuals, var2clean){
+  # z-score residuals
+  residuals_z <- scale(model_residuals)[,1]
+  # new column name
+  newcolname <- paste0(var2clean,"_clean")
+  # filter df
+  df <- df %>%
+    mutate(
+      !!newcolname := if_else(
+        abs(residuals_z)>2 | is.na(residuals_z),
+        NA,
+        .data[[var2clean]])
+    )
+  return(df)
+}
+
+# plot points removed from outlier detection
+plot_removedpoints <- function(cleaned_df, 
+                               xvar, yvar, groupvar, 
+                               cleanedvar,
+                               xlab_title, ylab_title, 
+                               plot_title, plot_subtitle,
+                               label1, label2){
+  # data frame of removed points
+  removed_points <- cleaned_df %>%
+    filter(is.na({{ cleanedvar }}))
+  # plot
+  q <- ggplot(data = cleaned_df) + 
+    geom_point(aes(x={{ xvar }}, # plot original points
+                   y={{ yvar }}),
+               color='black',
+               alpha=0.5)+
+    geom_line(aes(x = {{xvar}}, 
+                  y={{ yvar }}, 
+                  group = {{ groupvar }}),
+              color='black',
+              alpha=0.5)+
+    geom_point(data = removed_points, # plot removed points
+               aes(x = {{xvar}},
+                   y = {{yvar}}),
+               color='red')+
+    geom_line(data = removed_points,
+              aes(x={{xvar}},
+                  y={{yvar}},
+                  group={{groupvar}}),
+              color='red',
+              alpha=0.5)+
+    geom_text_repel(data = removed_points, # plot labels of removed data
+                  aes(x = {{xvar}},
+                      y = {{yvar}},
+                      label = paste0({{label1}},"_",{{label2}})),
+                  size = 3, 
+                  color = "red") +
+    xlab({{xlab_title}}) + ylab({{ ylab_title}})+
+    ggtitle({{plot_title}})+
+    labs(subtitle = {{plot_subtitle}}) +
+    theme(
+          plot.title = element_text(size = 11, face='plain', hjust=0),
+          plot.subtitle = element_text(size=10, face='plain',hjust=0),
+          axis.title = element_text(size=8),
+          panel.background = element_rect(fill='white'),
+          axis.line = element_line(color='black'),
+          legend.text = element_text(size=8),
+          legend.title = element_text(size = 8),
+          axis.text = element_text(size=8)
+        )
+  print(q)
+    
+}
+
+# extract ROI name from column name
+roi_from_name <- function(x) {
+  str_extract(x,"(?<=sipfc\\.)[^_]+")
+}
+
+# extract Metabolite from column name
+metabolite_from_name <- function(x) {
+  str_extract(x,"(?<=_)[^_]+(?=(_|$))")
+}
+```
+
+## Load libraries
+```{r load libraries}
+library(paletteer)
+library(patchwork)
+library(ggnewscale)
+library(dplyr)
+library(viridis)
+library(R.matlab)
+library(ggplot2)
+library(ggrepel)
+library(ggdist)
+library(lme4)
+library(LNCDR)
+library(lmerTest)
+library(reshape2)
+library(scales)
+library(tidyr)
+library(gridExtra)
+library(ggpubr)
+library(mgcv)
+library(emmeans)
+library(modelr)
+library(stringr)
+library(boot)
+library(mediation)
+library(lmeresampler)
+library(ggeffects)
+library(sjPlot)
+library(interactions)
+library(grid)
+library(ggeffects)
+```
+
+## Load and merge data
+```{r load and merge data}
+# load data from cluster power/ersp table
+clusterpower_df <- read.csv('/Volumes/Hera/Abby/AS_EEG/Results/ersp_itc_clusters_avgtrl_20260508.csv')
+clusters_df <- read.csv('/Volumes/Hera/Abby/AS_EEG/Results/ersp_itc_clusterinfo_avgtrl_20260508.csv')
+
+broadband_df <- read.csv('/Volumes/Hera/Abby/AS_EEG/Results/broadband_sponevo_20260508.csv')
+
+# merge broadband and ersp data frames
+sponevo_ersp_df <- merge(clusterpower_df,broadband_df, by = c("lunaid","eeg_date","eeg_age","sex","PercentErrCor","Accuracy","AvgLatCor",
+                                                             "CVLatCor","AvgLatErrCor","CVLatErrCor","NumCor","NumErrCor","NumIncor",
+                                                             "NumDrop","Total","Viable"))
+
+# make lunaid a factor
+sponevo_ersp_df$lunaid <- as.factor(sponevo_ersp_df$lunaid)
+
+# add visit number
+sponevo_ersp_df <- sponevo_ersp_df %>%
+  group_by(lunaid) %>%
+  mutate(visit = row_number()) %>%
+  ungroup()
+
+# calculate correct response rate
+sponevo_ersp_df$CorRate <- sponevo_ersp_df$NumCor / (sponevo_ersp_df$NumCor + sponevo_ersp_df$NumErrCor)
+
+# columns to no convert to dB
+cols_no_convert <- c("lunaid","eeg_date","eeg_age","sex",
+                     "PercentErrCor","AvgLatCor","CVLatCor",
+                     "AvgLatErrCor","CVLatErrCor","NumCor",
+                     "NumErrCor","NumDrop","NumIncor","Total",
+                     "Viable","visit","CorRate","Accuracy","CorRate")
+
+# columns to convert to dB
+cols_to_convert <- sponevo_ersp_df %>%
+  dplyr::select(contains("power"), -all_of(cols_no_convert)) %>%
+  names()
+
+# convert power values from uV^2 to dB
+sponevo_ersp_df_dB <- sponevo_ersp_df %>%
+  mutate(
+    across(
+      .cols = all_of(cols_to_convert),
+      .fns = ~ uV2_to_dB(.x),
+      .names = "{.col}_dB"
+    )
+  )
+
+# make sure dB matrix lunaid is factor
+sponevo_ersp_df_dB$lunaid <- factor(sponevo_ersp_df_dB$lunaid, levels = levels(sponevo_ersp_df_dB$lunaid))
+
+# load merged7t for glutamate values
+merged7t <- read.csv('/Volumes/Hera/Projects/7TBrainMech/scripts/txt/merged_7t.csv')
+merged7t_glugaba <- merged7t %>% dplyr::select(lunaid,sess.age,
+                                        visitno,sex ,top.mri.date,
+                                        matches("DLPFC.*GluGaba_Asym"),
+                                        matches("DLPFC.*Glu_gamadj"),
+                                        matches("DLPFC.*GABA_gamadj"),
+                                        matches("DLPFC.*Glu_SD"),
+                                        matches("DLPFC.*GABA_SD"))
+
+# make lunaid a factor
+merged7t_glugaba$lunaid <- as.factor(merged7t_glugaba$lunaid)
+
+# transform glu/gaba asymmetry by taking the square root: do not want to transform gamadj or ratio
+gamadj_cols <- colnames(merged7t_glugaba %>% dplyr::select(ends_with("gamadj") 
+                                                    | ends_with("Ratio")
+                                                    | ends_with("SD")))
+
+cols_no_trans <- c("lunaid","sess.age","top.mri.date","visitno",gamadj_cols)
+cols_to_trans <- merged7t_glugaba %>%
+  dplyr::select(where(is.numeric), -all_of(cols_no_trans)) %>%
+  names()
+merged7t_glugaba <- merged7t_glugaba %>%
+  mutate(
+    across(
+      .cols = all_of(cols_to_trans),
+      .fns = ~ sqrt(.x),
+      .names = "{.col}_sqrt"
+    )
+  )
+
+# get names of ROIs
+not_trans <- merged7t_glugaba %>%
+  dplyr::select(ends_with("_Asym") | ends_with("_SD")) %>%
+  names()
+# names %>% grepl
+not_roi_names <- c(not_trans, "lunaid","sess.age","visitno","sex","top.mri.date")
+
+names_rois <- merged7t_glugaba %>%
+  dplyr::select(-all_of(not_roi_names)) %>%
+  names()
+ # ^^ don't want to look at untransformed asymmetry values
+
+# join mrsi data and eeg data
+main_df <- merge(merged7t_glugaba, sponevo_ersp_df_dB,
+                 by.x = c("lunaid","visitno"),
+                 by.y = c("lunaid","visit"),
+                 all.x=T)
+
+# make sure lunaid is a factor
+main_df$lunaid <- factor(main_df$lunaid, levels = 
+                             levels(merged7t_glugaba$lunaid))
+
+# calculate difference in sess.age and eeg_age and take absolute value
+main_df <- main_df %>%
+  mutate(diffage = abs(sess.age - eeg_age))
+
+# Make sex a categorical variable
+main_df$sex <- as.factor(main_df$sex.x)
+
+# Filter out non-viable subs
+main_df_viable <- main_df %>% filter(Viable==1)
+main_df_viable$invage <- 1/main_df_viable$eeg_age
+main_df_viable$diff_broadband_spon <- main_df_viable$corAS_broadband_sponpower_dB -
+  main_df_viable$VGS_broadband_sponpower_dB
+main_df_viable$diff_broadband_evo <- main_df_viable$corAS_broadband_evopower_dB -
+  main_df_viable$VGS_broadband_evopower_dB
+main_df_viable <- main_df_viable %>% mutate(
+  age_cat = ifelse(
+    eeg_age < 17,"kid",
+    ifelse(
+      eeg_age>=23,
+      "adult",
+      'adolescent'
+    )
+  )
+)
+main_df_viable$age_cat <- factor(main_df_viable$age_cat, 
+                                 levels = c("kid","adolescent","adult"))
+```
+
+## Description of data
+```{r descriptive stats}
+hist(main_df$eeg_age)
+
+main_df <- main_df %>%
+  mutate(
+    eeg_age_viable = ifelse(Viable==1,
+                            eeg_age,
+                            NA)
+  )
+hist(main_df$eeg_age_viable)
+
+# is the mean age significantly different after removing non-viable subjects
+t.test(main_df$eeg_age, main_df$eeg_age_viable)
+main_df_long <- pivot_longer(main_df, cols = c("eeg_age","eeg_age_viable"),
+                             # names_to = "agetype",
+                             # values_to = "age"
+                             )
+main_df_long$name <- as.factor(main_df_long$name)
+lmermodel <- lmerTest::lmer(value ~ name + (1|lunaid),
+                            data=main_df_long)
+summary(lmermodel)
+
+cat(
+  # Total number of unique subjects
+  "Total subjects: ", length(unique(main_df$lunaid)),
+  " (", length(unique(main_df$lunaid[main_df$sex.x == "F"])), " F)", "\n",
+  range(main_df$eeg_age, na.rm = TRUE)[1], "-",
+  range(main_df$eeg_age, na.rm = TRUE)[2], " years old\n\n",
+  
+  # Total number of unique subjects that have AS EEGs
+  "Total AS EEG subjects: ", main_df %>% filter(!is.na(Total)) %>% pull(lunaid) %>% n_distinct(),
+  " (", main_df %>% filter(!is.na(Total), sex.x=="F") %>% pull(lunaid) %>% n_distinct(), " F)", "\n",
+  main_df %>%
+  filter(!is.na(Total)) %>% pull(eeg_age) %>% range() %>% .[1], "-",
+  main_df %>%
+  filter(!is.na(Total)) %>% pull(eeg_age) %>% range() %>% .[2], " years old\n\n",
+  
+  # Total number of AS main_df
+  "Total AS EEGs: ", main_df %>% filter(!is.na(Total)) %>% nrow(),"\n\n",
+  
+  # Total number of viable AS EEG 
+  "Total viable AS EEGs: ", main_df %>% filter(!is.na(Total),Viable==1) %>% nrow(),
+  "\n\nTotal viable AS EEG subjects: ", main_df %>% 
+    filter(!is.na(Total),Viable==1) %>% pull(lunaid) %>% n_distinct(),
+  " (", main_df %>% filter(!is.na(Total), Viable==1, sex.x=="F") %>% pull(lunaid) %>% n_distinct()," F)\n",
+   main_df %>%
+  filter(!is.na(Total),Viable==1) %>% pull(eeg_age) %>% range() %>% .[1],"-",
+   main_df %>%
+  filter(!is.na(Total),Viable==1) %>% pull(eeg_age) %>% range() %>% .[2], " years old\n\n",
+  
+  # Total number of unqiue subject's with DLPFC Glu/GABA asymmetry value
+  "Total DLPFC Glu-GABA Asym MRSI subjects: ", main_df %>%
+    filter(!is.na(sipfc.DLPFC_GluGaba_Asym_sqrt)) %>% pull(lunaid) %>% n_distinct(),
+  " (", main_df %>% 
+    filter(!is.na(sipfc.DLPFC_GluGaba_Asym_sqrt), sex.x=="F") %>% pull(lunaid) %>% n_distinct(), " F)", "\n",
+  main_df %>%
+  filter(!is.na(sipfc.DLPFC_GluGaba_Asym_sqrt)) %>% pull(sess.age) %>% range() %>% .[1], "-",
+  main_df %>%
+  filter(!is.na(sipfc.DLPFC_GluGaba_Asym_sqrt)) %>% pull(sess.age) %>% range() %>% .[2],
+  " years old\n\n",
+  
+  # Total number of DLPFC scans
+  "Total DLPFC Glu-GABA Asym MRSI scans: ", main_df %>%
+    filter(!is.na(sipfc.DLPFC_GluGaba_Asym_sqrt)) %>% nrow(),
+  " (", main_df %>%
+    filter(!is.na(sipfc.DLPFC_GluGaba_Asym_sqrt), sex.x =="F") %>% nrow(), " F)","\n", 
+  
+  # Totals of subjects with both viable AS eegs and DLPFC mrsi data
+   "Total DLPFC Glu-GABA Asym MRSI and viable AS EEG subjects: ", main_df %>%
+    filter(!is.na(sipfc.DLPFC_GluGaba_Asym_sqrt), !is.na(Total), Viable==1) %>% pull(lunaid) 
+  %>% n_distinct(),
+  " (", main_df %>% 
+    filter(!is.na(sipfc.DLPFC_GluGaba_Asym_sqrt), !is.na(Total), Viable==1, sex.x=="F") %>% 
+    pull(lunaid) %>% n_distinct(), " F)", "\n",
+  main_df %>%
+  filter(!is.na(sipfc.DLPFC_GluGaba_Asym_sqrt), !is.na(Total), Viable==1) %>%
+    pull(sess.age) %>% range() %>% .[1], "-",
+  main_df %>%
+  filter(!is.na(sipfc.DLPFC_GluGaba_Asym_sqrt), !is.na(Total), Viable==1) %>% pull(sess.age) 
+  %>% range() %>% .[2],
+  " years old\n\n",
+  "Total DLPFC Glu-GABA Asym MRSI and viable AS EEGs: ", main_df %>%
+    filter(!is.na(sipfc.DLPFC_GluGaba_Asym_sqrt), !is.na(Total), Viable==1) %>% nrow(),"\n\n",
+  sep=""
+)
+
+# Waterfall plot
+d <- data.frame(age = main_df$eeg_age, id=main_df$lunaid, Sex = as.factor(main_df$sex.x))
+p <- waterfall_plot(d,color=Sex)
+p + scale_color_manual(name = "",values = c("red4","blue4"),labels = c("Female","Male"))+
+  ggtitle("7T EEG")
+
+
+d <- data.frame(age = main_df$eeg_age_viable, 
+                id=main_df$lunaid, Sex = as.factor(main_df$sex.x))
+p <- waterfall_plot(d,color=Sex)
+p + scale_color_manual(name = "",values = c("red4","blue4"),labels = c("Female","Male")) +
+  ggtitle("7T Viable AS EEG")
+
+```
+
+## Behavior age effects
+```{r}
+
+run_behavior_analysis <- function(b, df, behav_titles, behav_labels, behavs){
+  # define temp data frame
+  temp_df <- data.frame(
+    lunaid = df$lunaid,
+    eeg_date = df$eeg_date,
+    sex = df$sex,
+    eeg_age = df$eeg_age,
+    invage = df$invage,
+    behav = df[[b]],
+    visit = df$visitno
+  )
+  
+  # run linear model w/o random effects
+  lm_model <- lm(behav ~ invage + sex, data = temp_df, na.action = na.exclude)
+  temp_df_clean <- outlier_modelresiduals(temp_df,residuals(lm_model),"lunaid")
+  temp_df_clean$lunaid_clean <- as.factor(temp_df_clean$lunaid_clean)
+  
+  # run with cleaned data and random effects
+  lmer_model <- lmerTest::lmer(behav ~ invage + sex + (1|lunaid_clean),
+                               data = temp_df_clean,
+                               na.action = na.exclude)
+  print(b)
+  print(summary(lmer_model))
+  
+  # build lmer plot
+  temp_plot_df <- temp_df_clean %>% filter(!is.na(lunaid_clean))
+  b_index <- match(b,behavs)
+  
+  behavage_fig <- ggplot(temp_plot_df, aes(x=eeg_age, y=behav)) + 
+    geom_point(alpha = 0.25, shape = 16, size = 0.5) +
+    geom_line(alpha = 0.25, aes(group = lunaid_clean), size = 0.2) +
+    geom_smooth(method = "lm", formula = y ~ I(1/x), color = "black", alpha = 0.5, linewidth = 0.5) +
+    xlab("Age (years)") + ylab(behav_labels[b_index]) +
+    ggtitle(behav_titles[b_index]) +
+    theme(
+      plot.title = element_text(size = 5, face = 'bold', hjust = 0),
+      axis.title = element_text(size = 5),
+      panel.background = element_rect(fill = 'white'),
+      axis.line = element_line(color = 'black'),
+      axis.text = element_text(size = 4)
+    )
+  print(behavage_fig)
+  
+  # save summary
+  lmer_summary <- summary(lmer_model)
+  results <- data.frame(behav = b, 
+                           EF = lmer_summary$coefficients["invage","Estimate"],
+                           t =  lmer_summary$coefficients["invage","t value"],
+                           p = lmer_summary$coefficients["invage","Pr(>|t|)"]
+                           )
+  # run GAM
+  gam_model <- gam(behav ~ s(eeg_age, k = 3), data = temp_df, na.action = na.exclude)
+  temp_df_clean <- outlier_modelresiduals(temp_df, residuals(gam_model), "lunaid")
+  temp_df_clean$lunaid_clean <- as.factor(temp_df_clean$lunaid_clean)
+  
+  gamme_model <- gam(behav ~ s(eeg_age, k = 3) + s(lunaid_clean, bs = 're'),
+                     data = temp_df_clean, na.action = na.exclude)
+  print(summary(gamme_model))
+  
+  temp_plot_df <- temp_df_clean %>% filter(!is.na(lunaid_clean))
+  behavage_fig_gam <- ggplot(temp_plot_df, aes(x = eeg_age, y = behav)) +
+    geom_point(alpha = 0.25, shape = 16, size = 0.5) +
+    geom_line(alpha = 0.25, aes(group = lunaid_clean),size = 0.2) +
+    geom_smooth(method = "gam", formula = y ~ s(x, k = 3), color = "black", alpha = 0.5, linewidth = 0.5) +
+    xlab("Age (years)") + ylab(behav_labels[b_index]) +
+    ggtitle(behav_titles[b_index]) +
+    theme(
+      plot.title = element_text(size = 5, face = 'bold', hjust = 0),
+      axis.title = element_text(size = 5),
+      panel.background = element_rect(fill = 'white'),
+      axis.line = element_line(color = 'black'),
+      axis.text = element_text(size = 4)
+    )
+  print(behavage_fig_gam)
+  
+  # return plots and results
+  list(plot_lmer = behavage_fig, plot_gam = behavage_fig_gam, result_row = results)
+}
+
+# defining behavior variables
+behavs <- c("CorRate","CVLatCor","AvgLatCor")
+# plot settings
+behav_titles <- c("Correct Response Rate","Latency Variability","Average Latency")
+behav_labels <- c('% correct','Coefficient of variation','Latency (ms)')
+
+results <- lapply(behavs, run_behavior_analysis,
+                  df = main_df_viable,
+                  behav_titles = behav_titles,
+                  behav_labels = behav_labels,
+                  behavs = behavs)
+P_behav <- setNames(lapply(results, '[[', "plot_lmer"),behavs)
+R_behav <- do.call(rbind, lapply(results, '[[',"result_row"))
+```
+
+## Broadband spontaneous and evoked power
+### Age effects
+```{r}
+run_power_interaction <- function(col_AS, col_VGS, color_AS,
+                                  diff_col, df, powertype) {
+  # pivot and run lmer
+  df_long <- pivot_longer(df, cols = c(col_AS, col_VGS),
+                          names_to = "condition",
+                          values_to = "power")
+  df_long$condition <- as.factor(df_long$condition)
+  
+  # linear model w/o random effects
+  lm_model <- lm(power ~ invage*condition + sex, data = df_long,
+                 na.action = na.exclude)
+  df_clean <- outlier_modelresiduals(df_long, residuals(lm_model),"lunaid")
+  df_clean$lunaid_clean <- as.factor(df_clean$lunaid_clean)
+  
+  # linear model with random effects
+  lmer_model <- lmerTest::lmer(power ~ invage*condition + sex + (1|lunaid_clean),
+                               data=df_clean,
+                               na.action = na.exclude)
+  
+  print(summary(lmer_model))
+  
+  plot_df <- df_clean %>% filter(!is.na(lunaid_clean))
+  predict_df <- ggpredict(lmer_model, terms = c("invage[all]","condition"))
+  predict_df$age_vals <- 1 / predict_df$x
+  
+  # Age trajectory w/ points
+  fig_wpts <- ggplot() +
+    geom_point(data = plot_df, aes(x = eeg_age, y = power, color = condition),
+               alpha = 0.3, size = 0.5, shape = 16) +
+    geom_line(data = plot_df, aes(x = eeg_age, y = power, color = condition,
+                                  group = interaction(lunaid_clean, condition)),
+              alpha = 0.25, size = 0.2) +
+    geom_smooth(data = predict_df, aes(x = age_vals, y = predicted, color = group),
+                linewidth = 0.4, method = 'lm', formula = y ~ I(1/x), se = F) +
+    scale_color_manual(name = "Condition",
+                       values = c(setNames(color_AS, col_AS), "grey40" |> setNames(col_VGS)),
+                       labels = c(setNames("AS", col_AS), setNames("VGS", col_VGS))) +
+    xlab("Age (years)") + ylab("Power (dB)") + theme_classic() +
+    theme(axis.title = element_text(size = 6), axis.text = element_text(size = 5),
+          axis.line = element_line(size = 0.3), axis.ticks = element_line(size = 0.3),
+          legend.text = element_text(size = 4), legend.title = element_text(size = 5))
+  print(fig_wpts)
+  
+    # --- Johnson-Neyman ---
+  df_clean$cond_num <- ifelse(df_clean$condition == col_AS, 1, 0)
+  lmer_jn <- lmerTest::lmer(power ~ invage * cond_num + sex + (1|lunaid_clean),
+                            data = df_clean, na.action = na.exclude)
+  print(summary(lmer_jn))
+  jn <- johnson_neyman(model = lmer_jn, pred = "cond_num", modx = "invage")
+  jnbounds_out <- 1 / jn$bounds
+  print(jnbounds_out)
+  
+  # Difference plot with significant ages highlighted
+  invage_grid <- seq(min(df_clean$invage, na.rm=T),
+                     max(df_clean$invage, na.rm=T),
+                     length.out = 100)
+  emm_age <- emmeans(lmer_model, ~ condition | invage, at = list(invage = invage_grid))
+  contrast_df <- contrast(emm_age, method = 'revpairwise') %>% confint() %>% as.data.frame()
+  if (powertype == "spontaneous"){
+    contrast_df <- contrast_df %>%
+      mutate(age = 1/invage, diff = -1*estimate,
+             conf.low = -1*lower.CL, conf.high = -1*upper.CL) %>%
+      arrange(age) %>%
+      mutate(sig.age      = ifelse(age <= jnbounds_out[2] | age >= jnbounds_out[1], 1, 0),
+             y_sig        = ifelse(sig.age == 1, diff, NA),
+             conf.high_sig = ifelse(sig.age == 1, conf.high, NA),
+             conf.low_sig  = ifelse(sig.age == 1, conf.low, NA))
+  }
+  
+  if (powertype == "evoked"){
+    contrast_df <- contrast_df %>%
+      mutate(age = 1/invage, diff = -1*estimate,
+             conf.low = -1*lower.CL, conf.high = -1*upper.CL) %>%
+      arrange(age) %>%
+      mutate(sig.age      = ifelse(age >= jnbounds_out[2] | age <= jnbounds_out[1], 0, 1),
+             y_sig        = ifelse(sig.age == 1, diff, NA),
+             conf.high_sig = ifelse(sig.age == 1, conf.high, NA),
+             conf.low_sig  = ifelse(sig.age == 1, conf.low, NA))
+  }
+  # plot difference
+  diff_split_fig <- ggplot(data = contrast_df, aes(x = age)) +
+    geom_hline(yintercept = 0, linetype = 'dashed', color = 'black', size = 0.2) +
+    geom_line(aes(y = diff), color = 'grey40', size = 0.2, alpha = 0.5) +
+    geom_line(aes(y = y_sig), color = color_AS, size = 0.5) +
+    geom_ribbon(aes(ymin = conf.low, ymax = conf.high), fill = "grey40", alpha = 0.1, color = NA) +
+    geom_ribbon(aes(ymax = conf.high_sig, ymin = conf.low_sig), fill = color_AS, alpha = 0.3, color = NA) +
+    xlab("Age (yrs)") + ylab("AS - VGS power (dB)") + theme_classic() +
+    theme(axis.title = element_text(size = 5), axis.text = element_text(size = 3),
+          axis.line = element_line(linewidth = 0.2), axis.ticks = element_line(linewidth = 0.2),
+          plot.margin = margin(0,0,0,0,unit="mm"))
+  print(diff_split_fig)
+  
+  # GAM w/o random effects
+  gam_model <- gam(power ~ s(eeg_age,by = condition,k=3) + condition + sex, data = df_long,
+                   na.action = na.exclude, method='REML')
+  df_clean <- outlier_modelresiduals(df_long, residuals(gam_model),"lunaid")
+  df_clean$lunaid_clean <- as.factor(df_clean$lunaid_clean)
+  gamre_model <- gam(power ~ s(eeg_age,by=condition,k=3) + condition + sex + s(lunaid_clean,bs='re'),
+                     data=df_clean,
+                     na.action = na.exclude)
+  print(summary(gamre_model))
+  
+  plot_df <- df_clean %>% filter(!is.na(lunaid_clean))
+  predict_df <- ggpredict(gamre_model, terms = c("eeg_age[all]","condition"))
+  
+  fig_wpts_gam <-  ggplot() +
+  geom_point(data = plot_df, aes(x = eeg_age, y = power, color = condition),
+             alpha = 0.3, size = 0.5, shape = 16) +
+  geom_line(data = plot_df, aes(x = eeg_age, y = power, color = condition,
+                                group = interaction(lunaid_clean, condition)),
+            alpha = 0.25, size = 0.2) +
+  geom_smooth(data = predict_df, aes(x = x, y = predicted, color = group),
+              method = "gam", formula = y ~ s(x, k=3), size = 0.4, se = F) +
+  scale_color_manual(name = "Condition",
+                     values = c(setNames(color_AS, col_AS), setNames("grey40", col_VGS)),
+                     labels = c(setNames("AS", col_AS), setNames("VGS", col_VGS))) +
+  xlab("Age (years)") + ylab("Power (dB)") + theme_classic() +
+  theme(axis.title = element_text(size = 6), axis.text = element_text(size = 5),
+        axis.line = element_line(size = 0.3), axis.ticks = element_line(size = 0.3),
+        legend.text = element_text(size = 4), legend.title = element_text(size = 5))
+  print(fig_wpts_gam)
+  
+  # is the difference in gam plots significant?
+  # compare to null model
+  gamre_null <- gam(power ~ s(eeg_age,k=3) + condition + sex + s(lunaid_clean,bs='re'),
+                    data= df_clean, na.action = na.exclude)
+  # compare
+  print(AIC(gamre_null, gamre_model))
+  anova(gamre_null, gamre_model, test = "Chisq")
+  
+  # plot difference plot in gam
+  # get contrast at grid of ages
+  age_grid <- seq(min(df_clean$eeg_age, na.rm=T), 
+                  max(df_clean$eeg_age, na.rm=T),
+                  length.out = 100)
+  
+  emm_gam <- emmeans(gamre_model, ~ condition | eeg_age, 
+                     at = list(eeg_age = age_grid))
+  contrast_df_gam <- contrast(emm_gam, method = 'pairwise') %>% 
+    confint() %>% 
+    as.data.frame()
+  
+  if (powertype == "spontaneous"){
+    contrast_df <- contrast_df %>%
+      mutate(age = 1/invage, diff = estimate,
+             conf.low = lower.CL, conf.high = upper.CL) %>%
+      arrange(age) %>%
+      mutate(sig.age      = ifelse(age <= jnbounds_out[2] | age >= jnbounds_out[1], 1, 0),
+             y_sig        = ifelse(sig.age == 1, diff, NA),
+             conf.high_sig = ifelse(sig.age == 1, conf.high, NA),
+             conf.low_sig  = ifelse(sig.age == 1, conf.low, NA))
+  }
+  
+  
+  if (powertype == "evoked"){
+    contrast_df_gam <- contrast_df_gam %>%
+    mutate(
+      diff      =  estimate,
+      conf.low  =  lower.CL,
+      conf.high =  upper.CL,
+      sig       = ifelse(conf.low > 0 | conf.high < 0, 0,1),
+      y_sig     = ifelse(sig == 1, diff, NA),
+      ci_hi_sig = ifelse(sig == 1, conf.high, NA),
+      ci_lo_sig = ifelse(sig == 1, conf.low, NA)
+      )
+  }
+  # see which ages are significant
+  print(contrast_df_gam %>% 
+    filter(sig == 0) %>% 
+    summarise(min_age = min(eeg_age), max_age = max(eeg_age)))
+  
+  gam_diff_split <- ggplot(data = contrast_df_gam, aes(x = eeg_age)) +
+    geom_hline(yintercept = 0, linetype = 'dashed', color = 'black', size = 0.2) +
+    geom_line(aes(y = diff), color = 'grey40', size = 0.2, alpha = 0.5) +
+    geom_line(aes(y = y_sig), color = color_AS, size = 0.5) +
+    geom_ribbon(aes(ymin = conf.low, ymax = conf.high), 
+                fill = "grey40", alpha = 0.1, color = NA) +
+    geom_ribbon(aes(ymin = ci_lo_sig, ymax = ci_hi_sig), 
+                fill = color_AS, alpha = 0.3, color = NA) +
+    xlab("Age (yrs)") + ylab("AS - VGS power (dB)") + theme_classic() +
+    theme(axis.title = element_text(size = 5), axis.text = element_text(size = 3),
+          axis.line = element_line(linewidth = 0.2), axis.ticks = element_line(linewidth = 0.2),
+          plot.margin = margin(0,0,0,0,unit="mm"))
+  print(gam_diff_split)
+}
+
+## TO DO return plots and results and bounds to list and lapply function to evo and spontaneous (and total?)
+
+```
+
