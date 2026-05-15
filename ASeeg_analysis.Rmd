@@ -32,7 +32,7 @@ outlier_modelresiduals <- function(df, model_residuals, var2clean){
   residuals_z <- scale(model_residuals)[,1]
   # new column name
   newcolname <- paste0(var2clean,"_clean")
-  # filter df
+  # outlier variables to NA
   df <- df %>%
     mutate(
       !!newcolname := if_else(
@@ -40,6 +40,8 @@ outlier_modelresiduals <- function(df, model_residuals, var2clean){
         NA,
         .data[[var2clean]])
     )
+  # remove outlier rows
+  df <- df %>% filter(!is.na(!!sym(newcolname)))
   return(df)
 }
 
@@ -115,6 +117,7 @@ library(patchwork)
 library(ggnewscale)
 library(dplyr)
 library(viridis)
+library(gratia)
 library(R.matlab)
 library(ggplot2)
 library(ggrepel)
@@ -391,34 +394,35 @@ run_behavior_analysis <- function(b, df, behav_titles, behav_labels, behavs){
   
   # run linear model w/o random effects
   lm_model <- lm(behav ~ invage + sex, data = temp_df, na.action = na.exclude)
-  temp_df_clean <- outlier_modelresiduals(temp_df,residuals(lm_model),"lunaid")
-  temp_df_clean$lunaid_clean <- as.factor(temp_df_clean$lunaid_clean)
+  df_clean <- outlier_modelresiduals(temp_df,residuals(lm_model),"lunaid")
+  df_clean$lunaid_clean <- as.factor(df_clean$lunaid_clean)
   
   # run with cleaned data and random effects
   lmer_model <- lmerTest::lmer(behav ~ invage + sex + (1|lunaid_clean),
-                               data = temp_df_clean,
+                               data = df_clean,
                                na.action = na.exclude)
   print(b)
   print(summary(lmer_model))
   
   # build lmer plot
-  temp_plot_df <- temp_df_clean %>% filter(!is.na(lunaid_clean))
+  temp_plot_df <- df_clean %>% filter(!is.na(lunaid_clean))
   b_index <- match(b,behavs)
   
   behavage_fig <- ggplot(temp_plot_df, aes(x=eeg_age, y=behav)) + 
     geom_point(alpha = 0.25, shape = 16, size = 0.5) +
-    geom_line(alpha = 0.25, aes(group = lunaid_clean), size = 0.2) +
-    geom_smooth(method = "lm", formula = y ~ I(1/x), color = "black", alpha = 0.5, linewidth = 0.5) +
+    geom_line(alpha = 0.25, aes(group = lunaid_clean), linewidth = 0.2) +
+    geom_smooth(method = "lm", formula = y ~ I(1/x), color = "black",
+                alpha = 0.5, linewidth = 0.5) +
     xlab("Age (years)") + ylab(behav_labels[b_index]) +
     ggtitle(behav_titles[b_index]) +
     theme(
       plot.title = element_text(size = 5, face = 'bold', hjust = 0),
       axis.title = element_text(size = 5),
       panel.background = element_rect(fill = 'white'),
-      axis.line = element_line(color = 'black'),
+      axis.line = element_line(color = 'black',size=0.3),
       axis.text = element_text(size = 4)
     )
-  print(behavage_fig)
+  # print(behavage_fig)
   
   # save summary
   lmer_summary <- summary(lmer_model)
@@ -428,29 +432,39 @@ run_behavior_analysis <- function(b, df, behav_titles, behav_labels, behavs){
                            p = lmer_summary$coefficients["invage","Pr(>|t|)"]
                            )
   # run GAM
-  gam_model <- gam(behav ~ s(eeg_age, k = 3), data = temp_df, na.action = na.exclude)
-  temp_df_clean <- outlier_modelresiduals(temp_df, residuals(gam_model), "lunaid")
-  temp_df_clean$lunaid_clean <- as.factor(temp_df_clean$lunaid_clean)
+  gam_model <- gam(behav ~ s(eeg_age, k = 3) + sex, data = temp_df, na.action = na.exclude)
+  df_clean <- outlier_modelresiduals(temp_df, residuals(gam_model), "lunaid")
+  df_clean$lunaid_clean <- as.factor(df_clean$lunaid_clean)
   
-  gamme_model <- gam(behav ~ s(eeg_age, k = 3) + s(lunaid_clean, bs = 're'),
-                     data = temp_df_clean, na.action = na.exclude)
-  print(summary(gamme_model))
+  gamre_model <- gam(behav ~ s(eeg_age, k = 3) + sex + s(lunaid_clean, bs = 're'),
+                     data = df_clean, na.action = na.exclude)
+  print(summary(gamre_model))
+  derivs <- derivatives(gamre_model, select = "s(eeg_age)", type = "central",
+                        interval = "simultaneous",n=200)
+  derivs$significant <- !(derivs$.lower_ci <= 0 & derivs$.upper_ci >= 0)
+  # print(draw(derivs) +
+  #         geom_ribbon(aes(ymin = .lower_ci, ymax = .upper_ci,
+  #                         fill = significant), alpha = 0.3))
+  # ages where derivative is significant
+  sig_ages <- derivs$eeg_age[derivs$significant]
+  print(paste("Derivative is significant from age", min(sig_ages), "to age", max(sig_ages)))
   
-  temp_plot_df <- temp_df_clean %>% filter(!is.na(lunaid_clean))
+  temp_plot_df <- df_clean %>% filter(!is.na(lunaid_clean))
   behavage_fig_gam <- ggplot(temp_plot_df, aes(x = eeg_age, y = behav)) +
     geom_point(alpha = 0.25, shape = 16, size = 0.5) +
-    geom_line(alpha = 0.25, aes(group = lunaid_clean),size = 0.2) +
-    geom_smooth(method = "gam", formula = y ~ s(x, k = 3), color = "black", alpha = 0.5, linewidth = 0.5) +
+    geom_line(alpha = 0.25, aes(group = lunaid_clean),linewidth = 0.2) +
+    geom_smooth(method = "gam", formula = y ~ s(x, k = 3), color = "black", 
+                alpha = 0.5, linewidth = 0.5) +
     xlab("Age (years)") + ylab(behav_labels[b_index]) +
     ggtitle(behav_titles[b_index]) +
     theme(
       plot.title = element_text(size = 5, face = 'bold', hjust = 0),
       axis.title = element_text(size = 5),
       panel.background = element_rect(fill = 'white'),
-      axis.line = element_line(color = 'black'),
+      axis.line = element_line(color = 'black',size=0.3),
       axis.text = element_text(size = 4)
     )
-  print(behavage_fig_gam)
+  # print(behavage_fig_gam)
   
   # return plots and results
   list(plot_lmer = behavage_fig, plot_gam = behavage_fig_gam, result_row = results)
@@ -468,6 +482,7 @@ results <- lapply(behavs, run_behavior_analysis,
                   behav_labels = behav_labels,
                   behavs = behavs)
 P_behav <- setNames(lapply(results, '[[', "plot_lmer"),behavs)
+P_behav_gam <- setNames(lapply(results,'[[',"plot_gam"),behavs)
 R_behav <- do.call(rbind, lapply(results, '[[',"result_row"))
 ```
 
@@ -475,69 +490,81 @@ R_behav <- do.call(rbind, lapply(results, '[[',"result_row"))
 ### Age effects
 ```{r}
 run_power_interaction <- function(col_AS, col_VGS, color_AS,
-                                  diff_col, df, powertype) {
-  # pivot and run lmer
+                                  df, powertype) {
+  # ---- Pivot data and run lmer ----
   df_long <- pivot_longer(df, cols = c(col_AS, col_VGS),
                           names_to = "condition",
                           values_to = "power")
   df_long$condition <- as.factor(df_long$condition)
   
-  # linear model w/o random effects
+  # ---- Linear model w/o random effects ----
   lm_model <- lm(power ~ invage*condition + sex, data = df_long,
                  na.action = na.exclude)
   df_clean <- outlier_modelresiduals(df_long, residuals(lm_model),"lunaid")
   df_clean$lunaid_clean <- as.factor(df_clean$lunaid_clean)
   
-  # linear model with random effects
+  # ---- Linear model with random effects ----
   lmer_model <- lmerTest::lmer(power ~ invage*condition + sex + (1|lunaid_clean),
                                data=df_clean,
                                na.action = na.exclude)
+  lmer_summary <- summary(lmer_model)
+  print(lmer_summary)
+  results_lmer <- data.frame(powertype = powertype, 
+                             p_interaction = lmer_summary$coefficients[5,5],
+                             p_age = lmer_summary$coefficients[2,5],
+                             p_condition = lmer_summary$coefficients[3,5]) 
   
-  print(summary(lmer_model))
-  
+  # build lmer plot
   plot_df <- df_clean %>% filter(!is.na(lunaid_clean))
-  predict_df <- ggpredict(lmer_model, terms = c("invage[all]","condition"))
-  predict_df$age_vals <- 1 / predict_df$x
+  # marginal means
+  emm_lmer <- emmeans(lmer_model, ~ condition | invage ,
+                      at = list(invage = seq(min(df_clean$invage,na.rm=T),
+                                             max(df_clean$invage,na.rm=T),
+                                             length.out = 100)))
+  emm_df_lmer <- as.data.frame(emm_lmer)
+  emm_df_lmer$age <- 1/emm_df_lmer$invage
   
-  # Age trajectory w/ points
+  # ---- LMER Age trajectory w/ points ----
   fig_wpts <- ggplot() +
     geom_point(data = plot_df, aes(x = eeg_age, y = power, color = condition),
                alpha = 0.3, size = 0.5, shape = 16) +
     geom_line(data = plot_df, aes(x = eeg_age, y = power, color = condition,
                                   group = interaction(lunaid_clean, condition)),
               alpha = 0.25, size = 0.2) +
-    geom_smooth(data = predict_df, aes(x = age_vals, y = predicted, color = group),
-                linewidth = 0.4, method = 'lm', formula = y ~ I(1/x), se = F) +
+    geom_line(data = emm_df_lmer, aes(x = age, y = emmean, color = condition),
+                linewidth = 0.4) +
     scale_color_manual(name = "Condition",
-                       values = c(setNames(color_AS, col_AS), "grey40" |> setNames(col_VGS)),
+                       values = c(setNames(color_AS, col_AS), "grey30" |> setNames(col_VGS)),
                        labels = c(setNames("AS", col_AS), setNames("VGS", col_VGS))) +
     xlab("Age (years)") + ylab("Power (dB)") + theme_classic() +
     theme(axis.title = element_text(size = 6), axis.text = element_text(size = 5),
           axis.line = element_line(size = 0.3), axis.ticks = element_line(size = 0.3),
           legend.text = element_text(size = 4), legend.title = element_text(size = 5))
-  print(fig_wpts)
+  # print(fig_wpts)
   
-    # --- Johnson-Neyman ---
+  # ---- Johnson-Neyman ----
   df_clean$cond_num <- ifelse(df_clean$condition == col_AS, 1, 0)
   lmer_jn <- lmerTest::lmer(power ~ invage * cond_num + sex + (1|lunaid_clean),
                             data = df_clean, na.action = na.exclude)
   print(summary(lmer_jn))
   jn <- johnson_neyman(model = lmer_jn, pred = "cond_num", modx = "invage")
-  jnbounds_out <- 1 / jn$bounds
-  print(jnbounds_out)
+  lmer_agebounds <- 1 / jn$bounds
+  print(lmer_agebounds)
   
-  # Difference plot with significant ages highlighted
+  # ---- Difference plot with significant ages highlighted ----
   invage_grid <- seq(min(df_clean$invage, na.rm=T),
                      max(df_clean$invage, na.rm=T),
                      length.out = 100)
   emm_age <- emmeans(lmer_model, ~ condition | invage, at = list(invage = invage_grid))
-  contrast_df <- contrast(emm_age, method = 'revpairwise') %>% confint() %>% as.data.frame()
+  contrast_df <- contrast(emm_age, method = 'pairwise') %>% confint() %>% as.data.frame()
   if (powertype == "spontaneous"){
     contrast_df <- contrast_df %>%
-      mutate(age = 1/invage, diff = -1*estimate,
-             conf.low = -1*lower.CL, conf.high = -1*upper.CL) %>%
+      mutate(age = 1/invage, 
+             diff = estimate,
+             conf.low = lower.CL, 
+             conf.high = upper.CL) %>%
       arrange(age) %>%
-      mutate(sig.age      = ifelse(age <= jnbounds_out[2] | age >= jnbounds_out[1], 1, 0),
+      mutate(sig.age      = ifelse(age <= lmer_agebounds[2] | age >= lmer_agebounds[1], 1, 0),
              y_sig        = ifelse(sig.age == 1, diff, NA),
              conf.high_sig = ifelse(sig.age == 1, conf.high, NA),
              conf.low_sig  = ifelse(sig.age == 1, conf.low, NA))
@@ -545,28 +572,56 @@ run_power_interaction <- function(col_AS, col_VGS, color_AS,
   
   if (powertype == "evoked"){
     contrast_df <- contrast_df %>%
-      mutate(age = 1/invage, diff = -1*estimate,
-             conf.low = -1*lower.CL, conf.high = -1*upper.CL) %>%
+      mutate(age = 1/invage, 
+             diff = estimate,
+             conf.low = lower.CL, 
+             conf.high = upper.CL) %>%
       arrange(age) %>%
-      mutate(sig.age      = ifelse(age >= jnbounds_out[2] | age <= jnbounds_out[1], 0, 1),
+      mutate(sig.age      = ifelse(age >= lmer_agebounds[2] | age <= lmer_agebounds[1], 0, 1),
              y_sig        = ifelse(sig.age == 1, diff, NA),
              conf.high_sig = ifelse(sig.age == 1, conf.high, NA),
              conf.low_sig  = ifelse(sig.age == 1, conf.low, NA))
   }
-  # plot difference
+  # ---- Plot difference LMER ----
   diff_split_fig <- ggplot(data = contrast_df, aes(x = age)) +
     geom_hline(yintercept = 0, linetype = 'dashed', color = 'black', size = 0.2) +
-    geom_line(aes(y = diff), color = 'grey40', size = 0.2, alpha = 0.5) +
+    geom_line(aes(y = diff), color = 'grey30', size = 0.2, alpha = 0.5) +
     geom_line(aes(y = y_sig), color = color_AS, size = 0.5) +
-    geom_ribbon(aes(ymin = conf.low, ymax = conf.high), fill = "grey40", alpha = 0.1, color = NA) +
-    geom_ribbon(aes(ymax = conf.high_sig, ymin = conf.low_sig), fill = color_AS, alpha = 0.3, color = NA) +
+    geom_ribbon(aes(ymin = conf.low, ymax = conf.high), fill = "grey30", alpha = 0.1,
+                color = NA) +
+    geom_ribbon(aes(ymax = conf.high_sig, ymin = conf.low_sig), fill = color_AS, alpha = 0.3,
+                color = NA) +
     xlab("Age (yrs)") + ylab("AS - VGS power (dB)") + theme_classic() +
     theme(axis.title = element_text(size = 5), axis.text = element_text(size = 3),
-          axis.line = element_line(linewidth = 0.2), axis.ticks = element_line(linewidth = 0.2),
+          axis.line = element_line(linewidth = 0.2), 
+          axis.ticks = element_line(linewidth = 0.2),
           plot.margin = margin(0,0,0,0,unit="mm"))
-  print(diff_split_fig)
+  # print(diff_split_fig)
   
-  # GAM w/o random effects
+  # --- plot sex differences lmer ---
+  emm_sex <- emmeans(lmer_model, ~ sex | invage,
+                     at = list(invage = seq(min(df_clean$invage,na.rm=T),
+                                             max(df_clean$invage,na.rm=T),
+                                             length.out=100)))
+  emm_sex_df <- as.data.frame(emm_sex)
+  emm_sex_df$eeg_age <- 1/emm_sex_df$invage
+  fig_sex <- ggplot() +
+  geom_point(data = df_clean, aes(x = eeg_age, y = power, color = sex),
+             alpha = 0.3, size = 0.5, shape = 16) +
+  geom_line(data = df_clean, aes(x = eeg_age, y = power, color = sex,
+                                  group = interaction(lunaid_clean, sex)),
+            alpha = 0.25, size = 0.2) +
+  geom_line(data = emm_sex_df, aes(x = eeg_age, y = emmean, color = sex),
+            linewidth = 0.4) +
+    scale_color_manual(name = "Sex",
+                       values = c("M"="#C9B82A",
+                                  "F" = "#62B03C"))+
+  xlab("Age (years)") + ylab("Power (dB)") + theme_classic() +
+  theme(axis.title = element_text(size = 6), axis.text = element_text(size = 5),
+        axis.line = element_line(size = 0.3), axis.ticks = element_line(size = 0.3),
+        legend.text = element_text(size = 4), legend.title = element_text(size = 5))
+  
+  # ---- GAM w/o random effects ----
   gam_model <- gam(power ~ s(eeg_age,by = condition,k=3) + condition + sex, data = df_long,
                    na.action = na.exclude, method='REML')
   df_clean <- outlier_modelresiduals(df_long, residuals(gam_model),"lunaid")
@@ -577,35 +632,39 @@ run_power_interaction <- function(col_AS, col_VGS, color_AS,
   print(summary(gamre_model))
   
   plot_df <- df_clean %>% filter(!is.na(lunaid_clean))
-  predict_df <- ggpredict(gamre_model, terms = c("eeg_age[all]","condition"))
-  
+  emm_gam <- emmeans(gamre_model, ~ condition | eeg_age,
+                        at = list(eeg_age = seq(min(df_clean$eeg_age,na.rm=T),
+                                                max(df_clean$eeg_age,na.rm=T),
+                                                length.out=100)))
+  emm_df_gam <- as.data.frame(emm_gam)
+
   fig_wpts_gam <-  ggplot() +
-  geom_point(data = plot_df, aes(x = eeg_age, y = power, color = condition),
+  geom_point(data = df_clean, aes(x = eeg_age, y = power, color = condition),
              alpha = 0.3, size = 0.5, shape = 16) +
-  geom_line(data = plot_df, aes(x = eeg_age, y = power, color = condition,
+  geom_line(data = df_clean, aes(x = eeg_age, y = power, color = condition,
                                 group = interaction(lunaid_clean, condition)),
             alpha = 0.25, size = 0.2) +
-  geom_smooth(data = predict_df, aes(x = x, y = predicted, color = group),
-              method = "gam", formula = y ~ s(x, k=3), size = 0.4, se = F) +
+  geom_line(data = emm_df_gam, aes(x = eeg_age, y = emmean, color = condition),
+              method = "gam",linewidth = 0.4) +
   scale_color_manual(name = "Condition",
-                     values = c(setNames(color_AS, col_AS), setNames("grey40", col_VGS)),
+                     values = c(setNames(color_AS, col_AS), setNames("grey30", col_VGS)),
                      labels = c(setNames("AS", col_AS), setNames("VGS", col_VGS))) +
   xlab("Age (years)") + ylab("Power (dB)") + theme_classic() +
   theme(axis.title = element_text(size = 6), axis.text = element_text(size = 5),
         axis.line = element_line(size = 0.3), axis.ticks = element_line(size = 0.3),
         legend.text = element_text(size = 4), legend.title = element_text(size = 5))
-  print(fig_wpts_gam)
+  # print(fig_wpts_gam)
   
-  # is the difference in gam plots significant?
+  # ---- Is the difference in gam plots significant? ----
   # compare to null model
   gamre_null <- gam(power ~ s(eeg_age,k=3) + condition + sex + s(lunaid_clean,bs='re'),
                     data= df_clean, na.action = na.exclude)
-  # compare
-  print(AIC(gamre_null, gamre_model))
-  anova(gamre_null, gamre_model, test = "Chisq")
+  aic_gam <- AIC(gamre_null, gamre_model)
+  anova_gam <- anova(gamre_null, gamre_model, test = "Chisq")
+  print(aic_gam)
+  print(anova_gam)
   
-  # plot difference plot in gam
-  # get contrast at grid of ages
+  # ---- Plot difference plot GAM ----
   age_grid <- seq(min(df_clean$eeg_age, na.rm=T), 
                   max(df_clean$eeg_age, na.rm=T),
                   length.out = 100)
@@ -617,14 +676,16 @@ run_power_interaction <- function(col_AS, col_VGS, color_AS,
     as.data.frame()
   
   if (powertype == "spontaneous"){
-    contrast_df <- contrast_df %>%
-      mutate(age = 1/invage, diff = estimate,
-             conf.low = lower.CL, conf.high = upper.CL) %>%
-      arrange(age) %>%
-      mutate(sig.age      = ifelse(age <= jnbounds_out[2] | age >= jnbounds_out[1], 1, 0),
-             y_sig        = ifelse(sig.age == 1, diff, NA),
-             conf.high_sig = ifelse(sig.age == 1, conf.high, NA),
-             conf.low_sig  = ifelse(sig.age == 1, conf.low, NA))
+   contrast_df_gam <- contrast_df_gam %>%
+    mutate(
+      diff      =  estimate,
+      conf.low  =  lower.CL,
+      conf.high =  upper.CL,
+      sig       = ifelse(conf.low > 0 | conf.high < 0, 1,0),
+      y_sig     = ifelse(sig == 1, diff, NA),
+      ci_hi_sig = ifelse(sig == 1, conf.high, NA),
+      ci_lo_sig = ifelse(sig == 1, conf.low, NA)
+      )
   }
   
   
@@ -641,26 +702,2428 @@ run_power_interaction <- function(col_AS, col_VGS, color_AS,
       )
   }
   # see which ages are significant
-  print(contrast_df_gam %>% 
+  gam_agebounds <- contrast_df_gam %>% 
     filter(sig == 0) %>% 
-    summarise(min_age = min(eeg_age), max_age = max(eeg_age)))
+    summarise(min_age = min(eeg_age), max_age = max(eeg_age))
   
   gam_diff_split <- ggplot(data = contrast_df_gam, aes(x = eeg_age)) +
     geom_hline(yintercept = 0, linetype = 'dashed', color = 'black', size = 0.2) +
-    geom_line(aes(y = diff), color = 'grey40', size = 0.2, alpha = 0.5) +
+    geom_line(aes(y = diff), color = 'grey30', size = 0.2, alpha = 0.5) +
     geom_line(aes(y = y_sig), color = color_AS, size = 0.5) +
     geom_ribbon(aes(ymin = conf.low, ymax = conf.high), 
-                fill = "grey40", alpha = 0.1, color = NA) +
+                fill = "grey30", alpha = 0.1, color = NA) +
     geom_ribbon(aes(ymin = ci_lo_sig, ymax = ci_hi_sig), 
                 fill = color_AS, alpha = 0.3, color = NA) +
     xlab("Age (yrs)") + ylab("AS - VGS power (dB)") + theme_classic() +
     theme(axis.title = element_text(size = 5), axis.text = element_text(size = 3),
           axis.line = element_line(linewidth = 0.2), axis.ticks = element_line(linewidth = 0.2),
           plot.margin = margin(0,0,0,0,unit="mm"))
-  print(gam_diff_split)
+  # print(gam_diff_split)
+  
+  # --- plot sex differences GAM ---
+  emm_sex_gam <- emmeans(gamre_model, ~ sex | eeg_age,
+                     at = list(eeg_age = seq(min(df_clean$eeg_age,na.rm=T),
+                                             max(df_clean$eeg_age,na.rm=T),
+                                             length.out=100)))
+  emm_sex_df_gam <- as.data.frame(emm_sex_gam)
+  fig_sex_gam <- ggplot() +
+  geom_point(data = df_clean, aes(x = eeg_age, y = power, color = sex),
+             alpha = 0.3, size = 0.5, shape = 16) +
+  geom_line(data = df_clean, aes(x = eeg_age, y = power, color = sex,
+                                  group = interaction(lunaid_clean, sex)),
+            alpha = 0.25, size = 0.2) +
+  geom_line(data = emm_sex_df_gam, aes(x = eeg_age, y = emmean, color = sex),
+            linewidth = 0.4) +
+    scale_color_manual(name = "Sex",
+                       values = c("M"="#C9B82A",
+                                  "F" = "#62B03C"))+
+  xlab("Age (years)") + ylab("Power (dB)") + theme_classic() +
+  theme(axis.title = element_text(size = 6), axis.text = element_text(size = 5),
+        axis.line = element_line(size = 0.3), axis.ticks = element_line(size = 0.3),
+        legend.text = element_text(size = 4), legend.title = element_text(size = 5))
+  
+  # ----- Return all plots and results ----
+  list(trajplot_lmer = fig_wpts, trajplot_gam = fig_wpts_gam, 
+              diffplot_lmer = diff_split_fig, diffplot_gam = gam_diff_split,
+              results_row_lmer = results_lmer, aic_gam = aic_gam, anova_gam = anova_gam,
+       ages_lmer = lmer_agebounds, ages_gam = gam_agebounds, fig_sex_lmer = fig_sex,
+       fig_sex_gam = fig_sex_gam)
 }
 
-## TO DO return plots and results and bounds to list and lapply function to evo and spontaneous (and total?)
+results_spontaneousage <- run_power_interaction(col_AS = "corAS_broadband_sponpower_dB",
+                                             col_VGS = "VGS_broadband_sponpower_dB",
+                                             color_AS = '#67428F',df = main_df_viable,
+                                             powertype = "spontaneous")
+P_spontraj <- results_spontaneousage$trajplot_lmer
+# P_spontraj
+P_spontraj_gam <- results_spontaneousage$trajplot_gam
+P_spondiff <- results_spontaneousage$diffplot_lmer
+P_spondiff_gam<- results_spontaneousage$diffplot_gam
+# P_spondiff
+P_sponsex <- results_spontaneousage$fig_sex_lmer
+P_sponsex
+P_sponsex_gam <- results_spontaneousage$fig_sex_gam
+P_sponsex_gam
+
+results_evokedage <- run_power_interaction(col_AS = "corAS_broadband_evopower_dB",
+                                             col_VGS = "VGS_broadband_evopower_dB",
+                                             color_AS = '#388599',df = main_df_viable,
+                                             powertype = "evoked")
+P_evotraj <- results_evokedage$trajplot_lmer
+# P_evotraj
+P_evodiff <- results_evokedage$diffplot_lmer
+# P_evodiff
+P_evotraj_gam <- results_evokedage$trajplot_gam
+# P_evotraj
+P_evodiff_gam <- results_evokedage$diffplot_gam
+# P_evodiff
+P_evosex <- results_evokedage$fig_sex_lmer
+P_evosex
+P_evosex_gam <- results_evokedage$fig_sex_gam
+P_evosex_gam
 
 ```
+
+### Behavioral effects
+#### Main effects
+```{r}
+### Associations with behavior
+#### Main effects
+powertypes <- c("spon","evo")
+R_BroadbandAge <- data.frame()
+R_BroadbandBehav <- data.frame()
+R_BroadbandBehav_gam <- data.frame()
+P_broadbandbehav <- list()
+P_broadbandbehav_gam <- list()
+P_broadbandage <- list()
+# defining behavior variables
+
+behavs <- c("CorRate","CVLatCor","AvgLatCor")
+
+# plot settings
+powertypes_titles <- c("Spontaneous","Evoked")
+
+# plotting settings
+behavior_title <- c("Correct Response Rate","Latency Variability","Average Latency")
+behavior_yaxis <- c('% correct','Coefficient of variation','Latency (ms)')
+
+# loop over power types
+for (p in powertypes){
+  # color to make plot
+  COLOR <- ifelse(
+    p=='spon', '#67428F',
+    ifelse(
+      p =='evo','#388599',
+      ifelse(
+        p=='tot','black'
+        )
+      )
+    )
+
+  # loop over behaviors
+  for (b in behavs){
+    # define current behavior
+    currbehav_title <- behavior_title[match(b,behavs)]
+    currbehav_yaxis <- behavior_yaxis[match(b,behavs)]
+    
+    # define temporary data frame
+    temp_df_viable <- data.frame(
+      lunaid = main_df_viable$lunaid,
+      eeg_date = main_df_viable$eeg_date,
+      eeg_age = main_df_viable$eeg_age,
+      sex = main_df_viable$sex,
+      invage = 1/ main_df_viable$eeg_age,
+      viable = main_df_viable$Viable,
+      behav = main_df_viable[[b]],
+      power = 
+        main_df_viable[[paste0("corAS_broadband_",p,"power_dB")]]
+         # main_df[[paste0("VGS_",p,"power_dB")]]
+      )
+    
+    # run linear model w/o repeated measures
+    lm_model <- lm(behav ~ power+ invage + sex, data = temp_df_viable,
+                   na.action = na.exclude)
+    # get residuals and clean
+    temp_df_clean <- outlier_modelresiduals(temp_df_viable,residuals(lm_model),"lunaid")
+    # make luna_id a factor
+    temp_df_clean$lunaid_clean <- factor(temp_df_clean$lunaid_clean)
+    
+    # run with cleaned data and random effects
+    lmer_model <- lmerTest::lmer(behav ~ power + invage + sex + (1|lunaid_clean), 
+                                 data = temp_df_clean
+                                 , na.action = na.exclude)
+    new_row <- data.frame(powertype =p, behav = b, 
+                          p_power = summary(lmer_model)$coefficients["power","Pr(>|t|)"])
+    R_BroadbandBehav <- rbind(R_BroadbandBehav, new_row)
+    # print summary
+    print(paste(p,b))
+    # print(summary(lmer_model))
+
+    # plot LMER
+    temp_plot_data <- temp_df_clean %>%
+      filter(!is.na(lunaid_clean))
+
+    # estimated marginal means plots
+    emm_lmer <- emmeans(lmer_model, ~ power, 
+                        at = list(power = seq(min(temp_df_clean$power,na.rm=T),
+                                      max(temp_df_clean$power,na.rm=T),
+                                      length.out=100)))
+    emm_df_lmer <- as.data.frame(emm_lmer)
+
+    q <- ggplot()+
+      geom_line(data = temp_df_clean, aes(x=power,y=behav,group=lunaid),
+        alpha = 0.25, size = 0.2,
+        color=COLOR)+
+      geom_point(data = temp_df_clean, aes(x=power,y=behav),
+                  color = COLOR,
+                 alpha = 0.25,shape= 16, size = 0.5)+
+      geom_line(data = emm_df_lmer, aes(x=power, y=emmean),color=COLOR, linewidth = 0.5)+
+      geom_ribbon(data = emm_df_lmer,
+                  aes(x=power,
+                      ymin=lower.CL, ymax=upper.CL)
+                  ,color=NA, fill = COLOR,alpha=0.3)+
+      xlab("AS Power (dB)")+
+      ylab(currbehav_yaxis)+
+      theme_classic()+
+     theme(axis.title = element_text(size = 6),
+        axis.text = element_text(size=5),
+        plot.title = element_text(size = 7, face = 'bold',hjust =0),
+        axis.line = element_line(size=0.3),
+        axis.ticks = element_line(size=0.3),
+        text = element_text(family = "sans"),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 7),
+        plot.margin = margin(t = 0, r =0, l=0, b=0))
+    P_broadbandbehav[[p]][[b]] <- q
+    
+    # print(q)
+   
+    ## GAM
+    gam_model <- gam(behav ~ s(power,k=3) + s(eeg_age,k=3) + sex, data = temp_df_viable,
+                     na.action = na.exclude)
+    temp_df_clean <- outlier_modelresiduals(temp_df_viable,residuals(gam_model),"lunaid")
+    gamre_model <- gam(behav ~ s(power,k=3) + s(eeg_age,k=3) + sex + s(lunaid_clean,bs='re'),
+                       data = temp_df_clean, na.action = na.exclude)
+    print(summary(gamre_model))
+    new_row <- data.frame(powertype =p, behav = b, 
+                          p_power = summary(gamre_model)$s.table["s(power)","p-value"])
+    R_BroadbandBehav_gam <- rbind(R_BroadbandBehav_gam, new_row)
+    # plot GAM
+    temp_plot_data <- temp_df_clean %>%
+      filter(!is.na(lunaid_clean))
+    
+    emm_gam <- emmeans(gamre_model, ~ power,
+                       at = list(power = seq(min(temp_df_clean$power,na.rm=T),
+                                             max(temp_df_clean$power,na.rm=T),
+                                             length.out = 100)))
+    emm_df_gam <- as.data.frame(emm_gam)
+
+    q <- ggplot()+
+      geom_line(data = temp_plot_data, aes(x=power,y=behav,group=lunaid),
+        alpha = 0.25, size = 0.2,
+        color=COLOR)+
+      geom_point(data = temp_plot_data, aes(x=power,y=behav),
+                  color = COLOR,
+                 alpha = 0.25,shape= 16, size = 0.5)+
+      geom_line(data = emm_df_gam, aes(x=power, y=emmean),color=COLOR, linewidth = 0.5)+
+      geom_ribbon(data = emm_df_gam,
+                  aes(x=power,
+                      ymin=upper.CL, ymax=lower.CL)
+                  ,color=NA, fill = COLOR,alpha=0.3)+
+      xlab("AS Power (dB)")+
+      ylab(currbehav_yaxis)+
+      theme_classic()+
+     theme(axis.title = element_text(size = 6),
+        axis.text = element_text(size=5),
+        plot.title = element_text(size = 7, face = 'bold',hjust =0),
+        axis.line = element_line(size=0.3),
+        axis.ticks = element_line(size=0.3),
+        text = element_text(family = "sans"),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 7),
+        plot.margin = margin(t = 0, r =0, l=0, b=0))
+    P_broadbandbehav_gam[[p]][[b]] <- q
+
+    # print(q)
+  }
+  
+}
+
+# adjust p-values
+R_BroadbandBehav <- R_BroadbandBehav %>% 
+  mutate(
+    p_power_bon = p.adjust(p_power,method='bonferroni'),
+    p_power_fdr = p.adjust(p_power,method='fdr')
+  )
+R_BroadbandBehav_gam <- R_BroadbandBehav_gam %>%
+  mutate(
+    p_power_bon = p.adjust(p_power,method='bonferroni'),
+    p_power_fdr = p.adjust(p_power,method='fdr')
+  ) 
+
+```
+
+#### Age interactions
+```{r}
+### Associations with behavior
+#### Interaction effects
+powertypes <- c("spon","evo")
+R_BroadbandBehavInteraction <- data.frame()
+P_broadbandbehavinteraction <- list()
+# defining behavior variables
+behavs <- c("CorRate","CVLatCor","AvgLatCor")
+behavs <- c("CorRate","CVLatCor")
+# plot settings
+powertypes_titles <- c("Spontaneous","Evoked")
+
+# plotting settings
+behavior_title <- c("Correct Response Rate","Latency Variability","Average Latency")
+behavior_yaxis <- c('% correct','Coefficient of variation','Latency (ms)')
+
+# loop over power types
+for (p in powertypes){
+  # color to make plot
+  COLOR <- ifelse(
+    p=='spon', '#67428F',
+    ifelse(
+      p =='evo','#388599',
+      ifelse(
+        p=='tot','black'
+        )
+      )
+    )
+
+  # loop over behaviors
+  for (b in behavs){
+    # define current behavior
+    currbehav_title <- behavior_title[match(b,behavs)]
+    currbehav_yaxis <- behavior_yaxis[match(b,behavs)]
+    
+    # define temporary data frame
+    temp_df_viable <- data.frame(
+      lunaid = main_df_viable$lunaid,
+      eeg_date = main_df_viable$eeg_date,
+      eeg_age = main_df_viable$eeg_age,
+      sex = main_df_viable$sex,
+      invage = 1/ main_df_viable$eeg_age,
+      viable = main_df_viable$Viable,
+      behav = main_df_viable[[b]],
+      power = 
+        main_df_viable[[paste0("corAS_broadband_",p,"power_dB")]]
+      )
+    
+    # run linear model w/o repeated measures
+    lm_model <- lm(behav ~ power * invage + sex, data = temp_df_viable,
+                   na.action = na.exclude)
+    # get residuals and clean
+    temp_df_clean <- outlier_modelresiduals(temp_df_viable,residuals(lm_model),"lunaid")
+    # make luna_id a factor
+    temp_df_clean$lunaid_clean <- factor(temp_df_clean$lunaid_clean)
+    
+    # run with cleaned data and random effects
+    lmer_model <- lmerTest::lmer(behav ~ power * invage + sex + (1|lunaid_clean), 
+                                 data = temp_df_clean
+                                 , na.action = na.exclude)
+    new_row <- data.frame(powertype =p, behav = b, 
+                          p_interaction =
+                            summary(lmer_model)$coefficients["power:invage","Pr(>|t|)"])
+    R_BroadbandBehavInteraction <- rbind(R_BroadbandBehavInteraction, new_row)
+    # print summary
+    print(paste(p,b))
+    print(summary(lmer_model))
+    
+    if(p=="spon"){
+        lineVALS <- c("25" = "#231631",
+                                "20" = "#67428F",
+                                "14" = "#A585C7")
+        pointVALS <-  c("0.04" = "#A585C7",
+                                "0.05" = "#67428F",
+                                "0.07" = "#231631")
+      } else if (p=="evo"){
+        lineVALS <-  c("25" = "#132E34",
+                                "20" = "#388599",
+                                "14" = "#88C4D3")
+        pointVALS <- c("0.04" = "#88C4D3",
+                                "0.05" = "#388599",
+                                "0.07" = "#132E34")
+        
+      }
+    
+    # get JN bounds
+    jn_out <- johnson_neyman(lmer_model, pred = "power",modx = "invage")
+    print(1/jn_out$bounds)
+    # estimated marginal means
+    emm_lmer <- emmeans(lmer_model, ~ invage | power,
+                        at = list(power = seq(min(temp_df_clean$power,na.rm=T),
+                                  max(temp_df_clean$power,na.rm=T),
+                                  length.out=100),
+                                  invage = c(1/14,1/20,1/25)))
+    emm_df_lmer <- as.data.frame(emm_lmer)
+    emm_df_lmer$age <- factor(1/emm_df_lmer$invage, levels =  c(14,20,25))
+    # predict responses
+    predict_df <- predict_response(lmer_model,terms=c("power[all]","invage"))
+
+    q <- ggplot()+
+      geom_line(data = temp_df_clean, aes(x=power,y=behav,group=lunaid),
+        alpha = 0.25, size = 0.2,
+        color=COLOR)+
+      geom_point(data = temp_df_clean, aes(x=power,y=behav),
+                  color = COLOR,
+                 alpha = 0.25,shape= 16, size = 0.5)+
+      new_scale_fill()+
+      new_scale_color()+
+      geom_line(data = emm_df_lmer, aes(x=power, y=emmean,color = age),
+        linewidth = 0.5)+
+      geom_ribbon(data = emm_df_lmer,
+                  aes(x=power,y=emmean,
+                      ymin=lower.CL, ymax=upper.CL, fill = age)
+                  ,color=NA,alpha=0.3)+
+      scale_color_manual(name = "Age (years)", values = lineVALS) +
+      scale_fill_manual(name  = "Age (years)", values = lineVALS) +
+      xlab("AS Power (dB)")+
+      ylab(currbehav_yaxis)+
+      theme_classic()+
+     theme(axis.title = element_text(size = 6),
+        axis.text = element_text(size=5),
+        plot.title = element_text(size = 7, face = 'bold',hjust =0),
+        axis.line = element_line(size=0.3),
+        axis.ticks = element_line(size=0.3),
+        text = element_text(family = "sans"),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 7),
+        plot.margin = margin(t = 0, r =0, l=0, b=0))
+    P_broadbandbehavinteraction[[p]][[b]] <- q
+    
+    # print(q)
+   
+    ## GAM
+    # gam_model <- gam(behav ~ ti(power,k=3)+ ti(eeg_age,k=3) + 
+    #                    ti(power,eeg_age,k=3)+ sex, data = temp_df_viable,
+    #                  na.action = na.exclude)
+    # temp_df_clean <- outlier_modelresiduals(temp_df_viable,residuals(gam_model),"lunaid")
+    # gamre_model <- gam(behav ~ ti(power,k=3)+ ti(eeg_age,k=3) + 
+    #                    ti(power,eeg_age,k=3)+sex+  s(lunaid_clean,bs='re'),
+    #                    data = temp_df_clean, na.action = na.exclude)
+    # print(summary(gamre_model))
+
+    # predict responses
+    # predict_df <- predict_response(gamre_model,terms=c("power[all]","eeg_age"))
+    # estimated marginal means
+    # emm_gam <- emmeans(gamre_model, ~ power | eeg_age,
+    #                       at = list(eeg_age = c(14,20,25),
+    #                                 power = seq(min(temp_df_clean$power,na.rm=T),
+    #                                             max(temp_df_clean$power, na.rm=T),
+    #                                             length.out = 100)))
+    # emm_df_gam <- as.data.frame(emm_gam)
+    # emm_df_gam$age <- factor(emm_df_gam$eeg_age, levels = c(14,20,25))
+    # 
+    # q <- ggplot()+
+    #   geom_line(data = temp_df_clean, aes(x=power,y=behav,group=lunaid),
+    #     alpha = 0.25, size = 0.2,
+    #     color=COLOR)+
+    #   geom_point(data = temp_df_clean, aes(x=power,y=behav),
+    #               color = COLOR,
+    #              alpha = 0.25,shape= 16, size = 0.5)+
+    #   geom_line(data = emm_df_gam, aes(x=power, y=emmean, color=age),
+    #       linewidth=0.5)+
+    #   geom_ribbon(data = emm_df_gam,
+    #               aes(x=power,fill=age,
+    #                   ymin=lower.CL, ymax=upper.CL)
+    #               ,color=NA, alpha=0.3)+
+    #   scale_color_manual(name="Age (years)",
+    #                         values =   lineVALS)+
+    #   scale_fill_manual(name="Age (years)",
+    #                        values = lineVALS)+
+    #   xlab("AS Power (dB)")+
+    #   ylab(currbehav_yaxis)+
+    #   theme_classic()+
+    #  theme(axis.title = element_text(size = 6),
+    #     axis.text = element_text(size=5),
+    #     plot.title = element_text(size = 7, face = 'bold',hjust =0),
+    #     axis.line = element_line(size=0.3),
+    #     axis.ticks = element_line(size=0.3),
+    #     text = element_text(family = "sans"),
+    #     legend.text = element_text(size = 6),
+    #     legend.title = element_text(size = 7),
+    #     plot.margin = margin(t = 0, r =0, l=0, b=0),
+    #     legend.margin = margin(t=0.5, r=0.5,l=0.5,b=0.5))
+
+    # print(q)
+  }
+  
+}
+
+# adjust p-values
+R_BroadbandBehavInteraction <- R_BroadbandBehavInteraction %>% 
+  mutate(
+    p_power_bon = p.adjust(p_interaction,method='bonferroni'),
+    p_power_fdr = p.adjust(p_interaction,method='fdr')
+  ) 
+
+```
+
+### Glu/GABA asymmetry
+#### Main effects
+```{r}
+# variables to loop over
+powertypes <- c("spon","evo")
+ei_measures <- c("sipfc.DLPFC_Glu_gamadj",
+                 "sipfc.DLPFC_GABA_gamadj",
+                 "sipfc.DLPFC_GluGaba_Asym_sqrt")
+ei_measures <- c("sipfc.DLPFC_GluGaba_Asym_sqrt")
+
+  # plotting titles
+powertypes_titles <- c("Spontaneous","Evoked")
+
+  # Variables being created
+R_BroadbandMRSI <- data.frame()
+R_BroadbandMRSIBehav <- data.frame()
+P_broadbandMRSI <- list()
+for (ei in ei_measures){
+  for (p in powertypes){
+   # color to make plot
+  COLOR <- ifelse(
+    p=='spon', '#67428F',
+    ifelse(
+      p =='evo','#388599',
+      ifelse(
+        p=='tot','black'
+        )
+      )
+    )
+    currmetabolite <- metabolite_from_name(ei)
+    suffix <- if (currmetabolite=="GluGaba"){
+      "_Asym_sqrt"
+    } else if (currmetabolite=="Glu" || currmetabolite=="GABA"){
+      "_gamadj"
+    }
+    temp_df_viable <- data.frame(
+      lunaid = main_df_viable$lunaid,
+      eeg_date = main_df_viable$eeg_date,
+      eeg_age = main_df_viable$eeg_age,
+      sex = main_df_viable$sex,
+      mrsi_age = main_df_viable$sess.age,
+      invage = 1/main_df_viable$eeg_age,
+      viable = main_df_viable$Viable,
+      r_EI = main_df_viable[[paste0("sipfc.R", roi_from_name(ei),"_",currmetabolite,suffix)]],
+      l_EI = main_df_viable[[paste0("sipfc.L", roi_from_name(ei),"_",currmetabolite,suffix)]],
+      power = main_df_viable[[paste0("corAS_broadband_",p,"power_dB")]],
+      behav = main_df_viable$CVLatCor
+    )
+    # pivot longer and make hemisphere a factor
+    temp_df_long <- pivot_longer(temp_df_viable, cols = c("r_EI","l_EI"),
+                                 names_to = "hemi",
+                                 values_to = "EI")
+    temp_df_long$hemi <- as.factor(temp_df_long$hemi)
+    # lm model
+    lm_model <- lm(power ~ EI + invage + hemi +  sex, 
+                   data = temp_df_long, 
+                   na.action=na.exclude)
+    temp_df_clean <- outlier_modelresiduals(temp_df_long,residuals(lm_model),
+                                            "lunaid")
+    temp_df_clean$lunaid_clean <- as.factor(temp_df_clean$lunaid_clean)
+    # lmer model
+    lmer_model <- lmerTest::lmer(power ~ EI + invage + hemi + sex+ (1|lunaid_clean),
+                                 data=temp_df_clean,
+                                 na.action=na.exclude)
+    print(paste(p,ei))
+    # print(summary(lmer_model))
+    
+    
+    new_row <- data.frame(powertype= p, ei_measure=ei,
+                          p_EI = summary(lmer_model)$coefficients["EI",    
+                                                                  "Pr(>|t|)"])
+    R_BroadbandMRSI <- rbind(R_BroadbandMRSI,new_row)
+    
+    # x-axis label for metabolites
+    x_label <- if (currmetabolite=="GluGaba"){
+      "Glu-GABA asymmetry"
+    } else if (currmetabolite == "Glu"){
+      "Glutamate"
+    } else if (currmetabolite == "GABA"){
+      "GABA"
+    }
+    # simple slopes plot
+    # estimated marginal means
+    emm_lmer <- emmeans(lmer_model, ~ EI,
+                        at = list(EI = seq(min(temp_df_clean$EI,na.rm=T),
+                                           max(temp_df_clean$EI,na.rm=T),
+                                           length.out=100)))
+    emm_df_lmer <- as.data.frame(emm_lmer)
+
+      eipowerfig <- ggplot()+
+        geom_line(data=temp_df_clean, 
+                  aes(x=EI, y=power,
+                      group= interaction(lunaid_clean,hemi)),
+                  alpha=0.25,
+                  size=0.2,
+                  color = COLOR)+
+        geom_point(data=temp_df_clean, 
+                   aes(x=EI, y=power,
+                       shape = hemi),
+                   alpha=0.25, 
+                   fill = COLOR,
+                   color = COLOR,
+                   size = 2)+
+        scale_shape_manual(name = "Hemisphere",
+                           values = c(
+                             "r_EI" = 21,
+                             "l_EI" = 24
+                           ),
+                           labels = c(
+                             "r_EI" = "R",
+                             "l_EI"="L"
+                           )) +
+        new_scale_color()+
+        new_scale_fill()+
+        geom_line(data=emm_df_lmer, aes(x=EI, y=emmean),
+                    color = COLOR, size = 0.5)+
+        geom_ribbon(data=emm_df_lmer, aes(x=EI, ymin=lower.CL, ymax= upper.CL),
+                    alpha= 0.3, color=NA,fill = COLOR)+
+        xlab(x_label) + 
+        ylab("Power (dB)")+
+        theme_classic()+
+        theme(axis.title = element_text(size = 6),
+        axis.text = element_text(size=4.5),
+        plot.title = element_text(size = 6, face = 'bold',hjust =0),
+        axis.line = element_line(size=0.3),
+        axis.ticks = element_line(size=0.3),
+        text = element_text(family = "sans"),
+        legend.text = element_text(size = 5),
+        legend.title = element_text(size =6)
+        )
+      P_broadbandMRSI[[p]][[ei]] <- eipowerfig
+      # print(eipowerfig)
+      
+      ## GAM
+      gam_model <- gam(power ~ s(EI,k=3) + s(eeg_age,k=3) + sex + hemi, data = temp_df_long,
+                       na.action = na.exclude)
+      temp_df_clean <- outlier_modelresiduals(temp_df_long,residuals(gam_model),"lunaid")
+      gamre_model <- gam(power ~ s(EI,k=3) + s(eeg_age,k=3) + sex + hemi+ s(lunaid_clean,bs='re'),
+                         data = temp_df_clean, na.action = na.exclude)
+      print(summary(gamre_model))
+      # simple slopes plot
+      # estimated marginal means
+    emm_gam <- emmeans(gamre_model, ~ EI,
+                        at = list(EI = seq(min(temp_df_clean$EI,na.rm=T),
+                                           max(temp_df_clean$EI,na.rm=T),
+                                           length.out=100)))
+    emm_df_gam <- as.data.frame(emm_gam)
+
+      eipowerfig <- ggplot()+
+        geom_line(data=temp_df_clean, 
+                  aes(x=EI, y=power,
+                      group= interaction(lunaid_clean,hemi)),
+                  alpha=0.25,
+                  size=0.2,
+                  color = COLOR)+
+        geom_point(data=temp_df_clean, 
+                   aes(x=EI, y=power,
+                       shape = hemi),
+                   alpha=0.25, 
+                   fill = COLOR,
+                   color = COLOR,
+                   size = 2)+
+        scale_shape_manual(name = "Hemisphere",
+                           values = c(
+                             "r_EI" = 21,
+                             "l_EI" = 24
+                           ),
+                           labels = c(
+                             "r_EI" = "R",
+                             "l_EI"="L"
+                           )) +
+        new_scale_color()+
+        new_scale_fill()+
+        geom_line(data=emm_df_gam, aes(x=EI, y=emmean), color = COLOR, size = 0.5)+
+        geom_ribbon(data=emm_df_gam, aes(x=EI, ymin=lower.CL, ymax= upper.CL),
+                    alpha= 0.3, color=NA,fill = COLOR)+
+        xlab(x_label) + 
+        ylab("Power (dB)")+
+        theme_classic()+
+        theme(axis.title = element_text(size = 6),
+        axis.text = element_text(size=4.5),
+        plot.title = element_text(size = 6, face = 'bold',hjust =0),
+        axis.line = element_line(size=0.3),
+        axis.ticks = element_line(size=0.3),
+        text = element_text(family = "sans"),
+        legend.text = element_text(size = 5),
+        legend.title = element_text(size =6)
+        )
+      print(eipowerfig)
+
+  }
+}
+  # correcting p-values
+R_BroadbandMRSI <- R_BroadbandMRSI %>% group_by(powertype) %>%
+  mutate(
+    p_EI_bon = p.adjust(p_EI,method="bonferroni"),
+    p_EI_fdr = p.adjust(p_EI,method='fdr')
+  )
+
+
+```
+
+#### Interaction effects
+```{r}
+# variables to loop over
+powertypes <- c("spon","evo")
+ei_measures <- c("sipfc.DLPFC_Glu_gamadj",
+                 "sipfc.DLPFC_GABA_gamadj",
+                 "sipfc.DLPFC_GluGaba_Asym_sqrt")
+ei_measures <- c("sipfc.DLPFC_GluGaba_Asym_sqrt")
+
+  # plotting titles
+powertypes_titles <- c("Spontaneous","Evoked")
+
+  # Variables being created
+P_broadbandMRSI_JNplots <- list()
+R_BroadbandMRSI_interaction <- data.frame()
+R_BroadbandMRSIBehav <- data.frame()
+P_broadbandMRSI_interaction <- list()
+for (ei in ei_measures){
+  for (p in powertypes){
+   # color to make plot
+  COLOR <- ifelse(
+    p=='spon', '#67428F',
+    ifelse(
+      p =='evo','#388599',
+      ifelse(
+        p=='tot','black'
+        )
+      )
+    )
+    currmetabolite <- metabolite_from_name(ei)
+    suffix <- if (currmetabolite=="GluGaba"){
+      "_Asym_sqrt"
+    } else if (currmetabolite=="Glu" || currmetabolite=="GABA"){
+      "_gamadj"
+    }
+    temp_df_viable <- data.frame(
+      lunaid = main_df_viable$lunaid,
+      eeg_date = main_df_viable$eeg_date,
+      eeg_age = main_df_viable$eeg_age,
+      sex = main_df_viable$sex,
+      mrsi_age = main_df_viable$sess.age,
+      invage = 1/main_df_viable$eeg_age,
+      viable = main_df_viable$Viable,
+      r_EI = main_df_viable[[paste0("sipfc.R", roi_from_name(ei),"_",currmetabolite,suffix)]],
+      l_EI = main_df_viable[[paste0("sipfc.L", roi_from_name(ei),"_",currmetabolite,suffix)]],
+      power = main_df_viable[[paste0("corAS_broadband_",p,"power_dB")]],
+      behav = main_df_viable$CVLatCor
+    )
+    # pivot longer and make hemisphere a factor
+    temp_df_long <- pivot_longer(temp_df_viable, cols = c("r_EI","l_EI"),
+                                 names_to = "hemi",
+                                 values_to = "EI")
+    temp_df_long$hemi <- as.factor(temp_df_long$hemi)
+    # lm model
+    lm_model <- lm(power ~ EI * invage + hemi +  sex, 
+                   data = temp_df_long, 
+                   na.action=na.exclude)
+    temp_df_clean <- outlier_modelresiduals(temp_df_long,residuals(lm_model),
+                                            "lunaid")
+    temp_df_clean$lunaid_clean <- as.factor(temp_df_clean$lunaid_clean)
+    # lmer model
+    lmer_model <- lmerTest::lmer(power ~ EI * invage + hemi + sex+ (1|lunaid_clean),
+                                 data=temp_df_clean,
+                                 na.action=na.exclude)
+    print(paste(p,ei))
+    print(summary(lmer_model))
+    
+    
+    new_row <- data.frame(powertype= p, ei_measure=ei,
+                          p_EI = summary(lmer_model)$coefficients["EI",    
+                                                                  "Pr(>|t|)"],
+                          p_interaction = summary(lmer_model)$coefficients["EI:invage","Pr(>|t|)"])
+    R_BroadbandMRSI_interaction <- rbind(R_BroadbandMRSI_interaction,new_row)
+    
+    if(p=="spon"){
+        lineVALS <- c("25" = "#231631",
+                                "20" = "#67428F",
+                                "14" = "#A585C7")
+        pointVALS <-  c("0.04" = "#A585C7",
+                                "0.05" = "#67428F",
+                                "0.07" = "#231631")
+      } else if (p=="evo"){
+        lineVALS <-  c("25" = "#132E34",
+                                "20" = "#388599",
+                                "14" = "#88C4D3")
+        pointVALS <- c("0.04" = "#88C4D3",
+                                "0.05" = "#388599",
+                                "0.07" = "#132E34")
+        
+      }
+    # x-axis label for metabolites
+    x_label <- if (currmetabolite=="GluGaba"){
+      "Glu-GABA asymmetry"
+    } else if (currmetabolite == "Glu"){
+      "Glutamate"
+    } else if (currmetabolite == "GABA"){
+      "GABA"
+    }
+    # simple slopes plot
+    # estimated marginal means
+    emm_lmer <- emmeans(lmer_model, ~ EI | invage,
+                        at = list(EI = seq(min(temp_df_clean$EI,na.rm=T),
+                                           max(temp_df_clean$EI,na.rm=T),
+                                           length.out=100),
+                                  invage = c(1/14,1/20,1/25)))
+    emm_df_lmer <- as.data.frame(emm_lmer)
+    emm_df_lmer$age <- factor(1/emm_df_lmer$invage,c(14,20,25))
+
+      eipowerfig <- ggplot()+
+        geom_line(data=temp_df_clean, 
+                  aes(x=EI, y=power,
+                      group= interaction(lunaid_clean,hemi)),
+                  alpha=0.25,
+                  size=0.2,
+                  color = COLOR)+
+        geom_point(data=temp_df_clean, 
+                   aes(x=EI, y=power,
+                       shape = hemi),
+                   alpha=0.25, 
+                   fill = COLOR,
+                   color = COLOR,
+                   size = 0.5)+
+        scale_shape_manual(name = "Hemisphere",
+                           values = c(
+                             "r_EI" = 21,
+                             "l_EI" = 24
+                           ),
+                           labels = c(
+                             "r_EI" = "R",
+                             "l_EI"="L"
+                           )) +
+        new_scale_color()+
+        new_scale_fill()+
+        geom_line(data=emm_df_lmer, aes(x=EI, y=emmean,color=age),
+                   size = 0.5)+
+        geom_ribbon(data=emm_df_lmer, aes(x=EI, ymin=lower.CL, ymax= upper.CL,fill=age),
+                    alpha= 0.3, color=NA)+
+        scale_color_manual(name = "Age (years)", values = lineVALS) +
+      scale_fill_manual(name  = "Age (years)", values = lineVALS) +
+        xlab(x_label) + 
+        ylab("Power (dB)")+
+        theme_classic()+
+        theme(axis.title = element_text(size = 6),
+        axis.text = element_text(size=4.5),
+        plot.title = element_text(size = 6, face = 'bold',hjust =0),
+        axis.line = element_line(size=0.3),
+        axis.ticks = element_line(size=0.3),
+        text = element_text(family = "sans"),
+        legend.text = element_text(size = 5),
+        legend.title = element_text(size =6)
+        )
+      P_broadbandMRSI_interaction[[p]][[ei]] <- eipowerfig
+      # print(eipowerfig)
+      
+      # johnson-neyman plot
+      recip_trans <- trans_new(
+        name = "recip",
+        transform = function(x) 1/x,
+        inverse = function(x) 1/x
+        )
+      jn_out <- johnson_neyman(lmer_model, pred = "EI",
+                               modx = "invage", sig.color = COLOR,
+                               insig.color = 'grey30',
+                               line.thickness = 0.5)
+      jn_out$plot@layers$geom_segment <- NULL
+      jn_plot <- jn_out$plot + theme_classic(base_size = 6)
+      jn_plot <- jn_plot + theme(axis.title = element_text(size=6),
+                                 axis.text = element_text(size=5),
+                                 axis.ticks = element_line(size=0.3),
+                                 axis.line = element_line(size=0.3),
+                                 legend.title = element_blank()
+                                 )+
+        scale_x_continuous(name = "Age (years)",
+                           trans = recip_trans,
+                           labels = c(10,20,30),
+                           breaks = c(1/10,1/20,1/30),
+                           limits = c(min(temp_df_clean$invage),max(temp_df_clean$invage))
+                           )+
+        ylab(paste0("Slope of ", x_label, "\non power")) +
+        labs(color=NULL,fill=NULL)
+      print(jn_plot)
+      print(1/jn_out$bounds)
+      P_broadbandMRSI_JNplots[[p]][[ei]] <- jn_plot
+      
+      ## GAM
+    #   gam_model <- gam(power ~ ti(EI,k=3) + ti(eeg_age,k=3) + ti(EI,eeg_age,k=3) + sex + hemi, data = temp_df_long,
+    #                    na.action = na.exclude)
+    #   temp_df_clean <- outlier_modelresiduals(temp_df_long,residuals(gam_model),"lunaid")
+    #   gamre_model <- gam(power ~ti(EI,k=3) + ti(eeg_age,k=3) + ti(EI,eeg_age,k=3) + sex
+    #                      + hemi+ s(lunaid_clean,bs='re'),
+    #                      data = temp_df_clean, na.action = na.exclude)
+    #   print(summary(gamre_model))
+    #   
+    #   # simple slopes plot
+    #   # estimated marginal means
+    # emm_gam <- emmeans(gamre_model, ~ EI | eeg_age,
+    #                     at = list(EI = seq(min(temp_df_clean$EI,na.rm=T),
+    #                                        max(temp_df_clean$EI,na.rm=T),
+    #                                        length.out=100),
+    #                               eeg_age = c(14,20,25)))
+    # emm_df_gam <- as.data.frame(emm_gam)
+    # emm_df_gam$age <- factor(emm_df_gam$eeg_age,levels = c(14,20,25))
+    # 
+    #   eipowerfig <- ggplot()+
+    #     geom_line(data=temp_df_clean, 
+    #               aes(x=EI, y=power,
+    #                   group= interaction(lunaid_clean,hemi)),
+    #               alpha=0.25,
+    #               size=0.2,
+    #               color = COLOR)+
+    #     geom_point(data=temp_df_clean, 
+    #                aes(x=EI, y=power,
+    #                    shape = hemi),
+    #                alpha=0.25, 
+    #                fill = COLOR,
+    #                color = COLOR,
+    #                size = 2)+
+    #     scale_shape_manual(name = "Hemisphere",
+    #                        values = c(
+    #                          "r_EI" = 21,
+    #                          "l_EI" = 24
+    #                        ),
+    #                        labels = c(
+    #                          "r_EI" = "R",
+    #                          "l_EI"="L"
+    #                        )) +
+    #     new_scale_color()+
+    #     new_scale_fill()+
+    #     geom_line(data=emm_df_gam, aes(x=EI, y=emmean,color=age), size = 0.5)+
+    #     geom_ribbon(data=emm_df_gam, aes(x=EI, ymin=lower.CL, ymax= upper.CL,fill=age),
+    #                 alpha= 0.3, color=NA)+
+    #     scale_color_manual(name = "Age (years)", values = lineVALS) +
+    #   scale_fill_manual(name  = "Age (years)", values = lineVALS) +
+    #     xlab(x_label) + 
+    #     ylab("Power (dB)")+
+    #     theme_classic()+
+    #     theme(axis.title = element_text(size = 6),
+    #     axis.text = element_text(size=4.5),
+    #     plot.title = element_text(size = 6, face = 'bold',hjust =0),
+    #     axis.line = element_line(size=0.3),
+    #     axis.ticks = element_line(size=0.3),
+    #     text = element_text(family = "sans"),
+    #     legend.text = element_text(size = 5),
+    #     legend.title = element_text(size =6)
+    #     )
+      # print(eipowerfig)
+
+  }
+}
+  # correcting p-values
+R_BroadbandMRSI_interaction <- R_BroadbandMRSI_interaction %>% group_by(powertype) %>%
+  mutate(
+    p_EI_bon = p.adjust(p_EI,method="bonferroni"),
+    p_EI_fdr = p.adjust(p_EI,method='fdr')
+  )
+
+
+```
+
+## ERSP and ITC Clusters
+```{r}
+# ERSP Clusters with behaviors
+run_ersp_behav_analysis <- function(b, df, behavs, behav_labels, plot_clusters = NULL){
+  # initialize plot list
+  plot_list <- list()
+  ## ---- LMER model ----
+  # define temp data frame
+  temp_df <- data.frame(
+    lunaid = df$lunaid,
+    eeg_date = df$eeg_date,
+    sex = df$sex,
+    eeg_age = df$eeg_age,
+    invage = df$invage,
+    behav = df[[b]],
+    visit = df$visitno,
+    ASc1 = df$corAS_c1_ersp_interaction,
+    ASc2 = df$corAS_c2_ersp_interaction,
+    ASc3 = df$corAS_c3_ersp_interaction,
+    ASc4 = df$corAS_c4_ersp_interaction,
+    ASc5 = df$corAS_c5_ersp_interaction,
+    VGSc1 = df$VGS_c1_ersp_interaction,
+    VGSc2 = df$VGS_c2_ersp_interaction,
+    VGSc3 = df$VGS_c3_ersp_interaction,
+    VGSc4 = df$VGS_c4_ersp_interaction,
+    VGSc5 = df$VGS_c5_ersp_interaction
+    )
+  
+  lm_model <- lm(behav ~ ASc1 + ASc2 + ASc3 + ASc4 + ASc5 + invage + sex, data = temp_df,
+                 na.action = na.exclude)
+  df_clean <- outlier_modelresiduals(temp_df, residuals(lm_model), "lunaid")
+  lmer_model <- lmerTest::lmer(behav ~ ASc1 + ASc2 + ASc3 + ASc4 + ASc5 + invage + sex + (1|lunaid_clean),
+                               data = df_clean,na.action = na.exclude)
+  lmer_summary <- summary(lmer_model)
+  print(b)
+  print(lmer_summary)
+  
+  ## plot distribution of AS and VGS of cluster ersp and age trajectory if clusters are specified
+  if (!is.null(plot_clusters)){
+    n_clusts <- length(plot_clusters)
+    
+    # loop over number of clusters
+    for (C in plot_clusters){
+      currcluster_df <- clusters_df %>% filter(modelterm == "interaction", 
+                                             datatype =="ersp",
+                                             clusternum ==C)
+      # pivot long    
+      df_long <- pivot_longer(df_clean,cols = c(paste0("ASc",C),
+                                                paste0("VGSc",C)),
+                              names_to = "condition",
+                              values_to = "ersp")
+      df_long$condition <- as.factor(df_long$condition)
+      COLOR <- if (C==1){
+        "#C0369D"
+        }else if (C==5){
+          "#C05936"
+        }
+      
+      VALUES = setNames(c(COLOR, "grey30"), c(paste0("ASc",C), paste0("VGSc",C)))
+      LABELS = setNames(c("AS","VGS"), c(paste0("ASc",C), paste0("VGSc",C)))
+      
+      # view total ERSP developmental trajectory 
+      ersptraj_fig <- ggplot(data=df_long, aes(x=eeg_age,
+                                                    y=ersp,
+                                                    color=condition))+
+        # geom_point()+
+        geom_smooth(method='lm',
+                    formula = y ~ I(1/x), 
+                    aes(color = condition,
+                        fill=condition),
+                    size = 0.5,
+                    alpha = 0.1, se=F) +
+        scale_fill_manual(values = VALUES,
+                          name=NULL,
+                          labels = LABELS)+
+         scale_color_manual(values =VALUES,
+                          name=NULL,
+                          labels =  LABELS)+
+        xlab("Age (years)")+
+        ylab(paste("ERSP (dB)"))+
+        theme_classic()+
+        theme(
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=4),
+          axis.line = element_line(size=0.3),
+          axis.ticks = element_line(size=0.3),
+          legend.text = element_text(size=5)
+          ) +
+        labs(title = paste(round(currcluster_df$minfreq),
+                           "-",round(currcluster_df$maxfreq),
+                           "Hz cluster",sep=" "))+
+        geom_hline(yintercept = 0, linetype = "dashed", color = "black",size = 0.4)
+      # print(ersptraj_fig)
+      
+      # cluster distribution
+      ersp_distribution <- ggplot(data=df_long, aes(x=condition,
+                                                         y=ersp,
+                                                         color=condition))+
+        geom_jitter(alpha = 0.75, 
+                    size = 0.2,
+                    position = position_jitterdodge(jitter.width = 0.25,
+                                                    dodge.width = 0.75),
+                    shape = 16)+
+        stat_slab(aes(fill = condition), 
+                  adjust = 0.75,
+                  width = 0.6,
+                  justification = -0.25,
+                  color = NA,
+                  alpha = 0.75) +
+        geom_boxplot(outlier.shape = NA,
+                     width = 0.15, 
+                     color='black',
+                     fill = NA,
+                     size=0.3) + 
+        scale_fill_manual(values = VALUES,
+                          name=NULL,
+                          labels = LABELS)+
+        scale_color_manual(values = VALUES,
+                           name=NULL,
+                           labels =LABELS) + 
+        scale_x_discrete(labels = LABELS)+
+        ylab(paste("ERSP (dB)"))+
+        theme_classic()+
+        theme(
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=4),
+          axis.line = element_line(size=0.3),
+          axis.ticks = element_line(size=0.3),
+          legend.text = element_text(size=5)
+          ) +
+        labs(title = paste(round(currcluster_df$minfreq),
+                           "-",round(currcluster_df$maxfreq),
+                           "Hz cluster",sep=" "))
+      # print(ersp_distribution)
+      
+      # behavior vs errp plot
+      var_name <- paste0("ASc",C)
+      emm <- emmeans(lmer_model, 
+               specs = as.formula(paste("~", var_name)),
+               at = setNames(
+                 list(seq(min(df_clean[[var_name]], na.rm=T),
+                          max(df_clean[[var_name]], na.rm=T),
+                          length.out = 100)),
+                 var_name
+               ))
+      emm_df <- as.data.frame(emm)
+      emm_df <- rename(emm_df, ersp = !!sym(var_name))
+      print(colnames(emm_df))
+      
+      behav_ersp_fig <- ggplot(data = emm_df, aes(x=ersp, y=emmean)) + 
+        geom_line(size=0.5,color=COLOR) + 
+        geom_ribbon(aes(ymin=lower.CL,ymax=upper.CL),fill = COLOR, alpha = 0.3)+
+        theme_classic() + 
+        xlab("ERSP (dB)") + ylab(behav_labels[match(b,behavs)])+
+        theme(axis.title = element_text(size=5),
+              axis.text = element_text(size=4),
+              axis.line = element_line(size=0.3),
+              axis.ticks = element_line(size=0.3))
+      # print(behav_ersp_fig)
+      # store in list
+      plot_list[[b]][[paste0("cluster", C)]][["ersptraj"]]    <- ersptraj_fig
+      plot_list[[b]][[paste0("cluster", C)]][["distribution"]] <- ersp_distribution
+      plot_list[[b]][[paste0("cluster", C)]][["behav_ersp"]]  <- behav_ersp_fig
+      
+      }
+  }
+  return(list(plot=plot_list))
+}
+
+# defining behavior variables
+behavs <- c("CorRate","CVLatCor","AvgLatCor")
+behav_labels <- c('% correct','Coefficient of variation','Latency (ms)')
+results_ersp <- lapply(behavs, run_ersp_behav_analysis,
+                  df = main_df_viable,
+                  behavs = behavs)
+# defining behavior variables
+behavs <- c("CorRate","CVLatCor")
+results_ersp <- setNames(lapply(behavs, run_ersp_behav_analysis,
+                  df = main_df_viable,
+                  behavs = behavs,
+                  behav_labels = behav_labels,
+                  plot_clusters = c(1,5)),behavs)
+P_c1_corrate <- results_ersp$CorRate$plot$CorRate$cluster1$behav_ersp
+# P_c1_corrate
+p_c5_corrate <- results_ersp$CorRate$plot$CorRate$cluster5$behav_ersp
+# p_c5_corrate
+P_c1_cvlat <- results_ersp$CVLatCor$plot$CVLatCor$cluster1$behav_ersp
+# P_c1_cvlat
+P_c5_cvlat <- results_ersp$CVLatCor$plot$CVLatCor$cluster5$behav_ersp
+# P_c5_cvlat
+P_c1_dist <- results_ersp$CVLatCor$plot$CVLatCor$cluster1$distribution
+# P_c1_dist
+P_c5_dist <- results_ersp$CVLatCor$plot$CVLatCor$cluster5$distribution
+# P_c5_dist
+P_c1_traj <- results_ersp$CVLatCor$plot$CVLatCor$cluster1$ersptraj
+# P_c1_traj 
+P_c5_traj <- results_ersp$CVLatCor$plot$CVLatCor$cluster5$ersptraj
+# P_c5_traj
+
+## ITC clusters with behaviors
+# run_itc_behav_analysis <- function(b, df, behavs,behav_labels,plot_clusters = NULL){
+#   # define temp data frame
+#   temp_df <- data.frame(
+#     lunaid = df$lunaid,
+#     eeg_date = df$eeg_date,
+#     sex = df$sex,
+#     eeg_age = df$eeg_age,
+#     invage = df$invage,
+#     behav = df[[b]],
+#     visit = df$visitno,
+#     ASc1 = df$corAS_c1_itc_interaction,
+#     ASc2 = df$corAS_c2_itc_interaction,
+#     ASc3 = df$corAS_c3_itc_interaction,
+#     ASc4 = df$corAS_c4_itc_interaction,
+#     ASc5 = df$corAS_c5_itc_interaction,
+#     ASc6 = df$corAS_c6_itc_interaction,
+#     VGSc1 = df$VGS_c1_itc_interaction,
+#     VGSc2 = df$VGS_c2_itc_interaction,
+#     VGSc3 = df$VGS_c3_itc_interaction,
+#     VGSc4 = df$VGS_c4_itc_interaction,
+#     VGSc5 = df$VGS_c5_itc_interaction,
+#     VGSc6 = df$VGS_c6_itc_interaction
+#   )
+#   
+#   lm_model <- lm(behav ~ ASc1 + ASc2 + ASc3 + ASc4 + ASc5 + ASc6 + invage + sex, data = temp_df,
+#                  na.action = na.exclude)
+#   df_clean <- outlier_modelresiduals(temp_df, residuals(lm_model), "lunaid")
+#   lmer_model <- lmerTest::lmer(behav ~ ASc1 + ASc2 + ASc3 + ASc4 + ASc5 + ASc6 + invage + sex + (1|lunaid_clean),
+#                                data = df_clean,na.action = na.exclude)
+#   lmer_summary <- summary(lmer_model)
+#   print(b)
+#   print(lmer_summary)
+#   
+#   ## plot distribution of AS and VGS of cluster itc and age trajectory if clusters are specified
+#   if (!is.null(plot_clusters)){
+#     n_clusts <- length(plot_clusters)
+#     
+#     # loop over number of clusters
+#     for (C in plot_clusters){
+#       currcluster_df <- clusters_df %>% filter(modelterm == "interaction", 
+#                                              datatype =="itc",
+#                                              clusternum ==C)
+#       # pivot long    
+#       df_long <- pivot_longer(df_clean,cols = c(paste0("ASc",C),
+#                                                 paste0("VGSc",C)),
+#                               names_to = "condition",
+#                               values_to = "itc")
+#       df_long$condition <- as.factor(df_long$condition)
+#       COLOR <- if (C==1){
+#         "#C0369D"
+#         }else if (C==5){
+#           "#C05936"
+#         }
+#       COLOR <- 'blue'
+#       
+#       VALUES = setNames(c(COLOR, "grey30"), c(paste0("ASc",C), paste0("VGSc",C)))
+#       LABELS = setNames(c("AS","VGS"), c(paste0("ASc",C), paste0("VGSc",C)))
+#       
+#       # view total ERSP developmental trajectory 
+#       itctraj_fig <- ggplot(data=df_long, aes(x=eeg_age,
+#                                                     y=itc,
+#                                                     color=condition))+
+#         # geom_point()+
+#         geom_smooth(method='lm',
+#                     formula = y ~ I(1/x), 
+#                     aes(color = condition,
+#                         fill=condition),
+#                     size = 0.5,
+#                     alpha = 0.1, se=F) +
+#         scale_fill_manual(values = VALUES,
+#                           name=NULL,
+#                           labels = LABELS)+
+#          scale_color_manual(values =VALUES,
+#                           name=NULL,
+#                           labels =  LABELS)+
+#         xlab("Age (years)")+
+#         ylab(paste("ITC"))+
+#         theme_classic()+
+#         theme(
+#           axis.title = element_text(size=5),
+#           axis.text = element_text(size=4),
+#           axis.line = element_line(size=0.3),
+#           axis.ticks = element_line(size=0.3),
+#           legend.text = element_text(size=5)
+#           ) +
+#         labs(title = paste(round(currcluster_df$minfreq),
+#                            "-",round(currcluster_df$maxfreq),
+#                            "Hz cluster",sep=" "))
+#         # geom_hline(yintercept = 0, linetype = "dashed", color = "black",size = 0.4)
+#       print(itctraj_fig)
+#       
+#       # cluster distribution
+#       itc_distribution <- ggplot(data=df_long, aes(x=condition,
+#                                                          y=itc,
+#                                                          color=condition))+
+#         geom_jitter(alpha = 0.75, 
+#                     size = 0.2,
+#                     position = position_jitterdodge(jitter.width = 0.25,
+#                                                     dodge.width = 0.75),
+#                     shape = 16)+
+#         stat_slab(aes(fill = condition), 
+#                   adjust = 0.75,
+#                   width = 0.6,
+#                   justification = -0.25,
+#                   color = NA,
+#                   alpha = 0.75) +
+#         geom_boxplot(outlier.shape = NA,
+#                      width = 0.15, 
+#                      color='black',
+#                      fill = NA,
+#                      size=0.3) + 
+#         scale_fill_manual(values = VALUES,
+#                           name=NULL,
+#                           labels = LABELS)+
+#         scale_color_manual(values = VALUES,
+#                            name=NULL,
+#                            labels =LABELS) + 
+#         scale_x_discrete(labels = LABELS)+
+#         ylab(paste("ITC"))+
+#         theme_classic()+
+#         theme(
+#           axis.title = element_text(size=5),
+#           axis.text = element_text(size=4),
+#           axis.line = element_line(size=0.3),
+#           axis.ticks = element_line(size=0.3),
+#           legend.text = element_text(size=5)
+#           ) +
+#         labs(title = paste(round(currcluster_df$minfreq),
+#                            "-",round(currcluster_df$maxfreq),
+#                            "Hz cluster",sep=" "))
+#       print(itc_distribution)
+#       
+#       # behavior vs errp plot
+#       var_name <- paste0("ASc",C)
+#       emm <- emmeans(lmer_model, 
+#                specs = as.formula(paste("~", var_name)),
+#                at = setNames(
+#                  list(seq(min(df_clean[[var_name]], na.rm=T),
+#                           max(df_clean[[var_name]], na.rm=T),
+#                           length.out = 100)),
+#                  var_name
+#                ))
+#       emm_df <- as.data.frame(emm)
+#       emm_df <- rename(emm_df, itc = !!sym(var_name))
+#       print(colnames(emm_df))
+#       
+#       behav_itc_fig <- ggplot(data = emm_df, aes(x=itc, y=emmean)) + 
+#         geom_line(size=0.5,color=COLOR) + 
+#         geom_ribbon(aes(ymin=lower.CL,ymax=upper.CL),fill = COLOR, alpha = 0.3)+
+#         theme_classic() + 
+#         xlab("ITC") + ylab(behav_labels[match(b,behavs)])+
+#         theme(axis.title = element_text(size=5),
+#               axis.text = element_text(size=4),
+#               axis.line = element_line(size=0.3),
+#               axis.ticks = element_line(size=0.3))
+#       print(behav_itc_fig)
+#       }
+#   }
+# }
+# 
+# # defining behavior variables
+# behavs <- c("CorRate","CVLatCor","AvgLatCor")
+# 
+# results_itc <- lapply(behavs, run_itc_behav_analysis,
+#                   df = main_df_viable,
+#                   behavs = behavs)
+# 
+# behavs <- c("CVLatCor")
+# behav_labels <- c('Coefficient of variation')
+# results_itc <- lapply(behavs, run_itc_behav_analysis,
+#                   df = main_df_viable,
+#                   behavs = behavs,
+#                   behav_labels = behav_labels,
+#                   plot_clusters = c(3))
+```
+ERSP interaction clusters:
+Correct rate: cluster 1
+CV latency: cluster 1 and cluster 5
+Average latency: cluster 4
+
+ITC interaction clusters:
+Correct rate: cluster 1, cluster 3, cluster 4, cluster 6
+CV latency: cluster 3
+Average latency: cluster 1, cluster 6
+
+## Spon/evo power and ersp/itc clusters
+```{r}
+run_power_cluster_analysis <- function(datatype, powertype, cluster, df, sig_color){
+  # --- build column names ---
+  ersp_col  <- paste0("corAS_c", cluster, "_", datatype, "_interaction")
+  power_col <- paste0("corAS_broadband_", 
+                      powertype,"power_dB")
+  
+  # --- outlier removal + lmer ---
+  lm_formula  <- as.formula(paste(power_col, "~", ersp_col, "* invage + sex"))
+  lm_model    <- lm(lm_formula, data = df, na.action = na.exclude)
+  df_clean    <- outlier_modelresiduals(df, residuals(lm_model), "lunaid")
+  df_clean$lunaid_clean <- as.factor(df_clean$lunaid_clean)
+  
+  lmer_formula <- as.formula(paste(power_col, "~", ersp_col, 
+                                   "* invage + sex + (1|lunaid_clean)"))
+  lmer_model   <- lmerTest::lmer(lmer_formula, data = df_clean, 
+                                 na.action = na.exclude)
+  print(summary(lmer_model))
+  
+  # --- emmeans ---
+  emm <- emmeans(lmer_model,
+                 specs = as.formula(paste("~", ersp_col, "| invage")),
+                 at = setNames(
+                   list(seq(min(df_clean[[ersp_col]], na.rm=T),
+                            max(df_clean[[ersp_col]], na.rm=T),
+                            length.out = 100),
+                        c(1/14, 1/20, 1/25)),
+                   c(ersp_col, "invage")
+                   ))
+  
+  emm_df <- as.data.frame(emm)
+  emm_df <- rename(emm_df, ersp = !!sym(ersp_col))
+  emm_df$eeg_age <- factor(1/emm_df$invage, levels = c(14, 20, 25))
+  
+  # --- main interaction plot ---
+  if(powertype=="spon"){
+        lineVALS <- c("25" = "#231631",
+                                "20" = "#67428F",
+                                "14" = "#A585C7")
+      } else if (powertype=="evo"){
+        lineVALS <-  c("25" = "#132E34",
+                                "20" = "#388599",
+                                "14" = "#88C4D3")
+      }
+
+  main_fig <- ggplot() +
+    geom_line(data = emm_df,
+              aes(x = ersp, y = emmean, color = eeg_age),
+              linewidth = 0.5) +
+    geom_ribbon(data = emm_df,
+                aes(x = ersp, ymin = lower.CL, ymax = upper.CL, fill = eeg_age),
+                color = NA, alpha = 0.3) +
+    scale_color_manual(name   = "Age (years)",
+                       labels = function(x) round(as.numeric(as.character(x)), 0),
+                       values = lineVALS) +
+    scale_fill_manual(name   = "Age (years)",
+                      labels = function(x) round(as.numeric(as.character(x)), 0),
+                      values = lineVALS) +
+    xlab(paste(toupper(datatype), "(dB)")) +
+    ylab(paste(ifelse(powertype == "spon", "Spontaneous", "Evoked"), "power (dB)")) +
+    theme_classic() +
+    theme(axis.line   = element_line(linewidth = 0.3),
+          axis.ticks  = element_line(linewidth = 0.3),
+          axis.text   = element_text(size = 5),
+          axis.title  = element_text(size = 6),
+          legend.text = element_text(size = 5),
+          legend.title = element_text(size=6))
+  # print(main_fig)
+  
+   # --- johnson-neyman ---
+  recip_trans <- scales::trans_new(
+    name      = "recip",
+    transform = function(x) 1/x,
+    inverse   = function(x) 1/x
+    )
+  
+  jn_out  <- johnson_neyman(lmer_model,
+                            pred        = !!sym(ersp_col),
+                            modx        = invage,
+                            insig.color = "grey30",
+                            sig.color   = sig_color,
+                            line.thickness = 0.5)
+  jn_out$plot@layers$geom_segment <- NULL
+  
+  jn_fig <- jn_out$plot +
+    theme_classic(base_size = 6) +
+    theme(axis.title    = element_text(size = 6),
+          axis.text     = element_text(size = 5),
+          axis.ticks    = element_line(linewidth = 0.3),
+          axis.line     = element_line(linewidth = 0.3),
+          legend.title  = element_blank()) +
+    scale_x_continuous(name   = "Age (years)",
+                       trans  = recip_trans,
+                       labels = c(10, 20, 30),
+                       breaks = c(1/10, 1/20, 1/30),
+                       limits = c(min(df_clean$invage), max(df_clean$invage))) +
+    ylab(paste("Slope of", toupper(datatype),"on power")) +
+    labs(color = NULL, fill = NULL)
+  # print(jn_fig)
+  
+  print(1/jn_out$bounds)
+  
+  return(list(jn = jn_fig, main = main_fig))
+}
+
+# cluster 1, ersp, spontaneous
+results_c1ersp_spon <- run_power_cluster_analysis(datatype  = "ersp", 
+                           powertype = "spon", 
+                           cluster   = 1,
+                           df        = main_df_viable,
+                           sig_color = "#C0369D")
+P_c1ersp_spon_JN <- results_c1ersp_spon$jn
+# P_c1ersp_spon_JN
+P_c1ersp_spon <- results_c1ersp_spon$main
+# P_c1ersp_spon
+
+# cluster 5, ersp, spontaneous
+results_c5ersp_spon <- run_power_cluster_analysis(datatype  = "ersp", 
+                           powertype = "spon", 
+                           cluster   = 5,
+                           df        = main_df_viable,
+                           sig_color = "#C05936")
+P_c5ersp_spon_JN <- results_c5ersp_spon$jn
+# P_c5ersp_spon_JN
+P_c5ersp_spon <- results_c5ersp_spon$main
+# P_c5ersp_spon
+
+# cluster 1, ersp, evoked
+results_c1ersp_evo <- run_power_cluster_analysis(datatype  = "ersp", 
+                           powertype = "evo", 
+                           cluster   = 1,
+                           df        = main_df_viable,
+                           sig_color = "#C0369D")
+P_c1ersp_evo_JN <- results_c1ersp_evo$jn
+# P_c1ersp_evo_JN
+P_c1ersp_evo <- results_c1ersp_evo$main
+# P_c1ersp_evo
+
+# cluster 5, ersp, evoked
+results_c5ersp_evo <- run_power_cluster_analysis(datatype  = "ersp", 
+                           powertype = "evo", 
+                           cluster   = 5,
+                           df        = main_df_viable,
+                           sig_color = "#C05936")
+P_c5ersp_evo_JN <- results_c5ersp_evo$jn
+# P_c5ersp_evo_JN
+P_c5ersp_evo <- results_c5ersp_evo$main
+# P_c5ersp_evo
+
+```
+
+## Paper Figures
+### Figure 1: Behavior
+```{r}
+# LMER plots
+P_behav$CorRate + theme(axis.title.x = element_blank(),
+                        plot.margin = margin(t=0,
+                                                b=0,
+                                                r = 1,
+                                                l = 0,unit="mm"))+
+  P_behav$CVLatCor + theme(plot.margin = margin(t=0,
+                                                b=0,
+                                                r = 1,
+                                                l = 1,unit="mm")) +
+  P_behav$AvgLatCor + theme(axis.title.x = element_blank(),
+                            plot.margin = margin(t=0,
+                                                b=0,
+                                                r = 0,
+                                                l = 1,unit="mm")) +
+        plot_layout(ncol=3)
+
+ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/behavior.png", width = 90, height = 45,
+       units="mm", dpi = 300 )
+
+# GAM plots
+P_behav_gam$CorRate + theme(axis.title.x = element_blank(),
+                        plot.margin = margin(t=0,
+                                                b=0,
+                                                r = 1,
+                                                l = 0,unit="mm"))+
+  P_behav_gam$CVLatCor + theme(plot.margin = margin(t=0,
+                                                b=0,
+                                                r = 1,
+                                                l = 1,unit="mm")) +
+  P_behav_gam$AvgLatCor + theme(axis.title.x = element_blank(),
+                            plot.margin = margin(t=0,
+                                                b=0,
+                                                r = 0,
+                                                l = 1,unit="mm")) +
+        plot_layout(ncol=3)
+
+ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/behavior_gam.png", width = 90, height = 45,
+       units="mm", dpi = 300 )
+```
+
+### Figure 2: Spontaneous and Evoked age and behavior effects
+```{r}
+## Difference split significance plots
+# Evoked
+P_evodiff +  theme(axis.title = element_blank(),
+                   plot.margin = margin(0,0,0,0,unit="mm"))
+
+ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/evo_diff_sig.png",
+       dpi = 400, width = 15, height = 15, units = "mm")
+# Spontaneous
+P_spondiff +  theme(axis.title = element_blank(),
+                   plot.margin = margin(0,0,0,0,unit="mm"))
+
+ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/spon_diff_sig.png",
+       dpi = 400, width = 15, height = 15, units = "mm")
+
+## Age trajectory and behavior plots
+P_spontraj + theme(legend.position = 'none',
+                   axis.title.x = element_blank(),
+                   plot.margin = margin(0,3,0.5,0,unit="mm")) + 
+  ylab("Power (dB)") + 
+  P_broadbandbehavinteraction$spon$CorRate + theme(plot.margin = margin(0,2,0.5,3,unit="mm"),
+                                                   axis.title.x = element_blank(),
+                                                   legend.position = 'none',
+                                                   plot.title = element_blank())  +
+  P_broadbandbehav$spon$CVLatCor + theme(plot.margin = margin(0,2,0.5,2,unit="mm"),
+                                         axis.title.x = element_blank())  +
+  P_broadbandbehav$spon$AvgLatCor + theme(plot.margin = margin(0,2,0.5,2,unit="mm"),
+                                          axis.title.x = element_blank()) +
+  P_evotraj + theme(legend.position = 'none',
+                    plot.margin = margin(0.5,3,0,0,unit="mm")) + 
+  ylab("Power (dB)") + 
+  P_broadbandbehavinteraction$evo$CorRate + theme(plot.margin = margin(0.5,2,0,3,unit="mm"),
+                                                  legend.position = 'none',
+                                                  plot.title = element_blank())  +
+  xlab("AS power (dB)")+
+  P_broadbandbehav$evo$CVLatCor + theme(plot.margin = margin(0.5,2,0,2,unit="mm"))  +
+  xlab("AS power (dB)")+
+  P_broadbandbehav$evo$AvgLatCor + theme(plot.margin = margin(0.5,2,0,2,unit="mm")) +
+  xlab("AS power (dB)")+
+  plot_layout(nrow = 2, ncol = 4, widths = c(2.5,1,1,1))
+ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/sponevo_agecondition_behav_corrate_interaction.png", 
+       dpi = 400, 
+       height = 90, width = 170, units = "mm")
+
+# save interaction legends
+spon_corrate_ageinteraction_legend <- get_legend(P_broadbandbehavinteraction$spon$CorRate)
+png("/Volumes/Hera/Abby/AS_EEG/paperfigs/spon_corrate_ageinteraction_legend.png",
+    width = 15, height = 25, units = "mm", res = 300)
+grid.newpage()                       # create a new page
+grid.draw(spon_corrate_ageinteraction_legend) # draw the grob
+dev.off()   
+
+evo_corrate_ageinteraction_legend <- get_legend(P_broadbandbehavinteraction$evo$CorRate)
+png("/Volumes/Hera/Abby/AS_EEG/paperfigs/evo_corrate_ageinteraction_legend.png",
+    width = 15, height = 25, units = "mm", res = 300)
+grid.newpage()                       # create a new page
+grid.draw(evo_corrate_ageinteraction_legend) # draw the grob
+dev.off() 
+
+```
+#### GAMs
+```{r}
+## Difference split significance plots
+# Evoked
+P_evodiff_gam +  theme(axis.title = element_blank(),
+                   plot.margin = margin(0,0,0,0,unit="mm"))
+
+ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/evo_diff_sig_gam.png",
+       dpi = 400, width = 15, height = 15, units = "mm")
+# Spontaneous
+P_spondiff_gam +  theme(axis.title = element_blank(),
+                   plot.margin = margin(0,0,0,0,unit="mm"))
+
+ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/spon_diff_sig_gam.png",
+       dpi = 400, width = 15, height = 15, units = "mm")
+
+## Age trajectory and behavior plots
+P_spontraj_gam + theme(legend.position = 'none',
+                   axis.title.x = element_blank(),
+                   plot.margin = margin(0,3,0.5,0,unit="mm")) + 
+  ylab("Power (dB)") + 
+  P_broadbandbehav_gam$spon$CorRate + theme(plot.margin = margin(0,2,0.5,3,unit="mm"),
+                                                   axis.title.x = element_blank(),
+                                                   legend.position = 'none',
+                                                   plot.title = element_blank())  +
+  P_broadbandbehav_gam$spon$CVLatCor + theme(plot.margin = margin(0,2,0.5,2,unit="mm"),
+                                         axis.title.x = element_blank())  +
+  P_broadbandbehav_gam$spon$AvgLatCor + theme(plot.margin = margin(0,2,0.5,2,unit="mm"),
+                                          axis.title.x = element_blank()) +
+  P_evotraj_gam + theme(legend.position = 'none',
+                    plot.margin = margin(0.5,3,0,0,unit="mm")) + 
+  ylab("Power (dB)") + 
+  P_broadbandbehav_gam$evo$CorRate + theme(plot.margin = margin(0.5,2,0,3,unit="mm"),
+                                                  legend.position = 'none',
+                                                  plot.title = element_blank())  +
+  xlab("AS power (dB)")+
+  P_broadbandbehav_gam$evo$CVLatCor + theme(plot.margin = margin(0.5,2,0,2,unit="mm"))  +
+  xlab("AS power (dB)")+
+  P_broadbandbehav_gam$evo$AvgLatCor + theme(plot.margin = margin(0.5,2,0,2,unit="mm")) +
+  xlab("AS power (dB)")+
+  plot_layout(nrow = 2, ncol = 4, widths = c(2.5,1,1,1))
+ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/sponevo_agecondition_behav_corrate_interaction_gam.png", 
+       dpi = 400, 
+       height = 90, width = 170, units = "mm")
+```
+
+
+
+### Figure 3: Glu/GABA
+```{r}
+# just glu/gaba asymmetry
+P_broadbandMRSI_interaction$spon$sipfc.DLPFC_GluGaba_Asym_sqrt + 
+  theme(legend.position = 'none',
+        plot.margin = margin(0,2,0.5,0,unit = "mm"),
+        axis.title.x = element_blank()) +
+  P_broadbandMRSI_JNplots$spon$sipfc.DLPFC_GluGaba_Asym_sqrt +
+  theme(plot.margin = margin(0,0,0.5,2,unit = "mm"),
+        axis.title.x = element_blank(),
+        legend.position = 'none',
+        plot.title = element_blank())+
+  P_broadbandMRSI_interaction$evo$sipfc.DLPFC_GluGaba_Asym_sqrt + 
+  theme(legend.position = 'none',
+        plot.margin = margin(0.5,2,0,0,unit = "mm")) +
+  P_broadbandMRSI_JNplots$evo$sipfc.DLPFC_GluGaba_Asym_sqrt + 
+  theme(plot.margin = margin(0.5,0,0,2,unit = "mm"),
+        plot.title = element_blank(),
+        legend.position='none')
+
+ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/sponevo_glugaba_jnplot.png",
+       dpi = 400, width = 80, height = 80, units = "mm")
+
+# get legends
+spon_mrsiinteraction_legend <- get_legend(P_broadbandMRSI_interaction$spon$sipfc.DLPFC_GluGaba_Asym_sqrt)
+png("/Volumes/Hera/Abby/AS_EEG/paperfigs/spon_glugabainteraction_legend",
+    width = 15, height = 60, units = "mm", res = 600)
+grid.newpage()
+grid.draw(spon_mrsiinteraction_legend)
+dev.off()
+
+evo_mrsiinteraction_legend <- get_legend(P_broadbandMRSI_interaction$evo$sipfc.DLPFC_GluGaba_Asym_sqrt)
+png("/Volumes/Hera/Abby/AS_EEG/paperfigs/evo_glugabainteraction_legend",
+    width = 15, height = 60, units = "mm", res = 600)
+grid.newpage()
+grid.draw(evo_mrsiinteraction_legend)
+dev.off()
+
+```
+
+### Figure 4: ERSP clusters and behavior
+#### load in ERSP data and plot heatmaps
+```{r}
+## TO DO instead save f-row data in matlab then load that in
+# load in matlab data
+corAS.ersp_list <- readMat("/Volumes/Hera/Abby/AS_EEG/ERSPdata/corAS_data/prep/corAS_prep_avgtrl_frow_ersp.mat")
+corAS.ids_list <- readMat("/Volumes/Hera/Abby/AS_EEG/ERSPdata/corAS_data/prep/corAS_prep_avgtrl_ids.mat")
+VGS.ersp_list <- readMat("/Volumes/Hera/Abby/AS_EEG/ERSPdata/VGS_data/prep/VGS_prep_avgtrl_frow_ersp.mat")
+VGS.ids_list <- readMat("/Volumes/Hera/Abby/AS_EEG/ERSPdata/VGS_data/prep/VGS_prep_avgtrl_ids.mat")
+clusterstats <- readMat("/Volumes/Hera/Abby/AS_EEG/ERSPdata/Cluster_stats/corASvsVGS_ersp_prep_avgtrl.mat")
+clustermasks <- readMat("/Volumes/Hera/Abby/AS_EEG/ERSPdata/Cluster_stats/corASvsVGS_tfceresults_ersp_prep_avgtrl.mat")
+
+# unlist variables
+times <- as.numeric(corAS.ersp_list[["times"]])
+freqs <- as.numeric(corAS.ersp_list[["freqs"]])
+corASersp <- corAS.ersp_list[["avg.ersp"]]
+VGSersp <- VGS.ersp_list[["avg.ersp"]]
+t_age <- clusterstats[["tval"]][[2]]
+t_condition <- clusterstats[["tval"]][[3]]
+t_interaction <- clusterstats[["tval"]][[4]]
+mask_interaction <- clustermasks[["tfce.results"]][[3]][[3]]
+mask_age <- clustermasks[["tfce.results"]][[1]][[3]]
+mask_condition <- clustermasks[["tfce.results"]][[2]][[3]]
+enhancedt_age <- clustermasks[["tfce.results"]][[1]][[1]]
+enhancedt_condition <- clustermasks[["tfce.results"]][[2]][[1]]
+enhancedt_interaction <- clustermasks[["tfce.results"]][[3]][[1]]
+
+# reshape into dataframe taht can be plotted with ggplot
+corAS_df <- melt(corASersp)
+colnames(corAS_df) <- c("freq_idx", "time_idx", "value")
+corAS_df$time <- times[corAS_df$time_idx]
+corAS_df$freq <- freqs[corAS_df$freq_idx]
+VGS_df <- melt(VGSersp)
+colnames(VGS_df) <- c("freq_idx","time_idx","value")
+VGS_df$time <- times[VGS_df$time_idx]
+VGS_df$freq <- freqs[VGS_df$freq_idx]
+
+# ERSP heatmaps
+# get absolute min and max between corAS and VGS
+min_val <- min(c(corAS_df$value, VGS_df$value), na.rm = TRUE)
+max_val <- max(c(corAS_df$value, VGS_df$value), na.rm = TRUE)
+
+# AS
+corAS_ersp_fig <- ggplot(corAS_df, aes(x = time, y = freq, fill = value)) +
+  geom_tile() +
+  scale_fill_viridis_c(limits = c(min_val,max_val)) +
+  labs(x = "Preparatory time (ms)", y = "Frequency (Hz)", fill = "ERSP (dB)") +
+  theme_classic()+
+  scale_y_continuous(breaks = c(3,10,20,30,40,50,60,70),
+                     expand = c(0,0))+
+  scale_x_continuous(breaks = c(0,250,500),
+                     expand = c(0,0))+
+  ggtitle("Correct AS ERSP") +
+  theme(axis.line = element_line(linewidth = 0.3),
+        axis.ticks = element_line(size=0.3),
+        axis.text = element_text(size=5),
+        axis.title = element_text(size=5),
+        plot.margin = margin(0,1,1,0,unit="mm"))
+# corAS_ersp_fig + theme(legend.position = 'none',
+#                        plot.title = element_blank())
+
+
+# VGS
+VGS_ersp_fig <- ggplot(VGS_df, aes(x = time, y = freq, fill = value)) +
+  geom_tile() +
+  scale_fill_viridis_c(limits = c(min_val,max_val)) +
+  labs(x = "Preparatory time (ms)", y = "Frequency (Hz)", fill = "ERSP (dB)") +
+  theme_classic()+
+  scale_y_continuous(breaks = c(3,10,20,30,40,50,60,70),
+                     expand = c(0,0)) +
+    scale_x_continuous(breaks = c(0,250,500),
+                       expand = c(0,0))+
+  ggtitle("VGS ERSP") +
+  theme(axis.line = element_line(size=0.3),
+        axis.ticks = element_line(size=0.3),
+        axis.text = element_text(size=5),
+        axis.title = element_text(size=5),
+        plot.margin = margin(1,1,0,0,unit="mm"))
+
+# Combine vgs and correct AS
+corAS_ersp_fig + theme(legend.position = 'none',
+                       plot.title = element_blank(),
+                       axis.title.x = element_blank(),
+                       axis.text.x = element_blank()) + 
+  VGS_ersp_fig + theme(legend.position = 'none',
+                       plot.title = element_blank()) + 
+  plot_layout(nrow=2)
+ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/corAS_VGS_ersp.png",
+       width = 30, height = 60, units = "mm", dpi = 600)
+
+# save legend
+ersp_legend <- get_legend(VGS_ersp_fig)
+png("/Volumes/Hera/Abby/AS_EEG/paperfigs/ersp_legend.png",
+    width = 20, height = 45, units = 'mm', res = 300)
+grid.newpage()
+grid.draw(ersp_legend)
+dev.off()
+```
+
+#### plot clusters
+```{r}
+# plot t-values and masks from tfce
+# interaction
+t_interaction_df <- melt(t_interaction)
+colnames(t_interaction_df) <- c("freq_idx","time_idx","value")
+t_interaction_df$time <- times[t_interaction_df$time_idx]
+t_interaction_df$freq <- freqs[t_interaction_df$freq_idx]
+mask_interaction_df <- melt(mask_interaction)
+colnames(mask_interaction_df) <- c("freq_idx","time_idx","value")
+mask_interaction_df$time <- times[mask_interaction_df$time_idx]
+mask_interaction_df$freq <- freqs[mask_interaction_df$freq_idx]
+mask_interaction_df$value <- as.factor(mask_interaction_df$value)
+enhancedt_interaction_df <- melt(enhancedt_interaction)
+colnames(enhancedt_interaction_df) <- c("freq_idx","time_idx","value")
+enhancedt_interaction_df$time <- times[enhancedt_interaction_df$time_idx]
+enhancedt_interaction_df$freq <- freqs[enhancedt_interaction_df$freq_idx]
+# age
+t_age_df <- melt(t_age)
+colnames(t_age_df) <- c("freq_idx","time_idx","value")
+t_age_df$time <- times[t_age_df$time_idx]
+t_age_df$freq <- freqs[t_age_df$freq_idx]
+mask_age_df <- melt(mask_age)
+colnames(mask_age_df) <- c("freq_idx","time_idx","value")
+mask_age_df$time <- times[mask_age_df$time_idx]
+mask_age_df$freq <- freqs[mask_age_df$freq_idx]
+mask_age_df$value <- as.factor(mask_age_df$value)
+enhancedt_age_df <- melt(enhancedt_age)
+colnames(enhancedt_age_df) <- c("freq_idx","time_idx","value")
+enhancedt_age_df$time <- times[enhancedt_age_df$time_idx]
+enhancedt_age_df$freq <- freqs[enhancedt_age_df$freq_idx]
+# condition
+t_condition_df <- melt(t_condition)
+colnames(t_condition_df) <- c("freq_idx","time_idx","value")
+t_condition_df$time <- times[t_condition_df$time_idx]
+t_condition_df$freq <- freqs[t_condition_df$freq_idx]
+mask_condition_df <- melt(mask_condition)
+colnames(mask_condition_df) <- c("freq_idx","time_idx","value")
+mask_condition_df$time <- times[mask_condition_df$time_idx]
+mask_condition_df$freq <- freqs[mask_condition_df$freq_idx]
+mask_condition_df$value <- as.factor(mask_condition_df$value)
+enhancedt_condition_df <- melt(enhancedt_condition)
+colnames(enhancedt_condition_df) <- c("freq_idx","time_idx","value")
+enhancedt_condition_df$time <- times[enhancedt_condition_df$time_idx]
+enhancedt_condition_df$freq <- freqs[enhancedt_condition_df$freq_idx]
+# round grids to same precision
+t_interaction_df$time <- round(t_interaction_df$time, 4)
+mask_interaction_df$time <- round(mask_interaction_df$time, 4)
+t_interaction_df$freq <- round(t_interaction_df$freq, 4)
+mask_interaction_df$freq <- round(mask_interaction_df$freq, 4)
+
+# compute tile sizes
+time_res <- min(diff(sort(unique(t_interaction_df$time))))
+freq_res <- min(diff(sort(unique(t_interaction_df$freq))))
+
+# contours around clusters
+# only contour around cluster 1 and 5
+mask_interaction_clust1_5 <- mask_interaction_df %>% mutate(
+  value = ifelse(freq >= 44 & freq <= 50.5 &
+                   time >=0 & time<=420 & value ==1, 1,
+                 ifelse(freq>=44 & freq <48.5 & time>=420 & time <=500 & value ==1,
+                        1,
+                        ifelse(freq >=29.9 & freq <=32 &
+                                 time>=126.5 & time <= 500 & value==1,
+                               2,0)))
+  )
+mask_interaction_clust1_5 <- mask_interaction_clust1_5 %>%
+  mutate(
+    clust1 = ifelse(value == 1, 1, 0),
+    clust2 = ifelse(value == 2, 1, 0)
+  )
+
+# just contour around cluster 1
+mask_interaction_clust1 <- mask_interaction_df %>%
+  mutate(
+    value = ifelse(freq >=44 & freq <=50.5 &
+                     time >=0 & time <=420 & value ==1, 1,
+                   ifelse(freq>=44 & freq <48.5 & time>=420 & time <=500 & value ==1,
+                        1,0))
+  )
+mask_interaction_clust1$value <- as.factor(mask_interaction_clust1$value)
+mask_interaction_clust1 <- mask_interaction_clust1 %>%
+  mutate(
+    clust1 = ifelse(value==1,1,0)
+  )
+
+# just contour around cluster 5
+mask_interaction_clust5 <- mask_interaction_df %>%
+  mutate(
+    value = ifelse(freq >=29.9 & freq <=32 &
+                                 time>=126.5 & time <= 500 & value==1,
+                   1, 0)
+  )
+mask_interaction_clust5$value <- as.factor(mask_interaction_clust5$value)
+mask_interaction_clust5 <- mask_interaction_clust5 %>%
+  mutate(
+    clust5 = ifelse(value==1,1,0)
+  )
+
+# mask of clusters
+mask_interaction_fig_clust1_5 <- ggplot() + 
+  geom_tile(data=t_interaction_df, aes(x=time,y=freq, fill=value),
+            width = time_res, height = freq_res,color=NA) +
+  scale_fill_viridis_c(name="t-value",
+                       limits = c(-4,4)) +
+  guides(fill = 'none')+
+  new_scale_fill()+
+   geom_contour(data = mask_interaction_clust1_5,
+               aes(x=time, y=freq,z = clust1),
+               breaks = 1,
+               color = "#C0369D",
+               linewidth=0.5) +
+  geom_contour(data=mask_interaction_clust1_5 ,
+               aes(x=time, y=freq,z = clust2),
+               breaks = 1,
+               color = "#C05936",
+               linewidth=0.5)+
+  geom_tile(data = mask_interaction_df, aes(x=time,y=freq,fill = value),
+            alpha=0.5,
+            width = time_res, height = freq_res,color=NA)+
+  scale_fill_manual(values = c("1"=NA,
+                               "0" = "black"))+
+  labs(x = "Preparatory time (ms)", y = "Frequency (Hz)") +
+  theme(legend.position = "none")+
+  guides(fill="none")+
+  theme_classic()+
+  scale_y_continuous(breaks = c(3,10,20,30,40,50,60,70),
+                     expand = c(0,0)) +
+  scale_x_continuous(expand=c(0,0))+
+  ggtitle("Interaction Effect") +
+  theme(axis.line = element_line(size=0.3),
+        axis.ticks = element_line(size=0.3),
+        axis.text = element_text(size=5),
+        axis.title = element_text(size=6),
+        plot.margin = margin(1,1.5,0,0,unit="mm"))
+
+mask_interaction_fig_clust1_5 + theme(plot.title=element_blank())
+ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/interaction_clusters1_5.png",
+       dpi=400, width = 45, height = 95, units = "mm")
+
+# cluster 1
+cluster1_mask <- ggplot() + 
+  geom_tile(data=t_interaction_df, aes(x=time,y=freq, fill=value),
+            width = time_res, height = freq_res,color=NA) +
+  scale_fill_viridis_c(name="t-value",
+                       limits = c(-4,4)
+                       ) +
+  guides(fill = 'none')+
+  new_scale_fill()+
+   geom_contour(data = mask_interaction_clust1,
+               aes(x=time, y=freq,z = clust1),
+               breaks = 1,
+               color = "#C0369D",
+               linewidth=0.3) +
+  geom_tile(data = mask_interaction_df, aes(x=time,y=freq,fill = value),
+            alpha=1,
+            width = time_res, height = freq_res,color=NA)+
+  scale_fill_manual(values = c("1"=NA,
+                               "0" = "black"))+
+  geom_tile(data = mask_interaction_clust1, aes(x=time,y=freq,fill = value),
+            alpha=0.5,
+            width = time_res, height = freq_res,color=NA)+
+  scale_fill_manual(values = c("1"=NA,
+                               "0" = "black"))+
+  labs(x = "Preparatory time (ms)", y = "Frequency (Hz)") +
+  theme(legend.position = "none")+
+  guides(fill="none")+
+  theme_classic()+
+  scale_y_continuous(breaks = c(3,10,20,30,40,50,60,70),
+                     expand = c(0,0)) +
+  scale_x_continuous(expand = c(0,0))+
+  ggtitle("Interaction Effect") +
+  theme(axis.line = element_line(size=0.3),
+        axis.ticks = element_line(size=0.3),
+        axis.text = element_text(size=5),
+        axis.title = element_text(size=6),
+        plot.margin = margin(0,0,0,0,unit="mm"))
+
+cluster1_mask + theme(plot.title = element_blank(),
+                      plot.margin = margin(1,1.5,0,0,
+                                           unit = "mm")
+                      # axis.title = element_blank(),
+                      )
+ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/cluster1_mask.png",
+       dpi = 700, height = 43, width = 33, units = "mm")
+
+# cluster 5
+cluster5_mask <- ggplot() + 
+  geom_tile(data=t_interaction_df, aes(x=time,y=freq, fill=value),
+            width = time_res, height = freq_res,color=NA) +
+  scale_fill_viridis_c(name="t-value",
+                       limits = c(-4,4)
+                       ) +
+  guides(fill = 'none')+
+  new_scale_fill()+
+   geom_contour(data = mask_interaction_clust5,
+               aes(x=time, y=freq,z = clust5),
+               breaks = 1,
+               color = "#C05936",
+               linewidth=0.3) +
+  geom_tile(data = mask_interaction_df, aes(x=time,y=freq,fill = value),
+            alpha=1,
+            width = time_res, height = freq_res,color=NA)+
+  scale_fill_manual(values = c("1"=NA,
+                               "0" = "black"))+
+  geom_tile(data = mask_interaction_clust5, aes(x=time,y=freq,fill = value),
+            alpha=0.5,
+            width = time_res, height = freq_res,color=NA)+
+  scale_fill_manual(values = c("1"=NA,
+                               "0" = "black"))+
+  labs(x = "Preparatory time (ms)", y = "Frequency (Hz)") +
+  theme(legend.position = "none")+
+  guides(fill="none")+
+  theme_classic()+
+  scale_y_continuous(breaks = c(3,10,20,30,40,50,60,70),
+                     expand = c(0,0)) +
+  scale_x_continuous(expand = c(0,0))+
+  ggtitle("Interaction Effect") +
+  theme(axis.line = element_line(size=0.3),
+        axis.ticks = element_line(size=0.3),
+        axis.text = element_text(size=5),
+        axis.title = element_text(size=6),
+        plot.margin = margin(0,0,0,0,unit="mm"))
+
+cluster5_mask + theme(plot.title = element_blank(),
+                      plot.margin = margin(1,1.5,0,0,
+                                           unit = "mm"))
+ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/cluster5_mask.png",
+       dpi = 550, height = 43, width = 33, units = "mm")
+```
+
+
+#### full figure
+```{r}
+P_c1_dist + theme(plot.title = element_blank(),
+                             legend.position = 'none',
+                             plot.margin = margin(0,0.5,0,0,unit="mm"),
+                             axis.title.x = element_blank())+
+ P_c1_traj + theme(plot.title = element_blank(),
+                                       legend.position = 'none',
+                            plot.margin = margin(0,0.5,0,0.5, unit="mm")) +
+  P_c1_corrate +  theme(plot.margin = margin(0,1.5,0,0.5, unit="mm"),
+                        plot.title = element_text(size=6))+
+  ggtitle("Correct response rate")+
+  P_c1_cvlat + theme(plot.margin = margin(0,1.5,0,1.5, unit="mm"),
+                     plot.title = element_text(size=6)) +
+  ggtitle("Latency variability")+
+  plot_layout(nrow =1,ncol=4)
+
+ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/c1_traj_behav.png",
+       dpi = 400, width = 120, height = 50, units = "mm")
+
+P_c5_dist + theme(plot.title = element_blank(),
+                             legend.position = 'none',
+                             plot.margin = margin(0,0.5,0,0,unit="mm"),
+                             axis.title.x = element_blank())+
+ P_c5_traj + theme(plot.title = element_blank(),
+                                       legend.position = 'none',
+                            plot.margin = margin(0,0.5,0,0.5, unit="mm")) +
+  p_c5_corrate +  theme(plot.margin = margin(0,1.5,0,0.5, unit="mm"),
+                        plot.title = element_text(size=6))+
+  ggtitle("Correct response rate")+
+  P_c5_cvlat + theme(plot.margin = margin(0,1.5,0,1.5, unit="mm"),
+                     plot.title = element_text(size=6)) +
+  ggtitle("Latency variability")+
+  plot_layout(nrow =1,ncol=4)
+
+ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/c5_traj_behav.png",
+       dpi = 400, width = 120, height = 50, units = "mm")
+
+```
+
+### Figure 5: Spon/evo power and ersp clusters
+```{r}
+# spontaneous
+P_c1ersp_spon + theme(legend.position='none',
+                    axis.title.x = element_blank(),
+                    plot.margin = margin(0,1,2,0, unit= "mm")) +
+  P_c1ersp_spon_JN + theme(legend.position = 'none',
+                         plot.title = element_blank(),
+                         # axis.title.x = element_blank(),
+                         plot.margin = margin(0,0,2,1,unit="mm")) +
+  P_c5ersp_spon + theme(legend.position='none',
+                        axis.title.x = element_blank(),
+                        plot.margin = margin(2,1,0,0, unit= "mm")) + 
+  P_c5ersp_spon_JN + theme(legend.position = 'none',
+                         plot.title = element_blank(),
+                         plot.margin = margin(2,0,0,1,unit="mm")) +
+  plot_layout(nrow = 2, ncol = 2, widths = c(2,1))
+ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/spon_clusts.png",
+       dpi=400, width = 65, height = 90, units = "mm")
+
+
+# evoked
+P_c1ersp_evo + theme(legend.position='none',
+                    axis.title.x = element_blank(),
+                    plot.margin = margin(0,1,2,0, unit= "mm")) +
+  P_c1ersp_evo_JN + theme(legend.position = 'none',
+                         plot.title = element_blank(),
+                         # axis.title.x = element_blank(),
+                         plot.margin = margin(0,0,2,1,unit="mm")) +
+  P_c5ersp_evo + theme(legend.position='none',
+                       axis.title.x = element_blank(),
+                    plot.margin = margin(2,1,0,0, unit= "mm")) +
+  P_c5ersp_evo_JN + theme(legend.position = 'none',
+                         plot.title = element_blank(),
+                         plot.margin = margin(2,0,0,1,unit="mm")) +
+  plot_layout(nrow = 2, ncol = 2, widths = c(2,1))
+
+ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/evo_clusts.png",
+       dpi=400, width = 65, height = 90, units = "mm")
+
+# get JN legends
+clust1_JNlegend <- get_legend(P_c1ersp_spon_JN)
+png("/Volumes/Hera/Abby/AS_EEG/paperfigs/clust1_JNlegend.png",
+    width = 20, height = 30, units = 'mm', res = 300)
+grid.newpage()
+grid.draw(clust1_JNlegend)
+dev.off()
+
+clust5_JNlegend <- get_legend(P_c5ersp_evo_JN)
+png("/Volumes/Hera/Abby/AS_EEG/paperfigs/clust5_JNlegend.png",
+    width = 20, height = 30, units = 'mm', res = 300)
+grid.newpage()
+grid.draw(clust5_JNlegend)
+dev.off()
+```
+
+## Supplemental figures
+### TFCE method
+```{r}
+## --- t-value maps ---
+# interaction
+tval_interaction <- ggplot(data = t_interaction_df, aes(x=time,y=freq,fill=value)) +
+  geom_tile()+
+  scale_fill_viridis_c(name = paste0("t-value"),
+                       limits = c(-4,4))+
+  xlab("Preparatory time (ms)") +
+  ylab("Frequency (Hz)") +
+  scale_y_continuous(breaks = c(3,35,70),
+                     expand = c(0,0))+
+  scale_x_continuous(breaks = c(0,250,500),
+                     expand = c(0,0))+
+  theme_classic()+
+  theme(axis.line = element_line(size=0.2),
+        axis.ticks = element_line(size=0.2),
+        axis.text = element_text(size=4),
+        axis.title = element_text(size=5),
+        plot.margin = margin(1,1.5,0,0,unit="mm"))
+# age 
+tval_age <- ggplot(data = t_age_df, aes(x=time,y=freq,fill=value)) +
+  geom_tile()+
+  scale_fill_viridis_c(name = paste0("t-value"),
+                       limits = c(-4,4))+
+  xlab("Preparatory time (ms)") +
+  ylab("Frequency (Hz)") +
+  scale_y_continuous(breaks = c(3,35,70),
+                     expand = c(0,0))+
+  scale_x_continuous(breaks = c(0,250,500),
+                     expand = c(0,0))+
+  theme_classic()+
+  theme(axis.line = element_line(size=0.2),
+        axis.ticks = element_line(size=0.2),
+        axis.text = element_text(size=4),
+        axis.title = element_text(size=5),
+        plot.margin = margin(1,1.5,0,0,unit="mm"))
+# condition
+tval_condition <- ggplot(data = t_condition_df, aes(x=time,y=freq,fill=value)) +
+  geom_tile()+
+  scale_fill_viridis_c(name = paste0("t-value"),
+                       limits = c(-4,4))+
+  xlab("Preparatory time (ms)") +
+  ylab("Frequency (Hz)") +
+  scale_y_continuous(breaks = c(3,35,70),
+                     expand = c(0,0))+
+  scale_x_continuous(breaks = c(0,250,500),
+                     expand = c(0,0))+
+  theme_classic()+
+  theme(axis.line = element_line(size=0.2),
+        axis.ticks = element_line(size=0.2),
+        axis.text = element_text(size=4),
+        axis.title = element_text(size=5),
+        plot.margin = margin(1,1.5,0,0,unit="mm"))
+
+## --- Combine and save t value maps ---
+tval_age + theme(axis.title = element_blank(),
+                 legend.position = 'none',
+                 plot.margin = margin(0,1,0,0,unit='mm')) + 
+  tval_condition+ theme(axis.title = element_blank(),
+                        axis.text.y = element_blank(),
+                        legend.position = 'none',
+                        plot.margin = margin(0,1,0,1,unit='mm')) + 
+  tval_interaction + theme(axis.title = element_blank(),
+                           axis.text.y = element_blank(),
+                           legend.position = 'none',
+                           plot.margin = margin(0,0,0,1,unit='mm'))
+ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/tval_maps.png",
+       width =60,height=20,units='mm', dpi = 600 )
+## --- t-value legend ---
+tval_legend <- get_legend(tval_age)
+png("/Volumes/Hera/Abby/AS_EEG/paperfigs/tval_legend.png",
+    width = 15, height = 45, res = 300, units='mm')
+grid.newpage()
+grid.draw(tval_legend)
+dev.off()
+
+## --- enhanced t-value maps ---
+# interaction
+enhancedtval_interaction <- ggplot(data = enhancedt_interaction_df, aes(x=time,y=freq,fill=value)) +
+  geom_tile()+
+  scale_fill_viridis_c(name = paste0("Enhanced t-value"),
+                       limits = c(0,300))+
+  xlab("Preparatory time (ms)") +
+  ylab("Frequency (Hz)") +
+  scale_y_continuous(breaks = c(3,35,70),
+                     expand = c(0,0))+
+  scale_x_continuous(breaks = c(0,250,500),
+                     expand = c(0,0))+
+  theme_classic()+
+  theme(axis.line = element_line(size=0.2),
+        axis.ticks = element_line(size=0.2),
+        axis.text = element_text(size=4),
+        axis.title = element_text(size=5),
+        plot.margin = margin(1,1.5,0,0,unit="mm"))
+# age 
+enhancedtval_age <- ggplot(data = enhancedt_age_df, aes(x=time,y=freq,fill=value)) +
+  geom_tile()+
+  scale_fill_viridis_c(name = paste0("Enhanced t-value"),
+                       limits = c(0,300))+
+  xlab("Preparatory time (ms)") +
+  ylab("Frequency (Hz)") +
+  scale_y_continuous(breaks = c(3,35,70),
+                     expand = c(0,0))+
+  scale_x_continuous(breaks = c(0,250,500),
+                     expand = c(0,0))+
+  theme_classic()+
+  theme(axis.line = element_line(size=0.2),
+        axis.ticks = element_line(size=0.2),
+        axis.text = element_text(size=4),
+        axis.title = element_text(size=5),
+        plot.margin = margin(1,1.5,0,0,unit="mm"))
+# condition
+enhancedtval_condition <- ggplot(data = enhancedt_condition_df, aes(x=time,y=freq,fill=value)) +
+  geom_tile()+
+  scale_fill_viridis_c(name = paste0("Enhanced t-value"),
+                       limits = c(0,300))+
+  xlab("Preparatory time (ms)") +
+  ylab("Frequency (Hz)") +
+  scale_y_continuous(breaks = c(3,35,70),
+                     expand = c(0,0))+
+  scale_x_continuous(breaks = c(0,250,500),
+                     expand = c(0,0))+
+  theme_classic()+
+  theme(axis.line = element_line(size=0.2),
+        axis.ticks = element_line(size=0.2),
+        axis.text = element_text(size=4),
+        axis.title = element_text(size=5),
+        plot.margin = margin(1,1.5,0,0,unit="mm"))
+
+## --- Combine and save enhanced t value maps ---
+enhancedtval_age + theme(axis.title = element_blank(),
+                 legend.position = 'none',
+                 plot.margin = margin(0,1,0,0,unit='mm')) + 
+  enhancedtval_condition+ theme(axis.title = element_blank(),
+                        axis.text.y = element_blank(),
+                        legend.position = 'none',
+                        plot.margin = margin(0,1,0,1,unit='mm')) + 
+  enhancedtval_interaction + theme(axis.title = element_blank(),
+                           axis.text.y = element_blank(),
+                           legend.position = 'none',
+                           plot.margin = margin(0,0,0,1,unit='mm'))
+ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/enhancedtval_maps.png",
+       width =60,height=20,units='mm', dpi = 600 )
+## --- t-value legend ---
+enhancedtval_legend <- get_legend(enhancedtval_age)
+png("/Volumes/Hera/Abby/AS_EEG/paperfigs/enhancedtval_legend.png",
+    width = 35, height = 45, res = 300, units='mm')
+grid.newpage()
+grid.draw(enhancedtval_legend)
+dev.off()
+
+## --- Enhanced t-values with masks ---
+mask_enhancedtval_interaction <- ggplot() +
+  geom_tile(data = enhancedt_interaction_df, aes(x=time,y=freq,fill=value))+
+  scale_fill_viridis_c(name = paste0("Enhanced t-value"),
+                       limits = c(0,300))+
+  xlab("Preparatory time (ms)") +
+  ylab("Frequency (Hz)") +
+  scale_y_continuous(breaks = c(3,35,70),
+                     expand = c(0,0))+
+  scale_x_continuous(breaks = c(0,250,500),
+                     expand = c(0,0))+
+  new_scale_fill() + 
+  geom_tile(data = mask_interaction_df, aes(x=time,y=freq,fill = value),
+            alpha=0.5,
+            width = time_res, height = freq_res,color=NA)+
+  scale_fill_manual(values = c("1"=NA,
+                               "0" = "black"))+
+  theme_classic()+
+  theme(axis.line = element_line(size=0.2),
+        axis.ticks = element_line(size=0.2),
+        axis.text = element_text(size=4),
+        axis.title = element_text(size=5),
+        plot.margin = margin(1,1.5,0,0,unit="mm"),
+        legend.position = 'none')+
+  guides(fill = 'none')
+
+# age 
+mask_enhancedtval_age <- ggplot() +
+  geom_tile(data = enhancedt_age_df, aes(x=time,y=freq,fill=value))+
+  scale_fill_viridis_c(name = paste0("Enhanced t-value"),
+                       limits = c(0,300))+
+  xlab("Preparatory time (ms)") +
+  ylab("Frequency (Hz)") +
+  scale_y_continuous(breaks = c(3,35,70),
+                     expand = c(0,0))+
+  scale_x_continuous(breaks = c(0,250,500),
+                     expand = c(0,0))+
+  new_scale_fill() + 
+  geom_tile(data = mask_age_df, aes(x=time,y=freq,fill = value),
+            alpha=0.5,
+            width = time_res, height = freq_res,color=NA)+
+  scale_fill_manual(values = c("1"=NA,
+                               "0" = "black"))+
+  theme_classic()+
+  theme(axis.line = element_line(size=0.2),
+        axis.ticks = element_line(size=0.2),
+        axis.text = element_text(size=4),
+        axis.title = element_text(size=5),
+        plot.margin = margin(1,1.5,0,0,unit="mm"),
+        legend.position = 'none')+
+  guides(fill = 'none')
+
+# condition
+mask_enhancedtval_condition <- ggplot() +
+  geom_tile(data = enhancedt_condition_df, aes(x=time,y=freq,fill=value))+
+  scale_fill_viridis_c(name = paste0("Enhanced t-value"),
+                       limits = c(0,300))+
+  xlab("Preparatory time (ms)") +
+  ylab("Frequency (Hz)") +
+  scale_y_continuous(breaks = c(3,35,70),
+                     expand = c(0,0))+
+  scale_x_continuous(breaks = c(0,250,500),
+                     expand = c(0,0))+
+  new_scale_fill() + 
+  geom_tile(data = mask_condition_df, aes(x=time,y=freq,fill = value),
+            alpha=0.5,
+            width = time_res, height = freq_res,color=NA)+
+  scale_fill_manual(values = c("1"=NA,
+                               "0" = "black"))+
+  theme_classic()+
+  theme(axis.line = element_line(size=0.2),
+        axis.ticks = element_line(size=0.2),
+        axis.text = element_text(size=4),
+        axis.title = element_text(size=5),
+        plot.margin = margin(1,1.5,0,0,unit="mm"),
+        legend.position = 'none')+
+  guides(fill = 'none')
+
+## --- Combine and save mask enhanced t value maps ---
+mask_enhancedtval_age + theme(axis.title = element_blank(),
+                 legend.position = 'none',
+                 plot.margin = margin(0,1,0,0,unit='mm')) + 
+  mask_enhancedtval_condition+ theme(axis.title = element_blank(),
+                        axis.text.y = element_blank(),
+                        legend.position = 'none',
+                        plot.margin = margin(0,1,0,1,unit='mm')) + 
+  mask_enhancedtval_interaction + theme(axis.title = element_blank(),
+                           axis.text.y = element_blank(),
+                           legend.position = 'none',
+                           plot.margin = margin(0,0,0,1,unit='mm'))
+ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/mask_enhancedtval_maps.png",
+       width =60,height=20,units='mm', dpi = 600 )
+
+## --- Mask of t-values ---
+# interaction
+mask_tval_interaction <- ggplot() +
+  geom_tile(data = t_interaction_df, aes(x=time,y=freq,fill=value))+
+  scale_fill_viridis_c(name = paste0("t-value"),
+                       limits = c(-4,4))+
+  xlab("Preparatory time (ms)") +
+  ylab("Frequency (Hz)") +
+  scale_y_continuous(breaks = c(3,35,70),
+                     expand = c(0,0))+
+  scale_x_continuous(breaks = c(0,250,500),
+                     expand = c(0,0))+
+  new_scale_fill() + 
+  geom_tile(data = mask_interaction_df, aes(x=time,y=freq,fill = value),
+            alpha=0.5,
+            width = time_res, height = freq_res,color=NA)+
+  scale_fill_manual(values = c("1"=NA,
+                               "0" = "black"))+
+  theme_classic()+
+  theme(axis.line = element_line(size=0.2),
+        axis.ticks = element_line(size=0.2),
+        axis.text = element_text(size=4),
+        axis.title = element_text(size=5),
+        plot.margin = margin(1,1.5,0,0,unit="mm"),
+        legend.position = 'none')+
+  guides(fill = 'none')
+
+# age 
+mask_tval_age <- ggplot() +
+  geom_tile(data = t_age_df, aes(x=time,y=freq,fill=value))+
+  scale_fill_viridis_c(name = paste0("t-value"),
+                       limits = c(-4,4))+
+  xlab("Preparatory time (ms)") +
+  ylab("Frequency (Hz)") +
+  scale_y_continuous(breaks = c(3,35,70),
+                     expand = c(0,0))+
+  scale_x_continuous(breaks = c(0,250,500),
+                     expand = c(0,0))+
+ new_scale_fill() + 
+  geom_tile(data = mask_age_df, aes(x=time,y=freq,fill = value),
+            alpha=0.5,
+            width = time_res, height = freq_res,color=NA)+
+  scale_fill_manual(values = c("1"=NA,
+                               "0" = "black"))+
+  theme_classic()+
+  theme(axis.line = element_line(size=0.2),
+        axis.ticks = element_line(size=0.2),
+        axis.text = element_text(size=4),
+        axis.title = element_text(size=5),
+        plot.margin = margin(1,1.5,0,0,unit="mm"),
+        legend.position = 'none')+
+  guides(fill = 'none')
+# condition
+mask_tval_condition <- ggplot() +
+  geom_tile(data = t_condition_df, aes(x=time,y=freq,fill=value))+
+  scale_fill_viridis_c(name = paste0("t-value"),
+                       limits = c(-4,4))+
+  xlab("Preparatory time (ms)") +
+  ylab("Frequency (Hz)") +
+  scale_y_continuous(breaks = c(3,35,70),
+                     expand = c(0,0))+
+  scale_x_continuous(breaks = c(0,250,500),
+                     expand = c(0,0))+
+ new_scale_fill() + 
+  geom_tile(data = mask_condition_df, aes(x=time,y=freq,fill = value),
+            alpha=0.5,
+            width = time_res, height = freq_res,color=NA)+
+  scale_fill_manual(values = c("1"=NA,
+                               "0" = "black"))+
+  theme_classic()+
+  theme(axis.line = element_line(size=0.2),
+        axis.ticks = element_line(size=0.2),
+        axis.text = element_text(size=4),
+        axis.title = element_text(size=5),
+        plot.margin = margin(1,1.5,0,0,unit="mm"),
+        legend.position = 'none')+
+  guides(fill = 'none')
+
+## --- Combine and save t value maps ---
+mask_tval_age + theme(axis.title = element_blank(),
+                 legend.position = 'none',
+                 plot.margin = margin(0,1,0,0,unit='mm')) + 
+  mask_tval_condition+ theme(axis.title = element_blank(),
+                        axis.text.y = element_blank(),
+                        legend.position = 'none',
+                        plot.margin = margin(0,1,0,1,unit='mm')) + 
+  mask_tval_interaction + theme(axis.title = element_blank(),
+                           axis.text.y = element_blank(),
+                           legend.position = 'none',
+                           plot.margin = margin(0,0,0,1,unit='mm'))
+ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/mask_tval_maps.png",
+       width =60,height=20,units='mm', dpi = 600 )
+```
+
+### Sex differences
+```{r}
+
+```
+
+
 
