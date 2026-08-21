@@ -29,6 +29,8 @@ ntrls = EEG.trials;
 Fs = EEG.srate;
 run_itc = 0;
 evoked=0;
+amplitude = 0;
+varargout = {};
 
 % define parameters based on inputs
 for i = 1:size(args,2)
@@ -48,13 +50,19 @@ for i = 1:size(args,2)
             else 
                 evoked=0;
                 EEGdata = EEG.data; % channels x time x trials
-                ntrls = EEG.ntrials;
+                ntrls = EEG.trials;
             end
         case 'itc'
             if value
                 run_itc = 1;
             else
                 run_itc = 0;
+            end
+        case 'amplitude'
+            if value
+                amplitude =1;
+            else
+                amplitude = 0;
             end
     end
 end
@@ -95,7 +103,7 @@ for fi = 1:nfreqs
     % trim
     temp = temp_full(halfw:halfw + pnts -1,:,:);
     % save complex reconstruction if running ITC
-    if run_itc
+    if run_itc || amplitude
         F(fi,:,:,:) = temp;
     end
     % compute power
@@ -106,7 +114,13 @@ end
 % comptue ITC if specified
 if run_itc
     itc = squeeze(abs(mean(F ./ abs(F),3)));
-    varargout = {itc};
+    varargout{end+1} = itc;
+end
+
+% return amplitude envelopes if specified
+if amplitude
+    amp_env = abs(F);
+    varargout{end+1} = amp_env;
 end
 
 end

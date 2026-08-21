@@ -9,9 +9,19 @@ addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/eeg/Shane/Preprocessing_Func
 addpath('/Volumes/Hera/Abby/Resources/slanCM/') 
 
 % define variables
-datatypes = ["ersp" "itc"];
+% datatypes = ["ersp" "itc"];
+datatypes = "ersp";
 eventtype = 'prep';
 basenorm = 'avgtrl';
+row = 'prow';
+% define electrodes
+if strcmp(row,'frow')
+    electrodes = [4 5 6 7 37 38 39 40 41];
+    subtitle = 'F-row electrodes';
+elseif strcmp(row,'prow')
+    electrodes = [19 20 21 22 23 31 55 56 57 58 59];
+    subtitle = 'P-row electrodes';
+end
 
 % define directories and file names
 maindir = hera('Abby/AS_EEG/ERSPdata/Cluster_stats');
@@ -26,17 +36,17 @@ PLOT=1;
 % Model 1: ERSP/ITC ~ condition*inverse age 
 for p = 1:length(datatypes)
    currdatatype = char(datatypes(p));
-   if exist(fullfile(maindir,['corASvsVGS_tfceresults_' currdatatype '_' eventtype '_' basenorm '.mat']),'file') && RERUN==0
+   if exist(fullfile(maindir,['corASvsVGS_tfceresults_' currdatatype '_' eventtype '_' basenorm '_' row '.mat']),'file') && RERUN==0
         fprintf('Computed TFCE for Full Model %s %s %s; skipping\n',currdatatype,eventtype,basenorm)
         if PLOT
-            load(fullfile(maindir,['corASvsVGS_tfceresults_' currdatatype '_' eventtype '_' basenorm '.mat']))
-            load(fullfile(maindir, ['corASvsVGS_' currdatatype '_' eventtype '_' basenorm '.mat']))
+            load(fullfile(maindir,['corASvsVGS_tfceresults_' currdatatype '_' eventtype '_' basenorm '_' row '.mat']))
+            load(fullfile(maindir, ['corASvsVGS_' currdatatype '_' eventtype '_' basenorm '_' row '.mat']))
         end
    else
        % print progress
        fprintf("%s %s\n", currdatatype,basenorm)
        % load current data stats
-       filename = ['corASvsVGS_' currdatatype '_' eventtype '_' basenorm '.mat'];
+       filename = ['corASvsVGS_' currdatatype '_' eventtype '_' basenorm '_' row '.mat'];
        % structure: tval, times,freqs
        load(fullfile(maindir,filename))
        
@@ -56,7 +66,7 @@ for p = 1:length(datatypes)
         tfce_results.interaction.mask = calc_tfce_mask_2d(tfce_results.interaction.tfcescores, tfce_results.interaction.permscores, 0.01);      
 
         % save tfce results
-        save(fullfile(maindir,['corASvsVGS_tfceresults_' currdatatype '_' eventtype '_' basenorm '.mat']), ...
+        save(fullfile(maindir,['corASvsVGS_tfceresults_' currdatatype '_' eventtype '_' basenorm '_' row '.mat']), ...
             "tfce_results", "times","freqs")
         
    end

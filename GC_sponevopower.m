@@ -27,7 +27,14 @@ load('/Volumes/Hera/Abby/AS_EEG/templatechannellabels.mat')
 % RERUN; 0 = do not rerun, 1 = rerun
 RERUN = 1;
 
-frow = [4 5 6 7 37 38 39 40 41];
+% define row of interest
+row = 'prow';
+% row = 'frow';
+if strcmp(row,'frow')
+    electrodes = [4 5 6 7 37 38 39 40 41];
+elseif strcmp(row,'prow')
+    electrodes = [19 20 21 22 23 31 55 56 57 58 59];
+end
 
 % stim or prep onset
 eventtype = 'prep';
@@ -122,11 +129,11 @@ for t = 1:length(tasks)
         eventend_idx = find(EEG.times>=eventend,1,'first');
 
         % Compute TF reconstruction of total power
-        [sub_totpower, times, freqs] = F_tfpower(EEG,'channels',frow);
+        [sub_totpower, times, freqs] = F_tfpower(EEG,'channels',electrodes);
         % Just prep period of power
         sub_totpower = sub_totpower(:,eventstart_idx:eventend_idx,:,:);
         % Compute TF reconstruction of evoked power
-        [sub_evopower,times,freqs] = F_tfpower(EEG,'channels',frow,'evoked',1);
+        [sub_evopower,times,freqs] = F_tfpower(EEG,'channels',electrodes,'evoked',1);
         sub_evopower = sub_evopower(:,eventstart_idx:eventend_idx,:,:);
         % Compute spontaneous power
         sub_sponpower = sub_totpower - sub_evopower;
@@ -149,5 +156,5 @@ end
 currdate = datetime();
 currdate.Format = 'yyyyMMdd';
 broadband_sponevo = temptable;
-save(fullfile(resultsdir,['broadband_sponevo_' char(currdate) '.mat']),'broadband_sponevo')
-writetable(broadband_sponevo,fullfile(resultsdir,['broadband_sponevo_' char(currdate) '.csv']))
+save(fullfile(resultsdir,['broadband_sponevo_' row '_' char(currdate)  '.mat']),'broadband_sponevo')
+writetable(broadband_sponevo,fullfile(resultsdir,['broadband_sponevo_' row '_' char(currdate) '.csv']))

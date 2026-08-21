@@ -16,7 +16,13 @@ erspdir = hera('Abby/AS_EEG/ERSPdata');
 eventtype = 'prep';
 basenorm = 'avgtrl';
 % basenorm = 'singletrl';
-frow = [4 5 6 7 37 38 39 40 41];
+row = 'prow';
+
+if strcmp(row,'frow')
+    electrodes = [4 5 6 7 37 38 39 40 41];
+elseif strcmp(row,'prow')
+    electrodes = [19 20 21 22 23 31 55 56 57 58 59];
+end
 
 % correct AS ersp directory
 corASerspdir = [erspdir '/corAS_data/' eventtype];
@@ -39,17 +45,17 @@ corASersp.allersp_viable = corASersp.allersp(corASid.idmat(:,4)==1 ,:,:,:);
 corASitc.allitc_viable = corASitc.allitc(corASid.idmat(:,4)==1,:,:,:);
 corASid.idmat_viable = corASid.idmat(corASid.idmat(:,4)==1,:);
 
-% average ersp and itc across frow
-corASersp.allersp_frow = squeeze(mean(corASersp.allersp_viable(:,:,:,frow),4));
-VGSersp.allersp_frow = squeeze(mean(VGSersp.allersp(:,:,:,frow),4));
-corASitc.allitc_frow = squeeze(mean(corASitc.allitc_viable(:,:,:,frow),4));
-VGSitc.allitc_frow = squeeze(mean(VGSitc.allitc(:,:,:,frow),4));
+% average ersp and itc across row
+corASersp.allersp_row = squeeze(mean(corASersp.allersp_viable(:,:,:,electrodes),4));
+VGSersp.allersp_row = squeeze(mean(VGSersp.allersp(:,:,:,electrodes),4));
+corASitc.allitc_row = squeeze(mean(corASitc.allitc_viable(:,:,:,electrodes),4));
+VGSitc.allitc_row = squeeze(mean(VGSitc.allitc(:,:,:,electrodes),4));
 
 % set up data to loop over
-data.ersp.corAS = corASersp.allersp_frow;
-data.ersp.VGS = VGSersp.allersp_frow;
-data.itc.corAS = corASitc.allitc_frow;
-data.itc.VGS = VGSitc.allitc_frow;
+data.ersp.corAS = corASersp.allersp_row;
+data.ersp.VGS = VGSersp.allersp_row;
+data.itc.corAS = corASitc.allitc_row;
+data.itc.VGS = VGSitc.allitc_row;
 
 % load merged7t AS score table
 load(fullfile(resultsdir,'merged7t_ASscore_table.mat'))   
@@ -65,16 +71,19 @@ clustertable = table('Size',[0,7],'VariableTypes',["string" "string" repmat("dou
     'VariableNames',["modelterm" "datatype" "minfreq","maxfreq","mintime","maxtime","clusternum"]);
 %% Loop over ERSP/ ITC condition, age, and interaction clusters
 modelterms = ["invage", "condition", "interaction"];
+modelterms = ["interaction"];
 datatypes = ["ersp", "itc"];
+datatypes = "ersp";
 
 for d = 1:length(datatypes)
     currdatatype = char(datatypes(d));
+    % load in tfce data
+    tfce = load(fullfile(tfcedir,['corASvsVGS_tfceresults_' currdatatype '_' eventtype '_' basenorm '_' row '.mat']));
+    
     for m = 1:length(modelterms)
         currterm = modelterms(m);
         % print out progress
-        fprintf('%s %s\n',currdatatype,currterm)
-        % load in tfce data
-        tfce = load(fullfile(tfcedir,['corASvsVGS_tfceresults_' currdatatype '_' eventtype '_' basenorm '.mat']));
+        fprintf('%s %s\n',currdatatype,currterm)        
         currclustermask = tfce.tfce_results.(currterm).mask;
         % get number of clusters
         [labeledclusters ,numclusters] = bwlabel(currclustermask);
@@ -91,9 +100,9 @@ for d = 1:length(datatypes)
         for p = 1:length(toosmall_clustnums)
             currnum = toosmall_clustnums(p);
             % in labeledclusters set the cluster to be removed to zero
-            [row,col] = find(labeledclusters == currnum);
-            for i = 1:length(row)
-                labeledclusters(row(i),col(i)) = 0;
+            [row_idx,col_idx] = find(labeledclusters == currnum);
+            for i = 1:length(row_idx)
+                labeledclusters(row_idx(i),col_idx(i)) = 0;
             end
         end
         % update number of clusters
@@ -215,8 +224,8 @@ end
 currdate = datetime();
 currdate.Format = 'yyyyMMdd';
 clusterpowertable = temptable;
-save(fullfile(resultsdir,['ersp_itc_clusters_',basenorm,'_',char(currdate),'.mat']),"clusterpowertable")
-writetable(clusterpowertable,fullfile(resultsdir,['ersp_itc_clusters_',basenorm,'_',char(currdate),'.csv']))
-save(fullfile(resultsdir,['ersp_itc_clusterinfo_' basenorm, '_' char(currdate) '.mat']),"clustertable")
-writetable(clustertable,fullfile(resultsdir,['ersp_itc_clusterinfo_' basenorm '_' char(currdate) '.csv']))
+save(fullfile(resultsdir,['ersp_itc_clusters_', basenorm, '_', row, '_',  char(currdate), '.mat']),"clusterpowertable")
+writetable(clusterpowertable,fullfile(resultsdir,['ersp_itc_clusters_',basenorm,'_',row, '_',char(currdate),'.csv']))
+save(fullfile(resultsdir,['ersp_itc_clusterinfo_' basenorm, '_' row '_' char(currdate) '.mat']),"clustertable")
+writetable(clustertable,fullfile(resultsdir,['ersp_itc_clusterinfo_' basenorm '_' row '_' char(currdate) '.csv']))
 

@@ -67,7 +67,7 @@ for t = 1:length(tasks)
     tasktotalEEGs = length(taskfilenames);
     currtask = tasks(t);
     parfor currentEEG = 1:tasktotalEEGs
-        % getting subject's id and scan date
+        % getting subject's id and eeg date
         filename = [taskfilenames(currentEEG).name];
         filepath = [taskfilenames(currentEEG).folder];
         splitfilename = strsplit(filename,'_');
