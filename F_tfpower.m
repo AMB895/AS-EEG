@@ -96,6 +96,10 @@ for fi = 1:nfreqs
     wave = exp(2 * 1i * pi * freqs(fi) *wavet) .* exp(-wavet.^2 / (2*gaus_width^2));
     A = 1 / sqrt(2 * pi* freqs(fi)); % normalization coeff
     wave = A*wave;
+    % compute FWHM in time domain
+    midp = dsearchn(wavet,0);
+    gauswin = exp(-wavet.^2 / (2*gaus_width^2));
+    fwhmT(fi) = wavet(midp - 1 + dsearchn(gauswin(midp:end),0.5)) - wavet(dsearchn(gauswin(1:midp),0.5));
     % wavelet in frequency domain
     waveX = fft(wave,nconv,1); 
     % Convolution in freq domain
