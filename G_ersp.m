@@ -1,26 +1,24 @@
 %% ERSP and ITC for correct AS, VGS, and error corrected AS
-% amb895 05/07/2026
+% Abigail Beatty 05/07/2026
+
 clear; 
 
 % add paths
-addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/fieldtrip-20180926/')
-addpath('/Volumes/Hera/Abby/Resources/eeglab_current/eeglab2024.2/')
-addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/eeg/Shane/Preprocessing_Functions/')
+addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/fieldtrip-20180926/') % fieldtrip
+addpath('/Volumes/Hera/Abby/Resources/eeglab_current/eeglab2024.2/') % eeglab
 addpath('/Volumes/Hera/Abby/AS_EEG/')
-addpath('/Volumes/Hera/Abby/Resources/slanCM/')
+addpath('/Volumes/Hera/Abby/Resources/slanCM/') % color palette for plotting ersp maps
+addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/txt/') % get age and sex from merged7T file
 
 % start eeglab
 [ALLEEG,EEG,CURRENTSET,ALLCOM]=eeglab("nogui");
 
 %% Set up directories/ load in relevant data
-% Getting age and sex from merge7t
-addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/txt/')
-
 % Load merged 7t EEG and AS score information
-merged7t_eeg = readtable('/Volumes/Hera/Abby/AS_EEG/Results/merged7t_ASscore_table.csv');
+merged7t_eeg = readtable('/Volumes/Hera/Abby/AS_EEG/Results/merged7t_ASscore_table.csv'); % loading in data with AS score
 
 % Main directory of preprocessed data
-maindir = hera('Abby/preprocessed_data');
+maindir = '/Volumes/Hera/Abby/preprocessed_data';
 
 % loading template of channel labels
 load('/Volumes/Hera/Abby/AS_EEG/templatechannellabels.mat')
@@ -54,11 +52,9 @@ baseend = -400;
 eventstart = 0;
 eventend = 500;
 
-% comptue average trial baseline and single trial baseline
-% base_norm = 'avgtrial_ers';
-% basenormfolder = 'avgtrl';
-base_norm = 'singletrial';
-basenormfolder = 'singletrl';
+% comptue average trial baseline
+base_norm = 'avgtrial_ers';
+basenormfolder = 'avgtrl';
 
 %% Loop through each task and subject
 for t = 1:length(tasks)
