@@ -4,17 +4,14 @@ clear;
 % Full model: ersp/ itc ~ condition * invage + (1|lunaid)
 %% Directories to data, paths to add and variables to define
 addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/eeg/Shane/Preprocessing_Functions/')
-maindir = hera('Abby/AS_EEG/ERSPdata');
+maindir = '/Volumes/Hera/Abby/preprocessed_data';
 eventtype = 'prep';
 basenorm = 'avgtrl';
-% basenorm = 'singletrl';
 corASdir = [maindir '/corAS_data/' eventtype '/'];
 VGSdir = [maindir '/VGS_data/' eventtype '/'];
 errcorASdir = [maindir '/errcorAS_data/' eventtype '/'];
-% datatypes = ["ersp","itc"];
 datatypes = "ersp";
-row = 'prow';
-% electrodes =  'frow';
+row = 'prow'; % change to either prow or frow
 
 RERUN = 0;
 if strcmp(row,'frow')
