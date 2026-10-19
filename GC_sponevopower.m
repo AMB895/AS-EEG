@@ -5,7 +5,6 @@ clear;
 % adding necessary paths 
 addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/fieldtrip-20180926/')
 addpath('/Volumes/Hera/Abby/Resources/eeglab_current/eeglab2024.2/')
-addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/eeg/Shane/Preprocessing_Functions/')
 addpath('/Volumes/Hera/Abby/AS_EEG/')
 
 %% Setting up directories and settings
@@ -19,7 +18,7 @@ resultsdir = hera('Abby/AS_EEG/Results');
 load(fullfile(resultsdir,'merged7t_ASscore_table.mat'))  
 
 % Main directory of preprocessed data
-maindirpreproc = hera('Abby/preprocessed_data');
+maindirpreproc = '/Volumes/Hera/Abby/preprocessed_data';
 
 % loading template of channel labels
 load('/Volumes/Hera/Abby/AS_EEG/templatechannellabels.mat')
