@@ -145,13 +145,13 @@ library(broom.helpers)
 library(R.matlab)
 library(webshot2)
 library(ggplot2)
-library(ggside)
+# library(ggside)
 library(ggrepel)
 library(broom.mixed)
 library(ggdist)
 library(lme4)
-library(gtsummary)
-library(LNCDR)
+# library(gtsummary)
+# library(LNCDR)
 library(lmerTest)
 library(reshape2)
 library(scales)
@@ -235,57 +235,6 @@ savedir <- "/Volumes/Hera/Abby/AS_EEG/paperfigs/"
 
 ```
 
-# Age distribution
-```{r}
-# load in data
-main_df <- read.csv('/Volumes/Hera/Abby/AS_EEG/Results/broadband_sponevo_frow_20260508.csv')
-main_df <- main_df %>%
-  mutate(
-    eeg_age_viable = ifelse(Viable==1,
-                            eeg_age,
-                            NA)
-  )
-main_df <- main_df %>% filter(!is.na(eeg_date))
-main_df <- main_df %>% filter(!is.na(Viable))
-
-# --- Histogram ---
-age_hist <- ggplot(data = main_df)+
-  geom_histogram(aes(x=eeg_age), binwidth = 2,
-                 alpha=0.25, color = 'black',fill = 'black') +
-  geom_histogram(aes(x=eeg_age_viable),binwidth = 2,
-                 alpha = 0.25, color = "#AD3DCC", fill = "#AD3DCC" )+
-  scale_x_continuous(expand= c(0,0))+
-  scale_y_continuous(expand = c(0,0))+
-  xlab("Age (yrs)") + ylab("Count")+
-  paper_theme
-
-# --- Waterfall plot ---
-# After exclusion 
-d <- data.frame(age = main_df$eeg_age_viable, id=main_df$lunaid, Sex = as.factor(main_df$sex))
-p <- waterfall_plot(d,color=Sex)
-waterfall_df <- p@data
-eeg_waterfall_viable <- ggplot(data = waterfall_df, aes(x=age, y = age_id, color = Sex))+
-  geom_point(shape = markers_list$marker_shape, size = markers_list$marker_size)+
-  geom_line(aes(group=id), linewidth = lines_list$lunaid_size)+
-  scale_color_manual(name = "",values = c("#3DA3CC","#CC663D"),
-                                   labels = c("Female","Male")) + 
-  paper_theme + xlab("Age (yrs)") + ylab("")
-
-# Together
-aligned_plts <- align_plots(
-  plotlist = list(age_hist, eeg_waterfall_viable),
-  axis = 'tb', align = 'h'
-)
-cowplot::plot_grid(aligned_plts[[1]],
-                   aligned_plts[[2]],
-                   nrow=1,
-                   labels = c("A","B"),
-                   label_size = 6)
-ggsave(file.path(savedir,"age_dist.png"),
-       dpi = 600, height = 50, width = 100, units = 'mm', bg = 'transparent')
-```
-
-
 # Behavior
 ## Age + Sex
 ```{r behavior plots, echo = FALSE, warning=FALSE}
@@ -310,6 +259,10 @@ behav_coefs <- behav_coefs %>%
   mutate(
     p_fdr = p.adjust(`Pr(>|t|)`, method = 'fdr')
   ) %>% ungroup()
+
+# export model coefs as a table
+write.table(behav_coefs, file = "/Volumes/Hera/Abby/AS_EEG/paperfigs/tables/behav_age_coefs.csv",
+            col.names = TRUE, row.names = FALSE)
 
 behavior_plot <- function(modellist,colorslist,
                            markerslist, alphalist,
@@ -396,116 +349,13 @@ ggsave(file.path(savedir,"behaviors.png"),
 
 ```
 
-## Age * Sex
-```{r behavior plots, echo = FALSE, warning=FALSE}
-# find rds file with results
-filepaths <- list.files(
-  path = resultsdir, 
-  pattern = "_AgeSex_Effects.rds$", 
-  full.names = TRUE,                    
-  recursive = FALSE,                     
-  ignore.case = TRUE                    
-)
-
-files <- lapply(filepaths, readRDS)
-
-names(files)  <- tools::file_path_sans_ext(basename(filepaths))
-
-# compile all results into one data frame
-behav_agesex_coefs <- compile_coefs(files)
-# adjust p-values
-behav_agesex_coefs <- behav_agesex_coefs%>%
-  group_by(term) %>%
-  mutate(
-    p_fdr = p.adjust(`Pr(>|t|)`, method = 'fdr')
-  ) %>% ungroup()
-
-behavior_plot <- function(modellist,colorslist,
-                           markerslist, alphalist,
-                           lineslist, figtheme,
-                           labelslist){
-  predict_df <- model_prediction(model = modellist$model,
-                                 predictVar = "invage",
-                                 groupVar = "sex",
-                                 cleandf = modellist$cleandata)
-  predict_df$eeg_age <- 1/predict_df$invage
-  modellist$cleandata$eeg_age <- 1/modellist$cleandata$invage
-  plt <- ggplot() + 
-    geom_point(data = modellist$cleandata,
-               aes(x=eeg_age, y=behav, color = sex),
-               shape = markerslist$marker_shape,
-               alpha = alphalist$alpha_marker,
-               size = markerslist$marker_size) + 
-    geom_line(data = modellist$cleandata,
-              aes(x = eeg_age, y=behav,
-                  group = lunaid_clean, color = sex),
-              linewidth = lineslist$lunaid_size,
-              alpha = alphalist$alpha_lunaid)+
-    geom_line(data= predict_df,
-              aes(x=eeg_age, y=emmean, color = sex),
-              linewidth = lineslist$line_size
-              )+
-    scale_color_manual(name = "",values = c("#3DA3CC","#CC663D"),
-                                   labels = c("Female","Male")) + 
-    xlab(labelslist$xlabel) + ylab(labelslist$ylabel)+
-    figtheme
-  return(plt)
-}
-
-corrate <- behavior_plot(modellist = files$CorRate_AgeSex_Effects,
-                         markerslist = markers_list,
-                         colorslist = colors_list,
-                         alphalist = alpha_list,
-                         lineslist = lines_list,
-                         figtheme = paper_theme,
-                         labelslist = list(xlabel = "Age (yrs)",
-                                           ylabel = "% correct"))
-
-cvlat <- behavior_plot(modellist = files$CVLatCor_AgeSex_Effects,
-                       markerslist = markers_list,
-                       colorslist = colors_list,
-                       alphalist = alpha_list,
-                       lineslist = lines_list,
-                       figtheme = paper_theme,
-                       labelslist = list(xlabel = "Age (yrs)",
-                                         ylabel = "Coefficient of variation"))
-
-avglat <- behavior_plot(modellist = files$AvgLatCor_AgeSex_Effects,
-                        markerslist = markers_list,
-                        colorslist = colors_list,
-                        alphalist = alpha_list,
-                        lineslist = lines_list,
-                        figtheme = paper_theme,
-                        labelslist = list(xlabel = "Age (yrs)",
-                                          ylabel = "Latency (ms)"))
-
-### --- Full behavior (age*sex) figure ---
-aligned_plts <- align_plots(
-  plotlist = list(corrate, cvlat, avglat),
-  align = 'h',
-  axis = 'l'
-)
-
-cowplot::plot_grid(
-  aligned_plts[[1]],
-  aligned_plts[[2]],
-  aligned_plts[[3]],
-  nrow=1,
-  labels = c("A","B","C"),
-  label_size = 6
-)
-
-ggsave(file.path(savedir,"behaviors_agesex.png"),
-       dpi = 600, units = 'mm', width = 90, height = 45 ,bg="transparent")
-```
-
 # Spon/Evo figures
-## Age * Condition * Sex
+## Age * Condition + Sex
 ```{r}
 # find rds file with results
 filepaths <- list.files(
   path = resultsdir, 
-  pattern = "frow_AgeSexCondition_Effects.rds$", 
+  pattern = "frow_AgeCondition_Effects.rds$", 
   full.names = TRUE,                    
   recursive = FALSE,                     
   ignore.case = TRUE                    
@@ -516,13 +366,18 @@ files <- lapply(filepaths, readRDS)
 names(files)  <- tools::file_path_sans_ext(basename(filepaths))
 
 # compile all results into one data frame
-sponevo_ageconditionsex_frow_coefs <- compile_coefs(files)
+sponevo_agecondition_frow_coefs <- compile_coefs(files)
 # adjust p-values
-sponevo_ageconditionsex_frow_coefs <- sponevo_ageconditionsex_frow_coefs %>%
+sponevo_agecondition_frow_coefs <- sponevo_agecondition_frow_coefs %>%
   group_by(term) %>%
   mutate(
     p_fdr = p.adjust(`Pr(>|t|)`, method = 'fdr')
   ) %>% ungroup()
+
+# save coefs as table
+write.table(sponevo_agecondition_frow_coefs, file = "/Volumes/Hera/Abby/AS_EEG/paperfigs/tables/sponevo_agecondition_frow_coefs.csv",
+            col.names = T, row.names =F)
+
 
 sponevo_agecondition_plot <- function(modellist,colorslist,
                                       powertype, row,
@@ -568,41 +423,11 @@ sponevo_agecondition_plot <- function(modellist,colorslist,
     xlab(labelslist$xlabel) + ylab(labelslist$ylabel)+
     figtheme
   
-  ### --- Age * Condition * Sex for supplement ---
-  predict_df <- model_prediction(model = modellist$model,
-                                 groupVar = "condition",
-                                 predictVar = "invage",
-                                 facetVar = "sex",
-                                 cleandf = modellist$cleandata)
-  predict_df$eeg_age <- 1/predict_df$invage
-  modellist$cleandata$eeg_age <- 1/modellist$cleandata$invage
   
-  agecondsex_plt <- ggplot() + 
-    geom_point(data = modellist$cleandata,
-               aes(x=eeg_age, y=power, color = condition),
-               shape = markerslist$marker_shape,
-               alpha = alphalist$alpha_marker,
-               size = markerslist$marker_size) + 
-    geom_line(data = modellist$cleandata,
-              aes(x = eeg_age, y=power, color = condition,
-                  group = interaction(lunaid_clean,condition)),
-              linewidth = lineslist$lunaid_size,
-              alpha = alphalist$alpha_lunaid)+
-    geom_line(data= predict_df,
-              aes(x=eeg_age, y=emmean, color = condition),
-              linewidth = lineslist$line_size
-              )+
-    scale_color_manual(name = "Condition", values = VALUES,
-                       labels = LABELS)+
-    facet_wrap(~sex, labeller = labeller(
-      sex = c("F"="Females","M"="Males")))+
-    xlab(labelslist$xlabel) + ylab(labelslist$ylabel)+
-    figtheme
-  
-  return(list(agecond = agecond_plt, agecondsex = agecondsex_plt))
+  return(list(agecond = agecond_plt))
 }
 
-evo_frow_agecondsex <- sponevo_agecondition_plot(modellist = files$evoPowerfrow_AgeSexCondition_Effects,
+evo_frow_agecond <- sponevo_agecondition_plot(modellist = files$evoPowerfrow_AgeCondition_Effects,
                                           row = "frow",
                                           powertype = "evo",
                                           colorslist = colors_list,
@@ -614,7 +439,7 @@ evo_frow_agecondsex <- sponevo_agecondition_plot(modellist = files$evoPowerfrow_
                                                             ylabel = "Evoked power (dB)")
                                           )
 
-spon_frow_agecondsex <- sponevo_agecondition_plot(modellist = files$sponPowerfrow_AgeSexCondition_Effects,
+spon_frow_agecond <- sponevo_agecondition_plot(modellist = files$sponPowerfrow_AgeCondition_Effects,
                                            row = "frow",
                                            powertype = "spon",
                                            colorslist = colors_list,
@@ -633,7 +458,7 @@ spon_frow_agecondsex <- sponevo_agecondition_plot(modellist = files$sponPowerfro
 # find rds file with results
 filepaths <- list.files(
   path = resultsdir, 
-  pattern = "_AgeSexCondition_Effects.rds$", 
+  pattern = "frow_AgeCondition_Effects.rds$", 
   full.names = TRUE,                    
   recursive = FALSE,                     
   ignore.case = TRUE                    
@@ -668,9 +493,9 @@ sponevo_diff_agecondition_plot <- function(modellist,
                          lower.CL < 0 & upper.CL > 0,
                          0,1)
                        ),
-      y_sig = ifelse(sig_age == 1, estimate, NA), 
-      lower.CL_sig = ifelse(sig_age == 1, lower.CL, NA),
-      upper.CL_sig = ifelse(sig_age == 1, upper.CL, NA)
+      y_sig = ifelse(sig_age == 1, estimate, NA_real_), 
+      lower.CL_sig = ifelse(sig_age == 1, lower.CL, NA_real_),
+      upper.CL_sig = ifelse(sig_age == 1, upper.CL, NA_real_)
     )
   } else if (powertype == "evo"){
     contrast_df <- contrast(emm, method = 'pairwise') %>% 
@@ -685,9 +510,9 @@ sponevo_diff_agecondition_plot <- function(modellist,
                            lower.CL < 0 & upper.CL > 0,
                            0,1)
                          ),
-        y_sig = ifelse(sig_age == 0, estimate, NA), 
-        lower.CL_sig = ifelse(sig_age == 0, lower.CL, NA),
-        upper.CL_sig = ifelse(sig_age == 0, upper.CL, NA)
+        y_sig = ifelse(sig_age == 0, estimate, NA_real_), 
+        lower.CL_sig = ifelse(sig_age == 0, lower.CL, NA_real_),
+        upper.CL_sig = ifelse(sig_age == 0, upper.CL, NA_real_)
       )
     }
   
@@ -703,7 +528,8 @@ sponevo_diff_agecondition_plot <- function(modellist,
     geom_line(aes(y= y_sig), 
               color = colorslist[[powertype]], linewidth = lineslist$line_size, 
               alpha = 1) + 
-    scale_x_continuous(n.breaks = 3)+scale_y_continuous(n.breaks=3)+
+    scale_x_continuous(n.breaks = 3)+
+    scale_y_continuous(n.breaks=3)+
     figtheme + xlab(labelslist$xlabel) + ylab(labelslist$ylabel) +
     theme(axis.title = element_text(size=5),
           axis.text = element_text(size=4),
@@ -711,7 +537,7 @@ sponevo_diff_agecondition_plot <- function(modellist,
   return(plt)
 }
 
-sponevo_diff_agecondition_plot(modellist = files$evoPowerfrow_AgeSexCondition_Effects,
+sponevo_diff_agecondition_plot(modellist = files$evoPowerfrow_AgeCondition_Effects,
                                            powertype='evo',
                                            markerslist=markers_list,
                                            alphalist = alpha_list,
@@ -724,7 +550,7 @@ ggsave(file.path(savedir, "evo_frow_diff_plot.png"),
        dpi = 600, units = "mm", width = 20, height = 15, bg = 'transparent')
 
 
-sponevo_diff_agecondition_plot(modellist = files$sponPowerfrow_AgeSexCondition_Effects,
+sponevo_diff_agecondition_plot(modellist = files$sponPowerfrow_AgeCondition_Effects,
                                            powertype='spon',
                                            markerslist=markers_list,
                                            alphalist = alpha_list,
@@ -737,116 +563,6 @@ ggsave(file.path(savedir, "spon_frow_diff_plot.png"),
        dpi = 600, units = "mm", width = 20, height = 15, bg = 'transparent')
 
 ```
-
-## 4-way interaction
-```{r}
-# find rds file with results
-filepaths <- list.files(
-  path = resultsdir, 
-  pattern = "_AgeConditionRowSex_Effects.rds$", 
-  full.names = TRUE,                    
-  recursive = FALSE,                     
-  ignore.case = TRUE                    
-)
-
-files <- lapply(filepaths, readRDS)
-names(files)  <- tools::file_path_sans_ext(basename(filepaths))
-
-# compile all results into one data frame
-sponevo_ageconditionsexrow_coefs <- compile_coefs(files)
-# adjust p-values
-sponevo_ageconditionsexrow_coefs <- sponevo_ageconditionsexrow_coefs %>%
-  group_by(term) %>%
-  mutate(
-    p_fdr = p.adjust(`Pr(>|t|)`, method = 'fdr')
-  ) %>% ungroup()
-
-# model results in a table for supplement
-# spontaneous
-spon_table <- tidy(files$spon_AgeConditionRowSex_Effects$model, 
-                   effects = 'fixed', conf.int = TRUE)
-spon_table_clean <- spon_table %>%
-  select(term, estimate, statistic, df, p.value, conf.low, conf.high) %>%
-  mutate(across(where(is.numeric), ~round(.x, 3))) %>%
-  rename(Term = term, Beta = estimate, `t-value` = statistic, 
-         `p-value` = p.value, `CI lower` = conf.low, `CI upper` = conf.high)
-write.csv(spon_table_clean, file.path(savedir,"tables/spon_4way_table.csv"),row.names = FALSE)
-
-# evoked
-evo_table <- tidy(files$evo_AgeConditionRowSex_Effects$model, 
-                   effects = 'fixed', conf.int = TRUE)
-evo_table_clean <- evo_table %>%
-  select(term, estimate, statistic, df, p.value, conf.low, conf.high) %>%
-  mutate(across(where(is.numeric), ~round(.x, 3))) %>%
-  rename(Term = term, Beta = estimate, `t-value` = statistic, 
-         `p-value` = p.value, `CI lower` = conf.low, `CI upper` = conf.high)
-write.csv(evo_table_clean, file.path(savedir,"tables/evo_4way_table.csv"),row.names = FALSE)
-
-
-sponevo_ageconditionsexrow_effect_plot <- function(modellist,
-                                                   colorslist,
-                                                   powertype,
-                                                   markerslist,
-                                                   alphalist,
-                                    lineslist, figtheme,
-                                    labelslist){
-  # figure colors
-  if(powertype == "spon"){
-    VALUES <- c("AS" = colorslist$spon,
-                "VGS" = colorslist$vgs)
-  } else if (powertype == "evo"){
-    VALUES <- c("AS" = colorslist$evo,
-                "VGS" = colorslist$vgs)
-  }
-
-  # predict model
-  predict_df <- model_prediction(model = modellist$model,
-                                 groupVar = "condition",
-                                 facetVar = "sex",
-                                 panelVar = "row",
-                                 predictVar = "invage",
-                                 cleandf = modellist$cleandata)
-  predict_df$eeg_age <- 1/predict_df$invage
-  modellist$cleandata$eeg_age <- 1/modellist$cleandata$invage
-  
-  plt <- ggplot() + 
-    geom_line(data = predict_df, 
-              aes(x=eeg_age, y=emmean,
-                  color = condition,
-                  linetype = row),
-              linewidth = lineslist$line_size)+
-    scale_color_manual(name = "Condition",
-                       values = VALUES)+
-    facet_wrap(~sex, labeller = labeller(sex = c("F" = "Females",
-                                                 "M" = "Males")))+
-    xlab(labelslist$xlabel) + ylab(labelslist$ylabel) +
-    figtheme
-  return(plt)
-}
-spon_agecondrowsex <-
-  sponevo_ageconditionsexrow_effect_plot(modellist = files$spon_AgeConditionRowSex_Effects,
-                                       powertype = "spon",
-                                       colorslist = colors_list,
-                                       alphalist = alpha_list,
-                                       markerslist = markers_list,
-                                       lineslist = lines_list,
-                                       figtheme = paper_theme,
-                                       labelslist = list(
-                                         xlabel = c("Age (yrs)"),
-                                         ylabel = 
-                                         c("Spontaneous power (dB)")))
-evo_agecondrowsex <- sponevo_ageconditionsexrow_effect_plot(modellist = files$evo_AgeConditionRowSex_Effects,
-                                       powertype = "evo",
-                                       colorslist = colors_list,
-                                       alphalist = alpha_list,
-                                       markerslist = markers_list,
-                                       lineslist = lines_list,
-                                       figtheme = paper_theme,
-                                       labelslist = list(
-                                         xlabel = c("Age (yrs)"),
-                                         ylabel = c("Evoked power (dB)")))
-```
-
 
 ## Behavior
 ### Individual AS and VGS 
@@ -876,10 +592,14 @@ sponevo_behav_coefs$row <- as.factor(sponevo_behav_coefs$row)
 
 # adjust p-values
 sponevo_behav_coefs <- sponevo_behav_coefs %>%
-  group_by(term,behav, row) %>%
+  group_by(term,behav) %>%
   mutate(
     p_fdr = p.adjust(`Pr(>|t|)`, method = 'fdr')
   ) %>% ungroup()
+
+# save coefs as table
+write.table(sponevo_behav_coefs, file = "/Volumes/Hera/Abby/AS_EEG/paperfigs/tables/sponevo_behav_coefs.csv",
+            col.names = T, row.names = F)
 
 sponevo_behav_plot <- function(modellist,colorslist,
                                task,powertype,
@@ -913,11 +633,13 @@ sponevo_behav_plot <- function(modellist,colorslist,
                ) +
     geom_line(data = predict_df, 
               aes(x=power, y=emmean),
+              # color = colorslist$vgs,
               color = colorslist[[powertype]],
               linetype = LINETYPE,
               linewidth = lineslist$line_size)+
     geom_ribbon(data = predict_df,
                 aes(x = power, ymin = lower.CL, ymax = upper.CL),
+                # fill = colorslist$vgs,
                 fill = colorslist[[powertype]],
                 color = NA, alpha = alphalist$alpha_ribbon)+
     figtheme + xlab(labelslist$xlabel) + ylab(labelslist$ylabel)
@@ -1001,184 +723,6 @@ avglat_ASevo_frow <- sponevo_behav_plot(modellist = files$AvgLatCor_corASevoPowe
 
 ```
 
-### One plot per behavior (all rows and conditions)
-```{r}
-# find rds file with results
-AS_filepaths <- list.files(
-  path = resultsdir, 
-  pattern = "_corAS(evo|spon)Power(f|p)row_Effects.rds$", 
-  full.names = TRUE,                    
-  recursive = FALSE,                     
-  ignore.case = TRUE                    
-)
-
-AS_files <- lapply(AS_filepaths, readRDS)
-
-names(AS_files)  <- tools::file_path_sans_ext(basename(AS_filepaths))
-
-# find rds file with results
-VGS_filepaths <- list.files(
-  path = resultsdir, 
-  pattern = "_VGS(evo|spon)Power(f|p)row_Effects.rds$", 
-  full.names = TRUE,                    
-  recursive = FALSE,                     
-  ignore.case = TRUE                    
-)
-
-VGS_files <- lapply(VGS_filepaths, readRDS)
-
-names(VGS_files)  <- tools::file_path_sans_ext(basename(VGS_filepaths))
-
-sponevo_behav_combined_plot <- function(ASmodellistfrow,
-                                        ASmodellistprow,
-                                        VGSmodellistfrow,
-                                        VGSmodellistprow,
-                                        colorslist, powertype,
-                                        markerslist, alphalist,
-                                        lineslist, figtheme,
-                                        labelslist){
-  if (powertype == "spon"){
-    xlabel <- c("Spontaneous power (dB)")
-  } else if (powertype == "evo"){
-    xlabel <- c("Evoked power (dB)")
-  }
-  
-  # predict responses
-  ASpredict_df_frow <- model_prediction(ASmodellistfrow$model,
-                                 predictVar = "power",
-                                 cleandf = ASmodellistfrow$cleandata)
-  VGSpredict_df_frow <- model_prediction(VGSmodellistfrow$model,
-                                    predictVar = "power",
-                                    cleandf = VGSmodellistfrow$cleandata)
-  ASpredict_df_prow <- model_prediction(ASmodellistprow$model,
-                                 predictVar = "power",
-                                 cleandf = ASmodellistprow$cleandata)
-  VGSpredict_df_prow <- model_prediction(VGSmodellistprow$model,
-                                    predictVar = "power",
-                                    cleandf = VGSmodellistprow$cleandata)
-  
-  plt <- ggplot() + 
-    # VGS lines
-    # p-row
-    geom_line(data = VGSpredict_df_prow, 
-              aes(x=power, y=emmean),
-              color = colorslist$vgs,
-              linewidth = lineslist$line_size,
-              linetype = "dashed")+
-    # f-row
-    geom_line(data = VGSpredict_df_frow, 
-              aes(x=power, y=emmean),
-              color = colorslist$vgs,
-              linewidth = lineslist$line_size)+
-    # AS lines
-    # p-row
-    geom_line(data = ASpredict_df_prow, 
-              aes(x=power, y=emmean),
-              color = colorslist[[powertype]],
-              linewidth = lineslist$line_size,
-              linetype = "dashed")+
-    # f-row
-    geom_line(data = ASpredict_df_frow, 
-              aes(x=power, y=emmean),
-              color = colorslist[[powertype]],
-              linewidth = lineslist$line_size)+
-    figtheme + xlab(xlabel) + ylab(labelslist$ylabel)
-  return(plt)
-}
-
-# Spontaneous power
-allspon_corrate <- sponevo_behav_combined_plot(ASmodellistfrow =
-                              AS_files$CorRate_corASsponPowerfrow_Effects,
-                            ASmodellistprow = 
-                              AS_files$CorRate_corASsponPowerprow_Effects,
-                            VGSmodellistfrow = 
-                              VGS_files$CorRate_VGSsponPowerfrow_Effects,
-                            VGSmodellistprow = 
-                              VGS_files$CorRate_VGSsponPowerprow_Effects,
-                            colorslist = colors_list,
-                            alphalist = alpha_list,
-                            lineslist = lines_list,
-                            markerslist = markers_list,
-                            powertype = "spon", figtheme = paper_theme,
-                            labelslist = list(ylabel = "% correct"))
-
-allspon_cvlat <- sponevo_behav_combined_plot(ASmodellistfrow =
-                              AS_files$CVLatCor_corASsponPowerfrow_Effects,
-                            ASmodellistprow = 
-                              AS_files$CVLatCor_corASsponPowerprow_Effects,
-                            VGSmodellistfrow = 
-                              VGS_files$CVLatCor_VGSsponPowerfrow_Effects,
-                            VGSmodellistprow = 
-                              VGS_files$CVLatCor_VGSsponPowerprow_Effects,
-                            colorslist = colors_list,
-                            alphalist = alpha_list,
-                            lineslist = lines_list,
-                            markerslist = markers_list,
-                            powertype = "spon", figtheme = paper_theme,
-                            labelslist = list(ylabel = "Coefficient of variation"))
-
-allspon_avglat <- sponevo_behav_combined_plot(ASmodellistfrow =
-                              AS_files$AvgLatCor_corASsponPowerfrow_Effects,
-                            ASmodellistprow = 
-                              AS_files$AvgLatCor_corASsponPowerprow_Effects,
-                            VGSmodellistfrow = 
-                              VGS_files$AvgLatCor_VGSsponPowerfrow_Effects,
-                            VGSmodellistprow = 
-                              VGS_files$AvgLatCor_VGSsponPowerprow_Effects,
-                            colorslist = colors_list,
-                            alphalist = alpha_list,
-                            lineslist = lines_list,
-                            markerslist = markers_list,
-                            powertype = "spon", figtheme = paper_theme,
-                            labelslist = list(ylabel = "Latency (ms)"))
-
-# Evoked power
-allevo_corrate <- sponevo_behav_combined_plot(ASmodellistfrow =
-                              AS_files$CorRate_corASevoPowerfrow_Effects,
-                            ASmodellistprow = 
-                              AS_files$CorRate_corASevoPowerprow_Effects,
-                            VGSmodellistfrow = 
-                              VGS_files$CorRate_VGSevoPowerfrow_Effects,
-                            VGSmodellistprow = 
-                              VGS_files$CorRate_VGSevoPowerprow_Effects,
-                            colorslist = colors_list,
-                            alphalist = alpha_list,
-                            lineslist = lines_list,
-                            markerslist = markers_list,
-                            powertype = "evo", figtheme = paper_theme,
-                            labelslist = list(ylabel = "% correct"))
-
-allevo_cvlat <- sponevo_behav_combined_plot(ASmodellistfrow =
-                              AS_files$CVLatCor_corASevoPowerfrow_Effects,
-                            ASmodellistprow = 
-                              AS_files$CVLatCor_corASevoPowerprow_Effects,
-                            VGSmodellistfrow = 
-                              VGS_files$CVLatCor_VGSevoPowerfrow_Effects,
-                            VGSmodellistprow = 
-                              VGS_files$CVLatCor_VGSevoPowerprow_Effects,
-                            colorslist = colors_list,
-                            alphalist = alpha_list,
-                            lineslist = lines_list,
-                            markerslist = markers_list,
-                            powertype = "evo", figtheme = paper_theme,
-                            labelslist = list(ylabel = "Coefficient of variation"))
-
-allevo_avglat <- sponevo_behav_combined_plot(ASmodellistfrow =
-                              AS_files$AvgLatCor_corASevoPowerfrow_Effects,
-                            ASmodellistprow = 
-                              AS_files$AvgLatCor_corASevoPowerprow_Effects,
-                            VGSmodellistfrow = 
-                              VGS_files$AvgLatCor_VGSevoPowerfrow_Effects,
-                            VGSmodellistprow = 
-                              VGS_files$AvgLatCor_VGSevoPowerprow_Effects,
-                            colorslist = colors_list,
-                            alphalist = alpha_list,
-                            lineslist = lines_list,
-                            markerslist = markers_list,
-                            powertype = "evo", figtheme = paper_theme,
-                            labelslist = list(ylabel = "Latency (ms)"))
-```
-
 ## Main paper figure
 ```{r}
 # adjust margins
@@ -1186,10 +730,10 @@ behav_margin <- margin(0.5,1,0.5,1, unit='mm')
 age_margin <- margin(0.5,3,0.5,1, unit = 'mm')
 
 ### --- Age * Condition plot + AS f-row behavior plots ---
-spon_plt <- spon_frow_agecondsex$agecond +
+spon_plt <- spon_frow_agecond$agecond +
   theme(plot.margin = age_margin,
         axis.title.x = element_blank())
-evo_plt <- evo_frow_agecondsex$agecond +
+evo_plt <- evo_frow_agecond$agecond +
   theme(plot.margin = age_margin)
 # remove axis titles and change margins from spontaneous plots
 corrate_spon <- corrate_ASspon_frow + 
@@ -1240,96 +784,6 @@ ggsave(file.path(savedir, "sponevo_frow_agecondition_behav.png"),
        bg = 'transparent')
 
 ```
-
-## SM figure
-### Sex effects Frow
-```{r}
-spon_plt <- spon_frow_agecondsex$agecondsex + 
-  theme(axis.title.x = element_blank())
-evo_plt <- evo_frow_agecondsex$agecondsex + 
-  theme(strip.background = element_blank(),
-        strip.text = element_blank())
-
-aligned_plts <- align_plots(
-  plotlist = list(spon_plt,
-                  evo_plt),
-  axis = 'l',
-  align = 'v'
-)
-
-cowplot::plot_grid(
-  aligned_plts[[1]],
-  aligned_plts[[2]],
-  nrow = 2,
-  labels = c("A","B"),
-  label_size =6
-)
-
-ggsave(file.path(savedir, "SM_frow_agecondsex.png"),
-       dpi = 600, width = 90, height = 90, units = 'mm', bg='transparent')
-  
-```
-
-### 4 way interaction
-```{r}
-
-# adjust margins
-behav_margin <- margin(0.5,1,0.5,1, unit='mm')
-age_margin <- margin(0.5,3,0.5,1, unit = 'mm')
-
-### --- Age * Condition plot + AS f-row behavior plots ---
-spon_plt <- spon_agecondrowsex +
-  theme(axis.title.x = element_blank(),
-        plot.margin = age_margin)
-evo_plt <- evo_agecondrowsex +
-  theme(strip.background = element_blank(),
-        strip.text = element_blank(),
-        plot.margin = age_margin)
-
-# remove axis titles and change margins from spontaneous plots
-corrate_spon <-allspon_corrate + 
-  theme(axis.title.x = element_blank())
-cvlat_spon <- allspon_cvlat + 
-  theme(axis.title.x = element_blank())
-avglat_spon <- allspon_avglat + 
-  theme(axis.title.x = element_blank()) +
-  scale_y_continuous(labels = function(x) round(x, 1))
-# change margin for evoked power
-corrate_evo <- allevo_corrate + xlab("Power (dB)")
-cvlat_evo <- allevo_cvlat  + xlab("Power (dB)")
-avglat_evo <- allevo_avglat + xlab("Power (dB)") +
-  scale_y_continuous(labels = function(x) round(x, 1))
-
-aligned_plts <- align_plots(
-  plotlist = list(spon_plt, 
-                  corrate_spon,
-                  cvlat_spon,
-                  avglat_spon,
-                  evo_plt, 
-                  corrate_evo,
-                  cvlat_evo,
-                  avglat_evo),
-  align = 'v', axis = 'l'
-)
-cowplot::plot_grid(aligned_plts[[1]],
-          aligned_plts[[2]],
-          aligned_plts[[3]],
-          aligned_plts[[4]],
-          aligned_plts[[5]],
-          aligned_plts[[6]],
-          aligned_plts[[7]],
-          aligned_plts[[8]],
-          rel_widths = c(2,1,1,1),
-          labels = c("A","B","C","D"),
-          label_size = 6,
-          nrow = 2,
-          ncol = 4)
-ggsave(file.path(savedir,"SM_sponevo_age_condition_row_sex_behav.png"),
-       dpi = 600, width = 170, height = 90, units = 'mm',
-       bg = 'transparent')
-
-```
-
 
 # ERSP Clusters
 ## Heat-maps
@@ -1429,8 +883,7 @@ heatmap_margin <- margin(1.75,1.75,1.75,1.75,unit='mm')
 
 # mask of clusters
 mask_interaction_fig_clust1_5 <- ggplot() + 
-  geom_tile(data=t_interaction_df, aes(x=time,y=freq, fill=value),
-            width = time_res, height = freq_res,color=NA) +
+  geom_raster(data=t_interaction_df, aes(x=time,y=freq, fill=value))+
   scale_fill_viridis_c(name="t-value",
                        limits = c(-4,4)) +
   guides(fill = 'none')+
@@ -1445,11 +898,11 @@ mask_interaction_fig_clust1_5 <- ggplot() +
                breaks = 1,
                color = colors_list$c5,
                linewidth=0.5)+
-  geom_tile(data = mask_interaction_df, aes(x=time,y=freq,fill = value),
-            alpha=0.5,
-            width = time_res, height = freq_res,color=NA)+
+  geom_raster(data = mask_interaction_df, aes(x=time,y=freq,fill = value),
+            alpha=0.5)+
   scale_fill_manual(values = c("1"=NA,
-                               "0" = "black"))+
+                               "0" = "black"),
+                    na.value = NA)+
   labs(x = "Preparatory time (ms)", y = "Frequency (Hz)") +
   guides(fill="none")+
   scale_y_continuous(breaks = c(3,10,20,30,40,50,60,70),
@@ -1478,8 +931,7 @@ mask_interaction_clust1 <- mask_interaction_clust1 %>%
   )
 # cluster 1
 cluster1_mask <- ggplot() + 
-  geom_tile(data=t_interaction_df, aes(x=time,y=freq, fill=value),
-            width = time_res, height = freq_res,color=NA) +
+  geom_raster(data=t_interaction_df, aes(x=time,y=freq, fill=value)) +
   scale_fill_viridis_c(name="t-value",
                        limits = c(-4,4)
                        ) +
@@ -1490,16 +942,17 @@ cluster1_mask <- ggplot() +
                breaks = 1,
                color = "#C0369D",
                linewidth=0.3) +
-  geom_tile(data = mask_interaction_df, aes(x=time,y=freq,fill = value),
-            alpha=1,
-            width = time_res, height = freq_res,color=NA)+
+  geom_raster(data = mask_interaction_df, aes(x=time,y=freq,fill = value),
+            alpha=0.5)+
   scale_fill_manual(values = c("1"=NA,
-                               "0" = "black"))+
+                               "0" = "black"),
+                    na.value= NA)+
   geom_tile(data = mask_interaction_clust1, aes(x=time,y=freq,fill = value),
             alpha=0.5,
             width = time_res, height = freq_res,color=NA)+
   scale_fill_manual(values = c("1"=NA,
-                               "0" = "black"))+
+                               "0" = "black"),
+                    na.value = NA)+
   labs(x = "Preparatory time (ms)", y = "Frequency (Hz)") +
   guides(fill="none")+
   scale_y_continuous(breaks = c(3,10,20,30,40,50,60,70),
@@ -1526,8 +979,7 @@ mask_interaction_clust5 <- mask_interaction_clust5 %>%
   )
 # cluster 5
 cluster5_mask <- ggplot() + 
-  geom_tile(data=t_interaction_df, aes(x=time,y=freq, fill=value),
-            width = time_res, height = freq_res,color=NA) +
+  geom_raster(data=t_interaction_df, aes(x=time,y=freq, fill=value)) +
   scale_fill_viridis_c(name="t-value",
                        limits = c(-4,4)
                        ) +
@@ -1538,171 +990,32 @@ cluster5_mask <- ggplot() +
                breaks = 1,
                color = "#C05936",
                linewidth=0.3) +
-  geom_tile(data = mask_interaction_df, aes(x=time,y=freq,fill = value),
-            alpha=1,
-            width = time_res, height = freq_res,color=NA)+
+  geom_raster(data = mask_interaction_df, aes(x=time,y=freq,fill = value),
+            alpha=0.5)+
   scale_fill_manual(values = c("1"=NA,
-                               "0" = "black"))+
-  geom_tile(data = mask_interaction_clust5, aes(x=time,y=freq,fill = value),
-            alpha=0.5,
-            width = time_res, height = freq_res,color=NA)+
+                               "0" = "black"),
+                    na.value= NA)+
+  geom_raster(data = mask_interaction_clust5, aes(x=time,y=freq,fill = value),
+            alpha=0.5)+
   scale_fill_manual(values = c("1"=NA,
-                               "0" = "black"))+
+                               "0" = "black"),
+                    na.value= NA)+
   labs(x = "Preparatory time (ms)", y = "Frequency (Hz)") +
   guides(fill="none")+
   scale_y_continuous(breaks = c(3,10,20,30,40,50,60,70),
                      expand = c(0,0)) +
   scale_x_continuous(expand = c(0,0))+
   paper_theme +
-  theme(plot.margin =heatmap_margin)
+  theme(plot.margin =heatmap_margin,
+    axis.line = element_line(linewidth=0.3),
+    axis.ticks = element_line(linewidth=0.3),
+    axis.text = element_text(size=5),
+    axis.title = element_text(size=6),
+    plot.title = element_text(size=6))
 
 cluster5_mask 
 ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/cluster5_mask.png",
        dpi = 700, height = 45, width = 35, units = "mm")
-
-```
-
-### P-row
-```{r}
-# load in matlab data
-corAS.ids_list <- readMat("/Volumes/Hera/Abby/AS_EEG/ERSPdata/corAS_data/prep/corAS_prep_avgtrl_ids.mat")
-VGS.ids_list <- readMat("/Volumes/Hera/Abby/AS_EEG/ERSPdata/VGS_data/prep/VGS_prep_avgtrl_ids.mat")
-clusterstats <- readMat("/Volumes/Hera/Abby/AS_EEG/ERSPdata/Cluster_stats/corASvsVGS_ersp_prep_avgtrl_prow.mat")
-clustermasks <- readMat("/Volumes/Hera/Abby/AS_EEG/ERSPdata/Cluster_stats/corASvsVGS_tfceresults_ersp_prep_avgtrl_prow.mat")
-
-# unlist variables
-times <- as.numeric(clusterstats[["times"]])
-freqs <- as.numeric(clusterstats[["freqs"]])
-t_age <- clusterstats[["tval"]][[2]]
-t_condition <- clusterstats[["tval"]][[3]]
-t_interaction <- clusterstats[["tval"]][[4]]
-mask_interaction <- clustermasks[["tfce.results"]][[3]][[3]]
-mask_age <- clustermasks[["tfce.results"]][[1]][[3]]
-mask_condition <- clustermasks[["tfce.results"]][[2]][[3]]
-enhancedt_interaction <- clustermasks[["tfce.results"]][[3]][[2]]
-enhancedt_age <- clustermasks[["tfce.results"]][[1]][[2]]
-enhancedt_condition <- clustermasks[["tfce.results"]][[2]][[2]]
-
-# plot t-values and masks from tfce
-# interaction
-t_interaction_df <- melt(t_interaction)
-colnames(t_interaction_df) <- c("freq_idx","time_idx","value")
-t_interaction_df$time <- times[t_interaction_df$time_idx]
-t_interaction_df$freq <- freqs[t_interaction_df$freq_idx]
-mask_interaction_df <- melt(mask_interaction)
-colnames(mask_interaction_df) <- c("freq_idx","time_idx","value")
-mask_interaction_df$time <- times[mask_interaction_df$time_idx]
-mask_interaction_df$freq <- freqs[mask_interaction_df$freq_idx]
-mask_interaction_df$value <- as.factor(mask_interaction_df$value)
-enhancedt_interaction_df <- melt(enhancedt_interaction)
-colnames(enhancedt_interaction_df) <- c("freq_idx","time_idx","value")
-enhancedt_interaction_df$time <- times[enhancedt_interaction_df$time_idx]
-enhancedt_interaction_df$freq <- freqs[enhancedt_interaction_df$freq_idx]
-# age
-t_age_df <- melt(t_age)
-colnames(t_age_df) <- c("freq_idx","time_idx","value")
-t_age_df$time <- times[t_age_df$time_idx]
-t_age_df$freq <- freqs[t_age_df$freq_idx]
-mask_age_df <- melt(mask_age)
-colnames(mask_age_df) <- c("freq_idx","time_idx","value")
-mask_age_df$time <- times[mask_age_df$time_idx]
-mask_age_df$freq <- freqs[mask_age_df$freq_idx]
-mask_age_df$value <- as.factor(mask_age_df$value)
-enhancedt_age_df <- melt(enhancedt_age)
-colnames(enhancedt_age_df) <- c("freq_idx","time_idx","value")
-enhancedt_age_df$time <- times[enhancedt_age_df$time_idx]
-enhancedt_age_df$freq <- freqs[enhancedt_age_df$freq_idx]
-# condition
-t_condition_df <- melt(t_condition)
-colnames(t_condition_df) <- c("freq_idx","time_idx","value")
-t_condition_df$time <- times[t_condition_df$time_idx]
-t_condition_df$freq <- freqs[t_condition_df$freq_idx]
-mask_condition_df <- melt(mask_condition)
-colnames(mask_condition_df) <- c("freq_idx","time_idx","value")
-mask_condition_df$time <- times[mask_condition_df$time_idx]
-mask_condition_df$freq <- freqs[mask_condition_df$freq_idx]
-mask_condition_df$value <- as.factor(mask_condition_df$value)
-enhancedt_condition_df <- melt(enhancedt_condition)
-colnames(enhancedt_condition_df) <- c("freq_idx","time_idx","value")
-enhancedt_condition_df$time <- times[enhancedt_condition_df$time_idx]
-enhancedt_condition_df$freq <- freqs[enhancedt_condition_df$freq_idx]
-# round grids to same precision
-t_interaction_df$time <- round(t_interaction_df$time, 4)
-mask_interaction_df$time <- round(mask_interaction_df$time, 4)
-t_interaction_df$freq <- round(t_interaction_df$freq, 4)
-mask_interaction_df$freq <- round(mask_interaction_df$freq, 4)
-
-# compute tile sizes
-time_res <- min(diff(sort(unique(t_interaction_df$time))))
-freq_res <- min(diff(sort(unique(t_interaction_df$freq))))
-
-# remove too small clusters
-mask_interaction_clean_df  <- mask_interaction_df %>%
-  mutate(
-    value = ifelse(freq < 16, 0, as.numeric(as.character(value)))
-  )
-mask_interaction_clean_df$value <- factor(mask_interaction_clean_df$value, levels = c(0,1))
-  
-# contours around clusters
-# only contour around cluster 3 and 5 and 6
-mask_interaction_clust1_5_6 <- mask_interaction_clean_df %>% mutate(
-  value = ifelse(freq >= 47 & freq <= 50.7 &
-                   time >=0 & time<=500 & value ==1, 1,
-                 ifelse(freq>=38 & freq <42.6 & time>=245 & time <=380 & value ==1,
-                        2,
-                        ifelse(freq >=16 & freq <=21 &
-                                 time>=370 & time <= 500 & value==1,
-                               3,0)))
-  )
-mask_interaction_clust1_5_6 <- mask_interaction_clust1_5_6 %>%
-  mutate(
-    clust1 = ifelse(value == 1, 1, 0),
-    clust2 = ifelse(value == 2, 1, 0),
-    clust3 = ifelse(value == 3, 1, 0)
-  )
-
-# adjust margins
-heatmap_margin <- margin(1.75,1.75,1.75,1.75,unit='mm')
-
-# mask of clusters
-mask_interaction_fig_clust1_5_6 <- ggplot() + 
-  geom_tile(data=t_interaction_df, aes(x=time,y=freq, fill=value),
-            width = time_res, height = freq_res,color=NA) +
-  scale_fill_viridis_c(name="t-value",
-                       limits = c(-4,4)) +
-  guides(fill = 'none')+
-  new_scale_fill()+
-   geom_contour(data = mask_interaction_clust1_5_6,
-               aes(x=time, y=freq,z = clust1),
-               breaks = 1,
-               color = colors_list$c3,
-               linewidth=0.5) +
-  geom_contour(data=mask_interaction_clust1_5_6 ,
-               aes(x=time, y=freq,z = clust2),
-               breaks = 1,
-               color = colors_list$c5prow ,
-               linewidth=0.5)+
-  geom_contour(data=mask_interaction_clust1_5_6 ,
-               aes(x=time, y=freq,z = clust3),
-               breaks = 1,
-               color = colors_list$c6,
-               linewidth=0.5)+
-  geom_tile(data = mask_interaction_clean_df, aes(x=time,y=freq,fill = value),
-            alpha=0.5,
-            width = time_res, height = freq_res,color=NA)+
-  scale_fill_manual(values = c("1"=NA,
-                               "0" = "black"))+
-  labs(x = "Preparatory time (ms)", y = "Frequency (Hz)") +
-  guides(fill="none")+
-  scale_y_continuous(breaks = c(3,10,20,30,40,50,60,70),
-                     expand = c(0,0)) +
-  scale_x_continuous(expand=c(0,0))+
-  paper_theme +
-  theme(plot.margin = heatmap_margin)
-
-mask_interaction_fig_clust1_5_6 
-ggsave("/Volumes/Hera/Abby/AS_EEG/paperfigs/interaction_clusters3_5_6prow.png",
-       dpi=700, width = 45, height = 105, units = "mm")
 
 ```
 
@@ -1722,18 +1035,11 @@ AS_files <- lapply(AS_filepaths, readRDS)
 
 names(AS_files)  <- tools::file_path_sans_ext(basename(AS_filepaths))
 
-# VGS interaction resutlts
-VGS_filepaths <- list.files(
-  path = resultsdir, 
-  pattern = "frowinteraction.rds$", 
-  full.names = TRUE,                    
-  recursive = FALSE,                     
-  ignore.case = TRUE                    
-)
+asersp_behav_coefs <- compile_coefs(AS_files)
 
-VGS_files <- lapply(VGS_filepaths, readRDS)
-
-names(VGS_files)  <- tools::file_path_sans_ext(basename(VGS_filepaths))
+# save coefs as table
+write.table(asersp_behav_coefs, file = "/Volumes/Hera/Abby/AS_EEG/paperfigs/tables/ASersp_frow_behav_coefs.csv",
+            col.names = T, row.names = F)
 
 cluster_behav_plot <- function(AS_modellist, 
                                VGS_modellist,
@@ -1789,7 +1095,8 @@ cluster_behav_plot <- function(AS_modellist,
                        values = c("AS" = colorslist[[cluster]],
                                               "VGS" = colorslist$vgs)) +
     figtheme +
-    theme(axis.title.x = element_blank())+
+    xlab("Condition")+
+    # theme(axis.title.x = element_blank())+
     ylab("ERSP (dB)")
   
   # --- Age trajectory plot ---
@@ -1832,7 +1139,7 @@ cluster_behav_plot <- function(AS_modellist,
       yaxis <- scale_y_continuous(limits = c(y_min, y_max), breaks = shared_breaks)
       } 
     } else {
-    yaxis <- scale_y_continuous(labels = function(x) round(x,2))
+    
   }
   
   # --- AS ---
@@ -1843,33 +1150,12 @@ cluster_behav_plot <- function(AS_modellist,
               aes(x=ersp, ymin= lower.CL, ymax = upper.CL),
               fill = colorslist[[cluster]],
               color=NA, alpha = 0.3)+ ylab(labelslist$ylabel)+
-    yaxis +
+    scale_y_continuous(labels = function(x) sprintf("%.2f",x))+
     xlab("AS ERSP (dB)")+
     figtheme 
-
-  # --- VGS ---
-  VGS_behav_plt <- ggplot()+
-    geom_line(data = VGS_predict_df, 
-              aes(x = ersp, y = emmean, color = eeg_age),
-              linewidth = lineslist$line_size) + 
-    geom_ribbon(data = VGS_predict_df,
-              aes(x = ersp, ymin = lower.CL, ymax = upper.CL, 
-                  fill = eeg_age),
-              alpha = 0.3, color = NA) +
-    scale_color_manual(name = "Age (yrs)",
-                       values = c("grey20","grey50","grey80"))+
-    scale_fill_manual(name = "Age (yrs)",
-                      values = c("grey20","grey50","grey80"))+
-    ylab(labelslist$ylabel)+
-    xlab("VGS ERSP (dB)")+
-    yaxis +
-    figtheme
-  
-  
   
   return(list(dist_plt = violin_plt, traj_plt = trajectory_plt, 
-              AS_plt = AS_behav_plt, 
-              VGS_plt = VGS_behav_plt))
+              AS_plt = AS_behav_plt))
 }
 
 corrate_c1 <- cluster_behav_plot(AS_modellist =
@@ -1919,22 +1205,25 @@ cvlat_c5 <- cluster_behav_plot(AS_modellist = AS_files$CVLatCor_corASfrowERSPclu
                    lineslist = lines_list,
                    figtheme = paper_theme,
                    labelslist = list(xlabel="Age (yrs)",
-                                     ylabel="Coefficient of variation"),
-                   share_yaxis = 1 ) 
+                                     ylabel="Coefficient of variation")) 
 
 # --- Cluster 1 (distribution/ trajectory/ correct rate/ lat var) ---
 # adjust margins (space between cluster 1 and cluster 5)
-c1_margin <- margin(0.5,1,4,1,unit='mm')
+c1_margin <- margin(0.5,1,0.5,1,unit='mm')
 
 # add large margins
 c1_dist <- corrate_c1$dist_plt +
-  theme(plot.margin = c1_margin)
+  theme(plot.margin = c1_margin,
+        axis.title.x = element_blank())
 c1_traj <- corrate_c1$traj_plt +
-  theme(plot.margin = c1_margin)
+  theme(plot.margin = c1_margin,
+        axis.title.x = element_blank())
 c1_corrate <- corrate_c1$AS_plt+
-  theme(plot.margin = c1_margin)
+  theme(plot.margin = c1_margin,
+        axis.title.x = element_blank())
 c1_cvlat <- cvlat_c1$AS_plt +
-  theme(plot.margin = c1_margin)
+  theme(plot.margin = c1_margin,
+        axis.title.x = element_blank())
 
 # Combine cluster 1
 aligned_plts <- align_plots(
@@ -1953,14 +1242,14 @@ top <- cowplot::plot_grid(aligned_plts[[1]],
           aligned_plts[[3]],
           aligned_plts[[4]],
           rel_widths =
-            c(0.2,0.2,0.3,0.3),
+            c(0.25,0.25,0.25,0.25),
           nrow =1, ncol = 4,
           labels = c("B","C","D","E"),
           label_size = 6)
 
 # --- Cluster 5 (distribution/ trajectory/ correct rate/ lat var) ---
 # adjust margins (space between cluster 1 and cluster 5)
-c5_margin <- margin(4,1,0.5,1,unit='mm')
+c5_margin <- margin(0.5,1,0.5,1,unit='mm')
 
 # add large margins
 c5_dist <- cvlat_c5$dist_plt +
@@ -1970,15 +1259,8 @@ c5_traj <- cvlat_c5$traj_plt +
 c5_corrate <- corrate_c5$AS_plt+
   theme(plot.margin = c5_margin)
 c5_cvlat <- cvlat_c5$AS_plt +
-  xlab("AS\nERSP (dB)")+
-  theme(plot.margin = margin(4,0.5,0.5,1,unit='mm'))
-VGS_plt <- cvlat_c5$VGS_plt +
-  xlab("VGS\nERSP (dB)")+
-  theme(axis.title.y = element_blank(),
-        axis.text.y = element_blank(),
-        axis.line.y = element_blank(),
-        axis.ticks.y = element_blank(),
-        plot.margin = margin(4,1,0.5,0.5,unit='mm'))
+  # xlab("AS ERSP (dB)")+
+  theme(plot.margin = c5_margin)
 
 # combine cluster 5
 aligned_plts <- align_plots(
@@ -1986,8 +1268,7 @@ aligned_plts <- align_plots(
     c5_dist,
     c5_traj,
     c5_corrate,
-    c5_cvlat,
-    VGS_plt
+    c5_cvlat
   ),
   axis = 'l',
   align = 'h'
@@ -1997,12 +1278,12 @@ bottom <- cowplot::plot_grid(aligned_plts[[1]],
           aligned_plts[[2]],
           aligned_plts[[3]],
           aligned_plts[[4]],
-          aligned_plts[[5]],
+          # aligned_plts[[5]],
           rel_widths =
-            c(0.2,0.2, 0.3,
-              0.19,0.11),
-          nrow =1, ncol = 5,
-          labels = c("F","G","H","I"),
+            c(0.25,0.25, 0.25,
+              0.25),
+          nrow =1, ncol = 4,
+          # labels = c("F","G","H","I"),
           label_y = 0.96,
           label_size = 6)
 
@@ -2029,7 +1310,7 @@ clusters_heatmap <- mask_interaction_fig_clust1_5 +
 cowplot::plot_grid(
   plotlist = list(clusters_heatmap,
                cluster1_and_5),
-  rel_widths = c(1,4),
+  rel_widths = c(2,4),
   nrow = 1,
   labels = c("A"),
           label_size = 6
@@ -2041,287 +1322,7 @@ ggsave(file.path(savedir, "full_ersp_behav_heatmap_frow.png"),
 
 ```
 
-### P-row
-```{r, echo = FALSE}
-# find rds file with results
-AS_filepaths <- list.files(
-  path = resultsdir, 
-  pattern = "corASprowERSPclusters_Effect.rds$", 
-  full.names = TRUE,                    
-  recursive = FALSE,                     
-  ignore.case = TRUE                    
-)
 
-AS_files <- lapply(AS_filepaths, readRDS)
-
-names(AS_files)  <- tools::file_path_sans_ext(basename(AS_filepaths))
-
-# VGS interaction resutlts
-VGS_filepaths <- list.files(
-  path = resultsdir, 
-  pattern = "prowinteraction.rds$", 
-  full.names = TRUE,                    
-  recursive = FALSE,                     
-  ignore.case = TRUE                    
-)
-
-VGS_files <- lapply(VGS_filepaths, readRDS)
-
-names(VGS_files)  <- tools::file_path_sans_ext(basename(VGS_filepaths))
-
-cluster_behav_plot <- function(AS_modellist, 
-                               VGS_modellist,
-                               cluster,behav, colorslist,
-                               markerslist, alphalist,
-                               lineslist, figtheme,
-                               labelslist){
-  # violin plot of ERSP distribution
-  AS_df <- AS_modellist$cleandata
-  AS_df <- AS_df %>% mutate(
-    condition = as.factor("AS"))
-  AS_df <- AS_df[,c("behav","invage","sex",cluster,"lunaid_clean","condition")]
-  colnames(AS_df) <-  c("behav","invage","sex","ersp","lunaid_clean","condition")
-  VGS_df <- VGS_modellist$cleandata 
-  VGS_df <- VGS_df %>% mutate(
-    condition = as.factor("VGS"))
-  VGS_df <- VGS_df[,c(behav,"invage",paste0("VGS_",cluster,"_ersp_interaction_prow"),"sex","lunaid_clean","condition")]
-  VGS_df <- VGS_df[, c(behav, "invage","sex",paste0("VGS_",cluster,"_ersp_interaction_prow"),"lunaid_clean","condition")]
-  colnames(VGS_df) <- c("behav","invage","sex","ersp","lunaid_clean","condition")
-  long_df <- rbind(AS_df, VGS_df)
-  
-  violin_plt <- ggplot(data=long_df, 
-                       aes(x=condition,y=ersp,color= condition))+
-    geom_jitter(alpha = 0.75, size = 0.2, 
-                position = position_jitterdodge(jitter.width = 0.25,
-                                                dodge.width = 0.75),
-                shape = 16) + 
-     stat_slab(aes(fill = condition), 
-                  adjust = 0.75,
-                  width = 0.6,
-                  justification = -0.25,
-                  color = NA,
-                  alpha = 0.75) +
-        geom_boxplot(outlier.shape = NA,
-                     width = 0.15, 
-                     color='black',
-                     fill = NA,
-                     size=0.3) +
-    scale_fill_manual(name = NULL, values = c("AS" = colorslist[[paste0(cluster,"prow")]],
-                                              "VGS" = colorslist$vgsprow)) + 
-    scale_color_manual(name = NULL, values = c("AS" = colorslist[[paste0(cluster,"prow")]],
-                                              "VGS" = colorslist$vgsprow)) +
-    figtheme + ylab("ERSP (dB)")+
-    theme(legend.position = 'none',
-          axis.title.x = element_blank())
-  # return(violin_plt)
-  
-  long_df$eeg_age <- 1/long_df$invage
-  trajectory_plt <- ggplot(data = long_df, aes(x=eeg_age, y=ersp, color = condition)) + 
-    geom_hline(yintercept = 0, linetype = 'dashed', linewidth = 0.3)+
-    geom_smooth(method='lm',formula = y~I(1/x),
-                linewidth = lineslist$line_size,se=F)+
-    scale_color_manual(name=NULL, 
-                       values = c("AS" = colorslist[[paste0(cluster,"prow")]],
-                                  "VGS" = colorslist$vgsprow))+
-    figtheme + xlab(labelslist$xlabel)+ ylab("ERSP (dB)")
-    theme(legend.position = 'none'
-          # axis.title.y = element_blank()
-          )
-  # return(trajectory_plt)
-  
-  # behavior plot
-  # AS model predictions
-  AS_predict_df <- model_prediction(model = AS_modellist$model,
-                                    predictVar = cluster,
-                                    cleandf = AS_modellist$cleandata)
-  colnames(AS_predict_df) <- c("ersp","emmean","SE","df","lower.CL","upper.CL")
-  
-  # just AS
-  AS_behav_plt <- ggplot()+
-    geom_line(data = AS_predict_df, 
-              aes(x=ersp, y=emmean),color = colorslist[[paste0(cluster,"prow")]])+
-    geom_ribbon(data = AS_predict_df, 
-              aes(x=ersp, ymin= lower.CL, ymax = upper.CL),
-              fill = colorslist[[paste0(cluster,"prow")]],
-              color=NA, alpha = 0.3)+ ylab(labelslist$ylabel)+
-    figtheme + xlab("AS ERSP (dB)")
-  
-  return(list(dist_plt = violin_plt, traj_plt = trajectory_plt, 
-         AS_plt = AS_behav_plt))
-}
-
-cvlat_c3 <- cluster_behav_plot(AS_modellist =
-                                   AS_files$CVLatCor_corASprowERSPclusters_Effect,
-                   VGS_modellist = VGS_files$CVLatVar_VGSc3prowinteraction,
-                   cluster = "c3",
-                   behav = "CVLatCor",
-                   colorslist = colors_list,
-                   markerslist = markers_list,
-                   alphalist = alpha_list,
-                   lineslist = lines_list,
-                   figtheme = paper_theme,
-                   labelslist = list(xlabel="Age (yrs)",
-                                     ylabel="Coefficient of variation")) 
-
-cvlat_c5 <- cluster_behav_plot(AS_modellist =
-                                   AS_files$CVLatCor_corASprowERSPclusters_Effect,
-                   VGS_modellist = VGS_files$CVLatVar_VGSc5prowinteraction,
-                   cluster = "c5",
-                   behav = "CVLatCor",
-                   colorslist = colors_list,
-                   markerslist = markers_list,
-                   alphalist = alpha_list,
-                   lineslist = lines_list,
-                   figtheme = paper_theme,
-                   labelslist = list(xlabel="Age (yrs)",
-                                     ylabel="Coefficient of variation")) 
-
-cvlat_c6 <- cluster_behav_plot(AS_modellist =
-                                   AS_files$CVLatCor_corASprowERSPclusters_Effect,
-                   VGS_modellist = VGS_files$CVLatVar_VGSc6prowinteraction,
-                   cluster = "c6",
-                   behav = "CVLatCor",
-                   colorslist = colors_list,
-                   markerslist = markers_list,
-                   alphalist = alpha_list,
-                   lineslist = lines_list,
-                   figtheme = paper_theme,
-                   labelslist = list(xlabel="Age (yrs)",
-                                     ylabel="Coefficient of variation")) 
-
-
-# --- Cluster 3 (distribution/ trajectory/ correct rate/ lat var) ---
-# adjust margins (space between cluster 3 and cluster 5)
-c3_margin <- margin(0.5,1,2,1,unit='mm')
-
-# add large margins
-c3_dist <- cvlat_c3$dist_plt +
-  theme(plot.margin = c1_margin)
-c3_traj <- cvlat_c3$traj_plt +
-  theme(plot.margin = c1_margin)
-c3_cvlat <- cvlat_c3$AS_plt +
-  theme(plot.margin = c3_margin)
-
-# Combine cluster 3
-aligned_plts <- align_plots(
-  plotlist = list(
-    c3_dist,
-    c3_traj,
-    c3_cvlat
-  ),
-  axis = 'l',
-  align = 'h'
-)
-
-top <- cowplot::plot_grid(aligned_plts[[1]],
-          aligned_plts[[2]],
-          aligned_plts[[3]],
-          rel_widths =
-            c(0.3,0.3,0.4),
-          nrow =1, ncol = 3,
-          labels = c("B","C","D"),
-          label_size = 6)
-
-# --- Cluster 5 (distribution/ trajectory/ correct rate/ lat var) ---
-# adjust margins (space between cluster 1 and cluster 5)
-c5_margin <- margin(2,1,2,1,unit='mm')
-
-# add large margins
-c5_dist <- cvlat_c5$dist_plt +
-  theme(plot.margin = c5_margin)
-c5_traj <- cvlat_c5$traj_plt +
-  theme(plot.margin = c5_margin)
-c5_cvlat <- cvlat_c5$AS_plt 
-
-# combine cluster 5
-aligned_plts <- align_plots(
-  plotlist = list(
-    c5_dist,
-    c5_traj,
-    c5_cvlat
-  ),
-  axis = 'l',
-  align = 'h'
-)
-
-middle <- cowplot::plot_grid(aligned_plts[[1]],
-          aligned_plts[[2]],
-          aligned_plts[[3]],
-          rel_widths =
-            c(0.3,0.3,0.4),
-          nrow =1, ncol = 3,
-          labels = c("E","F","G"),
-          label_y = 0.98,
-          label_size = 6)
-
-# --- Cluster 6 (distribution/ trajectory/ correct rate/ lat var) ---
-# adjust margins (space between cluster 5 and cluster 6)
-c6_margin <- margin(2,1,0.5,1,unit='mm')
-
-# add large margins
-c6_dist <- cvlat_c6$dist_plt +
-  theme(plot.margin = c6_margin)
-c6_traj <- cvlat_c6$traj_plt +
-  theme(plot.margin = c6_margin)
-c6_cvlat <- cvlat_c6$AS_plt 
-
-# combine cluster 6
-aligned_plts <- align_plots(
-  plotlist = list(
-    c6_dist,
-    c6_traj,
-    c6_cvlat
-  ),
-  axis = 'l',
-  align = 'h'
-)
-
-bottom <- cowplot::plot_grid(aligned_plts[[1]],
-          aligned_plts[[2]],
-          aligned_plts[[3]],
-          rel_widths =
-            c(0.3,0.3,0.4),
-          nrow =1, ncol = 3,
-          labels = c("H","I","J"),
-          label_y = 0.98,
-          label_size = 6)
-
-# --- Combine cluster 1, 5, and 6 ---
-combined <- align_plots(
-  plotlist = list(top,
-                  middle,
-                  bottom),
-  align = 'v',
-  axis = 'l'
-)
-
-cluster1_5_and_6 <- cowplot::plot_grid(
-  combined[[1]],
-  combined[[2]],
-  combined[[3]],
-  # rel_heights = c(1,1.5,1),
-  nrow=3
-  )
-
-# adjust margins and x-axis of heatmap to fit
-clusters_heatmap <- mask_interaction_fig_clust1_5_6 + 
-  theme(plot.margin = margin(1.5,8,
-                             1.5,1.5,unit='mm')) +
-  scale_x_continuous(breaks = c(0,250,500), expand = c(0,0))
-
-cowplot::plot_grid(
-  plotlist = list(clusters_heatmap,
-               cluster1_5_and_6),
-  rel_widths = c(1,3),
-  nrow = 1,
-  labels = c("A"),
-          label_size = 6
-)
-
-ggsave(file.path(savedir, "full_ersp_behav_heatmap_prow.png"),
-       dpi = 600, units = 'mm', width = 180, height = 150)
-
-```
 
 # Spon/Evo ~ Age*ERSP
 ## F-row
@@ -2349,6 +1350,10 @@ sponevo_ersp_frow_coefs <- sponevo_ersp_frow_coefs %>%
   mutate(
     p_fdr = p.adjust(`Pr(>|t|)`, method = 'fdr')
   ) %>% ungroup()
+
+# save coefs as table
+write.table(sponevo_ersp_frow_coefs, file = "/Volumes/Hera/Abby/AS_EEG/paperfigs/tables/sponevo_ersp_frow_coefs.csv",
+            col.names = T, row.names = F)
 
 sponevo_ersp_interaction_plot <- function(modellist,colorslist,
                                     task,powertype,
@@ -2386,25 +1391,33 @@ sponevo_ersp_interaction_plot <- function(modellist,colorslist,
   # print(plt)
   
   # Johnson-Neyman plot
-  recip_trans <- scales::trans_new(
+  recip_trans <- scales::new_transform(
     name      = "recip",
     transform = function(x) 1/x,
     inverse   = function(x) 1/x
     )
-  jn_out  <- johnson_neyman(modellist$model,
-                            pred        = ersp,
-                            modx        = invage,
-                            insig.color = "grey50",
-                            sig.color   = colorslist[[cluster]],
-                            line.thickness = 0.6)
-  jn_out$plot@layers$geom_segment <- NULL
+  jn_out  <- interactions::johnson_neyman(
+    modellist$model,
+    pred = ersp,
+    modx = invage,
+    insig.color = "grey50",
+    sig.color   = unname(colorslist[[cluster]]),
+    line.thickness = 0.6)
+  
+  # jn_out$plot$layers has the geom_x for the ggplot() 
+  # layer 8 is the thick solid black line indicating range of observed values
+  jn_out$plot$layers[[8]] <- NULL
+  
+  # x axis break points
+  age_breaks <- c(10,20,30)
+  
+  # jn_out$plot@layers$geom_segment <- NULL
   jn_plt <- jn_out$plot + 
     scale_x_continuous(name   = "Age (yrs)",
-                       trans  = recip_trans,
-                       labels = c(10, 20, 30),
-                       breaks = c(1/10, 1/20, 1/30),
-                       limits = c(min(modellist$cleandata$invage),
-                                  max(modellist$cleandata$invage))) +
+                       transform  = recip_trans,
+                       labels = age_breaks,
+                       breaks = 1 / age_breaks,
+                       limits = rev(range(modellist$cleandata$invage))) +
     ylab(labelslist$jnlabel) +
     figtheme +
     theme(legend.position = 'none',
@@ -2486,7 +1499,7 @@ cluster5_sponevo <- cowplot::plot_grid(
   aligned_plts[[2]],
   aligned_plts[[3]],
   aligned_plts[[4]],
-  labels = c("B","C","D","E"),
+  labels = c("B","C"),
   label_size = 6,
   rel_widths = c(1.25,1),
   nrow = 2, ncol = 2
@@ -2505,7 +1518,6 @@ cowplot::plot_grid(
 ggsave(file.path(savedir, "sponevo_c5ersp_frow.png"),
        dpi = 600, units = 'mm', width = 180, height = 90, bg = 'transparent')
 
-
 ### --- Full AS figure cluster 1 ---
 aligned_plts <- align_plots(
   plotlist = list(
@@ -2518,7 +1530,7 @@ aligned_plts <- align_plots(
 cluster1_sponevo <- cowplot::plot_grid(
   aligned_plts[[1]],
   aligned_plts[[2]],
-  labels = c("B","C"),
+  labels = c("B"),
   label_size = 6,
   nrow = 2, ncol = 1
 )
@@ -2531,874 +1543,12 @@ cowplot::plot_grid(
   cluster1_heatmap,
   cluster1_sponevo,
   labels = c("A"),label_size = 6,
-  rel_widths = c(1,1), nrow=1
+  rel_widths = c(1,1.5), nrow=1
 )
 ggsave(file.path(savedir, "sponevo_c1ersp_frow.png"),
-       dpi = 600, units = 'mm', width = 120, height = 90, bg = 'transparent')
-
-```
-
-## P-row
-```{r, echo =FALSE, warning = FALSE, results = 'hide', message=FALSE}
-# find rds file with results
-filepaths <- list.files(
-  path = resultsdir, 
-  pattern = "_cluster\\d+ERSPprow_Effect.rds$", 
-  full.names = TRUE,                    
-  recursive = FALSE,                     
-  ignore.case = TRUE                    
-)
-files <- lapply(filepaths, readRDS)
-names(files)  <- tools::file_path_sans_ext(basename(filepaths))
-
-# compile all results into one data frame
-sponevo_ersp_prow_coefs <- compile_coefs(files)
-
-# adjust p-values
-sponevo_ersp_prow_coefs <- sponevo_ersp_prow_coefs %>%
-  group_by(term) %>%
-  mutate(
-    p_fdr = p.adjust(`Pr(>|t|)`, method = 'fdr')
-  ) %>% ungroup()
-
-sponevo_ersp_interaction_plot <- function(modellist,colorslist,
-                                    task,powertype,
-                                    cluster,
-                                    markerslist, alphalist,
-                                    lineslist, figtheme,
-                                    labelslist){
-  if (powertype == "spon"){
-    COLOR_interaction <- c("#231631","#67428F","#A585C7")
-  } else if (powertype == "evo"){
-    COLOR_interaction <- c("#132E34","#388599","#88C4D3")
-  }
-  
-  # predict responses
-  predict_df <- model_prediction(model = modellist$model,
-                                 predictVar = "ersp",
-                                 groupVar = "invage",
-                                 cleandf = modellist$cleandata)
-  predict_df$eeg_age <- as.factor(round(1/predict_df$invage))
-  
-  plt <- ggplot() + 
-    # geom_point(data = modellist$cleandata, 
-    #            aes(x=ersp,y=power),
-    #            alpha = alphalist$alpha_marker,
-    #            shape = markerslist$marker_shape,
-    #            size = markerslist$marker_size,
-    #            color = colorslist[[powertype]])+
-    # geom_line(data = modellist$cleandata,
-    #           aes(x=ersp, y=power,
-    #               group = lunaid_clean),
-    #           alpha = alphalist$alpha_lunaid,
-    #           linewidth = lineslist$lunaid_size,
-    #           color = colorslist[[powertype]])+
-    geom_line(data = predict_df, 
-              aes(x=ersp, y=emmean, color = eeg_age),
-              linewidth = lineslist$line_size)+
-    geom_ribbon(data = predict_df, 
-                aes(x=ersp, ymin = lower.CL, ymax = upper.CL,
-                    fill = eeg_age),
-                color=NA, alpha = alphalist$alpha_ribbon)+
-    scale_color_manual(name = "Age (yrs)",
-                       values = COLOR_interaction)+
-    scale_fill_manual(name = "Age (yrs)",
-                      values = COLOR_interaction)+
-    ylab(labelslist$ylabel)+xlab(labelslist$xlabel)+
-    figtheme
-  # print(plt)
-  
-  # Johnson-Neyman plot
-  recip_trans <- scales::trans_new(
-    name      = "recip",
-    transform = function(x) 1/x,
-    inverse   = function(x) 1/x
-    )
-  jn_out  <- johnson_neyman(modellist$model,
-                            pred        = ersp,
-                            modx        = invage,
-                            insig.color = "grey50",
-                            sig.color   = colorslist[[cluster]],
-                            line.thickness = 0.6)
-  jn_out$plot@layers$geom_segment <- NULL
-  jn_plt <- jn_out$plot + 
-    scale_x_continuous(name   = "Age (yrs)",
-                       trans  = recip_trans,
-                       labels = c(10, 20, 30),
-                       breaks = c(1/10, 1/20, 1/30),
-                       limits = c(min(modellist$cleandata$invage),
-                                  max(modellist$cleandata$invage))) +
-    ylab("Slope of ERSP on power") +
-    figtheme +
-    theme(legend.position = 'none',
-          plot.title = element_blank())
-  # print(jn_plt)
-  
-  return(list(main_plot = plt, jn_plot = jn_plt, jn_bounds = jn_out$bounds))
-}
-
-# AS spontaneous power and clusters
-ASsponc3 <- sponevo_ersp_interaction_plot(
-  modellist =files$corASsponPower_cluster3ERSPprow_Effect,
-  colorslist = colors_list,
-  task = 'AS',powertype = 'spon',
-  cluster = "c3",
-  markerslist = markers_list,
-  alphalist = alpha_list,
-  lineslist = lines_list,
-  figtheme = paper_theme,
-  labelslist = list(xlabel = "ERSP (dB)",
-                    ylabel = "Power (dB)"))
-ASsponc3$main_plot + theme(legend.position = 'none')+
-  ASsponc3$jn_plot + 
-  plot_layout(ncol=2)
-
-ASsponc5 <- sponevo_ersp_interaction_plot(modellist =
-                                files$corASsponPower_cluster5ERSPprow_Effect,
-                              colorslist = colors_list,
-                              task = 'AS',powertype = 'spon',
-                              cluster = "c5",
-                              markerslist = markers_list,
-                              alphalist = alpha_list,
-                              lineslist = lines_list,
-                              figtheme = paper_theme,
-                              labelslist = list(xlabel = "ERSP (dB)",
-                                                ylabel = "Power (dB)"))
-ASsponc5$main_plot + theme(legend.position = 'none')+
-  ASsponc5$jn_plot + 
-  plot_layout(ncol=2)
-
-ASsponc6 <- sponevo_ersp_interaction_plot(modellist =
-                                files$corASsponPower_cluster6ERSPprow_Effect,
-                              colorslist = colors_list,
-                              task = 'AS',powertype = 'spon',
-                              cluster = "c6",
-                              markerslist = markers_list,
-                              alphalist = alpha_list,
-                              lineslist = lines_list,
-                              figtheme = paper_theme,
-                              labelslist = list(xlabel = "ERSP (dB)",
-                                                ylabel = "Power (dB)"))
-ASsponc6$main_plot + theme(legend.position = 'none')+
-  ASsponc6$jn_plot + 
-  plot_layout(ncol=2)
-
-# AS evoked power and clusters
-ASevoc3 <- sponevo_ersp_interaction_plot(
-  modellist =files$corASevoPower_cluster3ERSPprow_Effect,
-  colorslist = colors_list,
-  task = 'AS',powertype = 'evo',
-  cluster = "c3",
-  markerslist = markers_list,
-  alphalist = alpha_list,
-  lineslist = lines_list,
-  figtheme = paper_theme,
-  labelslist = list(xlabel = "ERSP (dB)",
-                    ylabel = "Power (dB)"))
-ASevoc3$main_plot + theme(legend.position = 'none')+
-  ASevoc1$jn_plot + 
-  plot_layout(ncol=2)
-
-ASevoc5 <- sponevo_ersp_interaction_plot(modellist =
-                                files$corASevoPower_cluster5ERSPprow_Effect,
-                              colorslist = colors_list,
-                              task = 'AS',powertype = 'evo',
-                              cluster = "c5",
-                              markerslist = markers_list,
-                              alphalist = alpha_list,
-                              lineslist = lines_list,
-                              figtheme = paper_theme,
-                              labelslist = list(xlabel = "ERSP (dB)",
-                                                ylabel = "Power (dB)"))
-ASevoc5$main_plot + theme(legend.position = 'none')+
-  ASevoc5$jn_plot + 
-  plot_layout(ncol=2)
-
-ASevoc6 <- sponevo_ersp_interaction_plot(modellist =
-                                files$corASevoPower_cluster6ERSPprow_Effect,
-                              colorslist = colors_list,
-                              task = 'AS',powertype = 'evo',
-                              cluster = "c6",
-                              markerslist = markers_list,
-                              alphalist = alpha_list,
-                              lineslist = lines_list,
-                              figtheme = paper_theme,
-                              labelslist = list(xlabel = "ERSP (dB)",
-                                                ylabel = "Power (dB)"))
-ASevoc6$main_plot + theme(legend.position = 'none')+
-  ASevoc6$jn_plot + 
-  plot_layout(ncol=2)
-
-# VGS spontaneous power and clusters
-VGSsponc3 <- sponevo_ersp_interaction_plot(
-  modellist =files$VGSsponPower_cluster3ERSPprow_Effect,
-  colorslist = colors_list,
-  task = 'VGS',powertype = 'spon',
-  cluster = "c3",
-  markerslist = markers_list,
-  alphalist = alpha_list,
-  lineslist = lines_list,
-  figtheme = paper_theme,
-  labelslist = list(xlabel = "ERSP (dB)",
-                    ylabel = "Power (dB)"))
-VGSsponc3$main_plot + theme(legend.position = 'none')+
-  VGSsponc3$jn_plot + 
-  plot_layout(ncol=2)
-
-VGSsponc5 <- sponevo_ersp_interaction_plot(modellist =
-                                files$VGSsponPower_cluster5ERSPprow_Effect,
-                              colorslist = colors_list,
-                              task = 'VGS',powertype = 'spon',
-                              cluster = "c5",
-                              markerslist = markers_list,
-                              alphalist = alpha_list,
-                              lineslist = lines_list,
-                              figtheme = paper_theme,
-                              labelslist = list(xlabel = "ERSP (dB)",
-                                                ylabel = "Power (dB)"))
-VGSsponc5$main_plot + theme(legend.position = 'none')+
-  VGSsponc5$jn_plot + 
-  plot_layout(ncol=2)
-
-VGSsponc6 <- sponevo_ersp_interaction_plot(modellist =
-                                files$VGSsponPower_cluster6ERSPprow_Effect,
-                              colorslist = colors_list,
-                              task = 'VGS',powertype = 'spon',
-                              cluster = "c6",
-                              markerslist = markers_list,
-                              alphalist = alpha_list,
-                              lineslist = lines_list,
-                              figtheme = paper_theme,
-                              labelslist = list(xlabel = "ERSP (dB)",
-                                                ylabel = "Power (dB)"))
-VGSsponc6$main_plot + theme(legend.position = 'none')+
-  VGSsponc6$jn_plot + 
-  plot_layout(ncol=2)
-
-
-```
-
-# Raw ERSP + TFCE method maps
-## F-row
-### Heat-maps
-```{r}
-corAS.ids_list <- readMat("/Volumes/Hera/Abby/AS_EEG/ERSPdata/corAS_data/prep/corAS_prep_avgtrl_ids.mat")
-VGS.ids_list <- readMat("/Volumes/Hera/Abby/AS_EEG/ERSPdata/VGS_data/prep/VGS_prep_avgtrl_ids.mat")
-corASersp.list <- readMat("/Volumes/Hera/Abby/AS_EEG/ERSPdata/corAS_data/prep/corAS_prep_avgtrl_frow_ersp.mat")
-VGSersp.list <- readMat("/Volumes/Hera/Abby/AS_EEG/ERSPdata/VGS_data/prep/VGS_prep_avgtrl_frow_ersp.mat")
-
-# unlist variables
-times <- as.numeric(corASersp.list[["times"]])
-freqs <- as.numeric(corASersp.list[["freqs"]])
-corASersp_all <- corASersp.list[["avg.ersp"]]
-VGSersp <- VGSersp.list[["avg.ersp"]]
-corASids <- corAS.ids_list[["idmat"]]
-
-# remove non-viable from AS ersp
-viable_idx <- corASids[,4] == 1
-corASersp <- corASersp_all[viable_idx, , ]
-
-# average across people
-avgcorASersp <- apply(corASersp, c(2,3), mean, na.rm=T)
-avgVGSersp <- apply(VGSersp, c(2,3), mean, na.rm=T)
-
-# convert to data frames for plotting
-corASersp_df <- melt(avgcorASersp)
-colnames(corASersp_df) <- c("freq_idx","time_idx","value")
-corASersp_df$time <- times[corASersp_df$time_idx]
-corASersp_df$freq <- freqs[corASersp_df$freq_idx]
-
-VGSersp_df <- melt(avgVGSersp)
-colnames(VGSersp_df) <- c("freq_idx","time_idx","value")
-VGSersp_df$time <- times[VGSersp_df$time_idx]
-VGSersp_df$freq <- freqs[VGSersp_df$freq_idx]
-
-# compute tile sizes
-time_res <- min(diff(sort(unique(corASersp_df$time))))
-freq_res <- min(diff(sort(unique(corASersp_df$freq))))
-
-# --- Raw ERSP ---
-ASersp_plt <- ggplot(data = corASersp_df, aes(x=time, y=freq, fill = value)) +
-  geom_raster() +
-  scale_fill_viridis_c(name="ERSP (dB)",
-                       limits = c(-0.8,0.8)) +
-  scale_x_continuous(breaks = c(0,250,500), expand = c(0,0))+
-  scale_y_continuous(breaks = c(3,10,20,30,40,50,60,70),expand = c(0,0))+
-  xlab("Preparatory time (ms)") + ylab("Frequency (dB)")+
-  theme_classic() + 
-  theme(
-    axis.line = element_line(linewidth=0.3),
-    axis.ticks = element_line(linewidth=0.3),
-    axis.text = element_text(size=5),
-    axis.title = element_text(size=6),
-    plot.title = element_text(size=6),
-    legend.background = element_rect(fill = 'transparent',color = NULL),
-    legend.key.height = unit(4,'mm'),
-    legend.key.width = unit(5,'mm'),
-    legend.title = element_text(size=7),
-    legend.text = element_text(size = 6),
-    plot.margin = margin(1, 1.75, 1.5, 1.5, unit='mm'),
-    plot.background = element_rect(fill='transparent',
-                                   color = NA),
-    panel.background = element_rect(fill='transparent',
-                                    color=NA),
-    plot.tag = element_text(size=6,face='bold'),
-    strip.background = element_rect(fill = 'transparent',
-                                    color=NA),
-    strip.text = element_text(size = 6)
-  )
-
-VGSersp_plt <- ggplot(data = VGSersp_df, aes(x=time, y=freq, fill = value)) +
-  geom_raster() +
-  scale_fill_viridis_c(name="ERSP (dB)",
-                       limits = c(-0.8,0.8)) +
-  scale_x_continuous(breaks = c(0,250,500), expand = c(0,0))+
-  scale_y_continuous(breaks = c(3,10,20,30,40,50,60,70),expand = c(0,0))+
-  xlab("Preparatory time (ms)") + ylab("Frequency (dB)")+
-  paper_theme +
-  theme(axis.text = element_text(size=5),
-    axis.title = element_text(size=6),
-    plot.title = element_text(size=6),
-    plot.margin = margin(0.5, 1.75, 1.5, 1.5, unit='mm'))
-
-# save legend
-ersp_legend <- get_legend(ASersp_plt)
-ggsave(file.path(savedir,"ersp_legend.png"), ersp_legend, width  = 15, height = 30, units = 'mm',
-       dpi = 600, bg = 'transparent')
-
-# save AS and VGS ersp plots together
-AS <- ASersp_plt + theme(legend.position = 'none',
-                         axis.title.x = element_blank())
-VGS <- VGSersp_plt + theme(plot.margin = margin(1, 1.75, 1.5, 1.5, unit='mm'))
-aligned_plts <- align_plots(plotlist = list(AS, VGS),
-                            align = 'v', axis = 'l')
-plot_grid(aligned_plts[[1]],
-          aligned_plts[[2]],
-          nrow = 2
-          )
-ggsave(file.path(savedir,"ersp_frow.png"), height = 60, width = 30, units = 'mm',
-       dpi = 600, bg = 'transparent')
-
-# load in TFCE stats (t-values, enhanced t-values and masks)
-clusterstats <- readMat("/Volumes/Hera/Abby/AS_EEG/ERSPdata/Cluster_stats/corASvsVGS_ersp_prep_avgtrl_frow.mat")
-clustermasks <- readMat("/Volumes/Hera/Abby/AS_EEG/ERSPdata/Cluster_stats/corASvsVGS_tfceresults_ersp_prep_avgtrl_frow.mat")
-
-# unlist variables
-t_age <- clusterstats[["tval"]][[2]]
-t_condition <- clusterstats[["tval"]][[3]]
-t_interaction <- clusterstats[["tval"]][[4]]
-mask_interaction <- clustermasks[["tfce.results"]][[3]][[3]]
-mask_age <- clustermasks[["tfce.results"]][[1]][[3]]
-mask_condition <- clustermasks[["tfce.results"]][[2]][[3]]
-enhancedt_interaction <- clustermasks[["tfce.results"]][[3]][[1]]
-enhancedt_age <- clustermasks[["tfce.results"]][[1]][[1]]
-enhancedt_condition <- clustermasks[["tfce.results"]][[2]][[1]]
-
-# plot t-values and masks from tfce
-# interaction
-t_interaction_df <- melt(t_interaction)
-colnames(t_interaction_df) <- c("freq_idx","time_idx","value")
-t_interaction_df$time <- times[t_interaction_df$time_idx]
-t_interaction_df$freq <- freqs[t_interaction_df$freq_idx]
-mask_interaction_df <- melt(mask_interaction)
-colnames(mask_interaction_df) <- c("freq_idx","time_idx","value")
-mask_interaction_df$time <- times[mask_interaction_df$time_idx]
-mask_interaction_df$freq <- freqs[mask_interaction_df$freq_idx]
-mask_interaction_df$value <- as.factor(mask_interaction_df$value)
-enhancedt_interaction_df <- melt(enhancedt_interaction)
-colnames(enhancedt_interaction_df) <- c("freq_idx","time_idx","value")
-enhancedt_interaction_df$time <- times[enhancedt_interaction_df$time_idx]
-enhancedt_interaction_df$freq <- freqs[enhancedt_interaction_df$freq_idx]
-null_interaction_df <- melt(clustermasks[["tfce.results"]][[3]][[2]])
-colnames(null_interaction_df) <- c("freq_idx","time_idx","value")
-null_interaction_df$time <- times[null_interaction_df$time_idx]
-null_interaction_df$freq <- freqs[null_interaction_df$freq_idx]
-
-# age
-t_age_df <- melt(t_age)
-colnames(t_age_df) <- c("freq_idx","time_idx","value")
-t_age_df$time <- times[t_age_df$time_idx]
-t_age_df$freq <- freqs[t_age_df$freq_idx]
-mask_age_df <- melt(mask_age)
-colnames(mask_age_df) <- c("freq_idx","time_idx","value")
-mask_age_df$time <- times[mask_age_df$time_idx]
-mask_age_df$freq <- freqs[mask_age_df$freq_idx]
-mask_age_df$value <- as.factor(mask_age_df$value)
-enhancedt_age_df <- melt(enhancedt_age)
-colnames(enhancedt_age_df) <- c("freq_idx","time_idx","value")
-enhancedt_age_df$time <- times[enhancedt_age_df$time_idx]
-enhancedt_age_df$freq <- freqs[enhancedt_age_df$freq_idx]
-null_age_df <- melt(clustermasks[["tfce.results"]][[1]][[2]])
-colnames(null_age_df) <- c("freq_idx","time_idx","value")
-null_age_df$time <- times[null_age_df$time_idx]
-null_age_df$freq <- freqs[null_age_df$freq_idx]
-
-# condition
-t_condition_df <- melt(t_condition)
-colnames(t_condition_df) <- c("freq_idx","time_idx","value")
-t_condition_df$time <- times[t_condition_df$time_idx]
-t_condition_df$freq <- freqs[t_condition_df$freq_idx]
-mask_condition_df <- melt(mask_condition)
-colnames(mask_condition_df) <- c("freq_idx","time_idx","value")
-mask_condition_df$time <- times[mask_condition_df$time_idx]
-mask_condition_df$freq <- freqs[mask_condition_df$freq_idx]
-mask_condition_df$value <- as.factor(mask_condition_df$value)
-enhancedt_condition_df <- melt(enhancedt_condition)
-colnames(enhancedt_condition_df) <- c("freq_idx","time_idx","value")
-enhancedt_condition_df$time <- times[enhancedt_condition_df$time_idx]
-enhancedt_condition_df$freq <- freqs[enhancedt_condition_df$freq_idx]
-null_condition_df <- melt(clustermasks[["tfce.results"]][[2]][[2]])
-colnames(null_condition_df) <- c("freq_idx","time_idx","value")
-null_condition_df$time <- times[null_condition_df$time_idx]
-null_condition_df$freq <- freqs[null_condition_df$freq_idx]
-
-```
-
-### save themes
-```{r}
-age_theme <- theme_classic() + 
-  theme(
-    axis.line = element_line(linewidth=0.3),
-    axis.ticks = element_line(linewidth=0.3),
-     axis.text = element_text(size=5),
-    axis.title = element_text(size=6),
-    plot.title = element_text(size=6),
-    legend.background = element_rect(fill = 'transparent',color = NULL),
-    legend.key.height = unit(4,'mm'),
-    legend.key.width = unit(5,'mm'),
-    legend.title = element_text(size=7),
-    legend.text = element_text(size = 6),
-    plot.margin = margin(1, 1, 1.5, 1.5, unit='mm'),
-    plot.background = element_rect(fill='transparent',
-                                   color = NA),
-    panel.background = element_rect(fill='transparent',
-                                    color=NA),
-    plot.tag = element_text(size=6,face='bold'),
-    strip.background = element_rect(fill = 'transparent',
-                                    color=NA),
-    strip.text = element_text(size = 6)
-  )
-
-condition_theme <- theme_classic() + 
-  theme(
-    axis.line = element_line(linewidth=0.3),
-    axis.ticks = element_line(linewidth=0.3),
-     axis.text = element_text(size=5),
-    axis.title = element_text(size=6),
-    plot.title = element_text(size=6),
-    legend.background = element_rect(fill = 'transparent',color = NULL),
-    legend.key.height = unit(4,'mm'),
-    legend.key.width = unit(5,'mm'),
-    legend.title = element_text(size=7),
-    legend.text = element_text(size = 6),
-    plot.margin = margin(1, 1, 1.5, 1, unit='mm'),
-    plot.background = element_rect(fill='transparent',
-                                   color = NA),
-    panel.background = element_rect(fill='transparent',
-                                    color=NA),
-    plot.tag = element_text(size=6,face='bold'),
-    strip.background = element_rect(fill = 'transparent',
-                                    color=NA),
-    strip.text = element_text(size = 6)
-  )
-
-interaction_theme <- theme_classic() + 
-  theme(
-    axis.line = element_line(linewidth=0.3),
-    axis.ticks = element_line(linewidth=0.3),
-    axis.text = element_text(size=5),
-    axis.title = element_text(size=6),
-    plot.title = element_text(size=6),
-    legend.background = element_rect(fill = 'transparent',color = NULL),
-    legend.key.height = unit(4,'mm'),
-    legend.key.width = unit(5,'mm'),
-    legend.title = element_text(size=7),
-    legend.text = element_text(size = 6),
-    plot.margin = margin(1, 1.5, 1.5, 1, unit='mm'),
-    plot.background = element_rect(fill='transparent',
-                                   color = NA),
-    panel.background = element_rect(fill='transparent',
-                                    color=NA),
-    plot.tag = element_text(size=6,face='bold'),
-    strip.background = element_rect(fill = 'transparent',
-                                    color=NA),
-    strip.text = element_text(size = 6)
-  )
+       dpi = 600, units = 'mm', width = 90, height = 90, bg = 'transparent')
 
 ```
 
 
-### t-values
-```{r}
- 
-# --- Raw- t-values ---
-age_tval_plt <- ggplot(data = t_age_df, aes(x=time, y=freq, fill = value)) +
-  geom_raster() +
-  scale_fill_viridis_c(name="t-value",
-                       limits = c(-4,4)) +
-  scale_x_continuous(breaks = c(0,250,500), expand = c(0,0))+
-  scale_y_continuous(breaks = c(3,35,70),expand = c(0,0))+
-  xlab("Preparatory time (ms)") + ylab("Frequency (dB)")+
-  age_theme
-  
-
-condition_tval_plt <- ggplot(data = t_condition_df, aes(x=time, y=freq, fill = value)) +
-  geom_raster() +
-  scale_fill_viridis_c(name="t-value",
-                       limits = c(-4,4)) +
-  scale_x_continuous(breaks = c(0,250,500), expand = c(0,0))+
-  scale_y_continuous(breaks = c(3,35,70),expand = c(0,0))+
-  xlab("Preparatory time (ms)") + ylab("Frequency (dB)")+
-  condition_theme
-
-interaction_tval_plt <- ggplot(data = t_interaction_df, aes(x=time, y=freq, fill = value)) +
-  geom_raster() +
-  scale_fill_viridis_c(name="t-value",
-                       limits = c(-4,4)) +
-  scale_x_continuous(breaks = c(0,250,500), expand = c(0,0))+
-  scale_y_continuous(breaks = c(3,35,70),expand = c(0,0))+
-  xlab("Preparatory time (ms)") + ylab("Frequency (dB)")+
-  interaction_theme
-  
-# save legend
-tval_legend <- get_legend(interaction_tval_plt)
-ggsave(file.path(savedir,"tval_legend.png"),tval_legend, width = 15, height = 30, units = 'mm',
-       dpi = 600, bg = 'transparent')
-
-age <- age_tval_plt + theme(legend.position = 'none',
-                            axis.title.x = element_blank()) +
-  ggtitle("Inverse age")
-
-condition <- condition_tval_plt  + theme(legend.position = 'none',
-                            axis.title.y = element_blank(),
-                            axis.text.y=element_blank()) +
-  ggtitle("Condition")
-
-interaction <- interaction_tval_plt  + theme(legend.position = 'none',
-                            axis.title = element_blank(),
-                            axis.text.y = element_blank()) +
-  ggtitle("Interaction")
-
-aligned_plts <- align_plots(
-  plotlist = list(age,condition,interaction),
-  align = 'h', axis = 'tb'
-)
-plot_grid(aligned_plts[[1]],
-          aligned_plts[[2]],
-          aligned_plts[[3]],
-          nrow=1, 
-          rel_widths = c(1.3,1,1))
-ggsave(file.path(savedir, "tval_frow_heatmap.png"), width = 65, height = 30, units = 'mm',
-       dpi = 600, bg = 'transparent')
-```
-
-
-### Enhanced t-values
-```{r}
-# --- Enhanced t-values ---
-age_entval_plt <- ggplot(data = enhancedt_age_df, aes(x=time, y=freq, fill = value)) +
-  geom_raster() +
-  scale_fill_viridis_c(name="Enhanced\nt-value",
-                       limits = c(0,300)) +
-  scale_x_continuous(breaks = c(0,250,500), expand = c(0,0))+
-  scale_y_continuous(breaks = c(3,35,70),expand = c(0,0))+
-  xlab("Preparatory time (ms)") + ylab("Frequency (dB)")+
-  age_theme
-
-condition_entval_plt <- ggplot(data = enhancedt_condition_df, aes(x=time, y=freq, fill = value)) +
-  geom_raster() +
-  scale_fill_viridis_c(name="Enhanced\nt-value",
-                       limits = c(0,300)) +
-  scale_x_continuous(breaks = c(0,250,500), expand = c(0,0))+
-  scale_y_continuous(breaks = c(3,35,70),expand = c(0,0))+
-  xlab("Preparatory time (ms)") + ylab("Frequency (dB)")+
-  condition_theme
-
-interaction_entval_plt <- ggplot(data = enhancedt_interaction_df, aes(x=time, y=freq, fill = value)) +
-  geom_raster() +
-  scale_fill_viridis_c(name="Enhanced\nt-value",
-                       limits = c(0,300)) +
-  scale_x_continuous(breaks = c(0,250,500), expand = c(0,0))+
-  scale_y_continuous(breaks = c(3,35,70),expand = c(0,0))+
-  xlab("Preparatory time (ms)") + ylab("Frequency (dB)")+
-  interaction_theme
-
-# save legend
-entval_legend <- get_legend(interaction_entval_plt)
-ggsave(file.path(savedir,"entval_legend.png"),entval_legend, width = 15, height = 30, units = 'mm',
-       dpi = 600, bg = 'transparent')
-
-age <- age_entval_plt + theme(legend.position = 'none',
-                            axis.title.x = element_blank())+
-  ggtitle("Inverse age")
-
-condition <- condition_entval_plt  + theme(legend.position = 'none',
-                            axis.title.y = element_blank(),
-                            axis.text.y = element_blank())+
-  ggtitle("Condition")
-
-interaction <- interaction_entval_plt  + theme(legend.position = 'none',
-                            axis.title = element_blank(),
-                            axis.text.y = element_blank()) +
-  ggtitle("Interaction")
-
-aligned_plts <- align_plots(
-  plotlist = list(age,condition,interaction),
-  align = 'h', axis = 'tb'
-)
-plot_grid(aligned_plts[[1]],
-          aligned_plts[[2]],
-          aligned_plts[[3]],
-          nrow=1, 
-          rel_widths = c(1.3,1,1))
-ggsave(file.path(savedir, "entval_frow_heatmap.png"), width = 65, height = 30, units = 'mm',
-       dpi = 600, bg = 'transparent')
-
-```
-
-### Null distributions
-```{r}
-# --- Null distributions ---
-age_null_thres <- quantile(null_age_df$value, c(0.99))
-age_null_plt <- ggplot(data = null_age_df, aes(x=value))+
-  geom_histogram(alpha = 0.5, bins = 30) + 
-  scale_x_continuous(expand = c(0,0))+
-  scale_y_continuous(expand=c(0,0))+
-  geom_vline(xintercept = age_null_thres, linewidth = 0.3, linetype = 'dashed',color='red')+
-  xlab("Enhanced t-value")+
-  ylab("Count")+
-  age_theme
-
-condition_null_thres <- quantile(null_condition_df$value, c(0.99))
-condition_null_plt <- ggplot(data = null_condition_df, aes(x=value))+
-  geom_histogram(alpha = 0.5, bins = 30) + 
-  scale_x_continuous(expand = c(0,0))+
-  scale_y_continuous(expand=c(0,0))+
-  geom_vline(xintercept = condition_null_thres, linewidth = 0.3, linetype = 'dashed',color='red')+
-  xlab("Enhanced t-value")+
-  ylab("Count")+
-  condition_theme
-
-interaction_null_thres <- quantile(null_interaction_df$value, c(0.99))
-interaction_null_plt <- ggplot(data = null_interaction_df, aes(x=value))+
-  geom_histogram(alpha = 0.5, bins = 30) + 
-  scale_x_continuous(expand = c(0,0))+
-  scale_y_continuous(expand=c(0,0))+
-  geom_vline(xintercept = interaction_null_thres, linewidth = 0.3, linetype = 'dashed',color='red')+
-  xlab("Enhanced t-value")+
-  ylab("Count")+
-  interaction_theme
-
-age <- age_null_plt + theme(axis.title.x = element_blank()) +
-  ggtitle("Inverse Age")
-condition <- condition_null_plt + theme(axis.title.y = element_blank()) +
-  ggtitle("Condition")
-interaction <- interaction_null_plt + theme(axis.title = element_blank()) +
-  ggtitle("Interaction")
-aligned_plts <- align_plots(plotlist = list(age, condition, interaction),
-                            align = 'h', axis='tb')
-plot_grid(aligned_plts[[1]],
-          aligned_plts[[2]],
-          aligned_plts[[3]],
-          nrow=1,
-          rel_widths = c(1.1,1,1))
-ggsave(file.path(savedir, "null_dist.png"), width = 65, height = 30, units = 'mm',
-       dpi = 600, bg = 'transparent')
-```
-
-### Enahnced t-values with masks
-```{r}
-# --- Enhanced t-values with masks ---
-age_entvalmask_plt <- ggplot() +
-  geom_raster(data = enhancedt_age_df, aes(x=time, y=freq, fill = value)) +
-  scale_fill_viridis_c(name="Enhanced\nt-value",
-                       limits = c(0,300)) +
-  new_scale_fill()+
-  geom_raster(data = mask_age_df, aes(x=time, y=freq, fill = value),alpha = 0.5) +
-  scale_fill_manual(values = c("1"=NA,
-                               "0" = "black"))+
-  guides(fill = 'none')+
-  scale_x_continuous(breaks = c(0,250,500), expand = c(0,0))+
-  scale_y_continuous(breaks = c(3,35,70),expand = c(0,0))+
-  xlab("Preparatory time (ms)") + ylab("Frequency (dB)")+
- age_theme
-
-condition_entvalmask_plt <- ggplot() +
-  geom_raster(data = enhancedt_condition_df, aes(x=time, y=freq, fill = value)) +
-  scale_fill_viridis_c(name="Enhanced\nt-value",
-                       limits = c(0,300)) +
-  new_scale_fill()+
-  geom_raster(data = mask_condition_df, aes(x=time, y=freq, fill = value),alpha = 0.5) +
-  scale_fill_manual(values = c("1"=NA,
-                               "0" = "black"))+
-  guides(fill = 'none')+
-  scale_x_continuous(breaks = c(0,250,500), expand = c(0,0))+
-  scale_y_continuous(breaks = c(3,35,70),expand = c(0,0))+
-  xlab("Preparatory time (ms)") + ylab("Frequency (dB)")+
-  condition_theme
-
-interaction_entvalmask_plt <- ggplot() +
-  geom_raster(data = enhancedt_interaction_df, aes(x=time, y=freq, fill = value)) +
-  scale_fill_viridis_c(name="Enhanced\nt-value",
-                       limits = c(0,300)) +
-  new_scale_fill()+
-  geom_raster(data = mask_interaction_df, aes(x=time, y=freq, fill = value),alpha = 0.5) +
-  scale_fill_manual(values = c("1"=NA,
-                               "0" = "black"))+
-  guides(fill = 'none')+
-  scale_x_continuous(breaks = c(0,250,500), expand = c(0,0))+
-  scale_y_continuous(breaks = c(3,35,70),expand = c(0,0))+
-  xlab("Preparatory time (ms)") + ylab("Frequency (dB)")+
-  interaction_theme
-# plot
-age <- age_entvalmask_plt + theme(legend.position = 'none',
-                            axis.title.x = element_blank()) +
-  ggtitle("Inverse age")
-condition <- condition_entvalmask_plt  + theme(legend.position = 'none',
-                            axis.title.y = element_blank(),
-                            axis.text.y = element_blank())+
-  ggtitle("Condition")
-interaction <- interaction_entvalmask_plt  + theme(legend.position = 'none',
-                            axis.title = element_blank(),
-                            axis.text.y = element_blank())+
-  ggtitle("Interaction")
-aligned_plts <- align_plots(
-  plotlist = list(age,condition,interaction),
-  align = 'h', axis = 'tb'
-)
-plot_grid(aligned_plts[[1]],
-          aligned_plts[[2]],
-          aligned_plts[[3]],
-          nrow=1, 
-          rel_widths = c(1.3,1,1))
-ggsave(file.path(savedir, "entvalmask_frow_heatmap.png"), width = 65, height = 30, units = 'mm',
-       dpi = 600, bg = 'transparent')
-
-```
-
-### t-values with mask
-```{r}
-# --- t-values with masks ---
-age_tvalmask_plt <- ggplot() +
-  geom_raster(data = t_age_df, aes(x=time, y=freq, fill = value)) +
-  scale_fill_viridis_c(name="t-value",
-                       limits = c(-4,4)) +
-  new_scale_fill()+
-  geom_raster(data = mask_age_df, aes(x=time, y=freq, fill = value),alpha = 0.5) +
-  scale_fill_manual(values = c("1"=NA,
-                               "0" = "black"))+
-  guides(fill = 'none')+
-  scale_x_continuous(breaks = c(0,250,500), expand = c(0,0))+
-  scale_y_continuous(breaks = c(3,35,70),expand = c(0,0))+
-  xlab("Preparatory time (ms)") + ylab("Frequency (dB)")+
-  age_theme
-
-condition_tvalmask_plt <- ggplot() +
-  geom_raster(data = t_condition_df, aes(x=time, y=freq, fill = value)) +
-  scale_fill_viridis_c(name="t-value",
-                       limits = c(-4,4)) +
-  new_scale_fill()+
-  geom_raster(data = mask_condition_df, aes(x=time, y=freq, fill = value),alpha = 0.5) +
-  scale_fill_manual(values = c("1"=NA,
-                               "0" = "black"))+
-  guides(fill = 'none')+
-  scale_x_continuous(breaks = c(0,250,500), expand = c(0,0))+
-  scale_y_continuous(breaks = c(3,35,70),expand = c(0,0))+
-  xlab("Preparatory time (ms)") + ylab("Frequency (dB)")+
- condition_theme
-
-interaction_tvalmask_plt <- ggplot() +
-  geom_raster(data = t_interaction_df, aes(x=time, y=freq, fill = value)) +
-  scale_fill_viridis_c(name="t-value",
-                       limits = c(-4,4)) +
-  new_scale_fill()+
-  geom_raster(data = mask_interaction_df, aes(x=time, y=freq, fill = value),alpha = 0.5) +
-  scale_fill_manual(values = c("1"=NA,
-                               "0" = "black"))+
-  guides(fill = 'none')+
-  scale_x_continuous(breaks = c(0,250,500), expand = c(0,0))+
-  scale_y_continuous(breaks = c(3,35,70),expand = c(0,0))+
-  xlab("Preparatory time (ms)") + ylab("Frequency (dB)")+
-  interaction_theme
-# plot
-age <- age_tvalmask_plt + theme(legend.position = 'none',
-                            axis.title.x = element_blank())+
-  ggtitle("Inverse age")
-condition <- condition_tvalmask_plt  + theme(legend.position = 'none',
-                            axis.title.y = element_blank(),
-                            axis.text.y = element_blank())+
-  ggtitle("Condition")
-interaction <- interaction_tvalmask_plt  + theme(legend.position = 'none',
-                            axis.title = element_blank(),
-                            axis.text.y = element_blank())+
-  ggtitle("Interaction")
-aligned_plts <- align_plots(
-  plotlist = list(age,condition,interaction),
-  align = 'h', axis = 'tb'
-)
-plot_grid(aligned_plts[[1]],
-          aligned_plts[[2]],
-          aligned_plts[[3]],
-          nrow=1, 
-          rel_widths = c(1.3,1,1))
-ggsave(file.path(savedir, "tvalmask_frow_heatmap.png"), width = 65, height = 30, units = 'mm',
-       dpi = 600, bg = 'transparent')
-```
-
-
-### Single Participant
-```{r}
-# --- Single participant ERSP ---
-sub_ersp <- corASersp[1, ,]
-sub_ersp_df <- melt(sub_ersp)
-colnames(sub_ersp_df) <- c("freq_idx","time_idx","value")
-sub_ersp_df$time <- times[sub_ersp_df$time_idx]
-sub_ersp_df$freq <- freqs[sub_ersp_df$freq_idx]
-
-interaction_subersp_plt <- ggplot() +
-  geom_raster(data = sub_ersp_df, aes(x=time, y=freq, fill = value)) +
-  scale_fill_viridis_c(name="ERSP (dB)",
-                       limits = c(-3,6)) +
-  scale_x_continuous(breaks = c(0,250,500), expand = c(0,0))+
-  scale_y_continuous(breaks = c(3,35,70),expand = c(0,0))+
-  new_scale_fill()+
-  geom_raster(data = mask_interaction_df, aes(x=time,y=freq, fill = value),alpha=0.5)+
-  scale_fill_manual(values = c("1"=NA,
-                               "0" = "black"))+
-  guides(fill = 'none')+
-  xlab("Preparatory time (ms)") + ylab("Frequency (dB)")+
-  theme_classic() + 
-  theme(
-    axis.line = element_line(linewidth=0.3),
-    axis.ticks = element_line(linewidth=0.3),
-    axis.text = element_text(size=5),
-    axis.title = element_text(size=6),
-    plot.title = element_text(size=6),
-    legend.background = element_rect(fill = 'transparent',color = NULL),
-    legend.key.height = unit(4,'mm'),
-    legend.key.width = unit(5,'mm'),
-    legend.title = element_text(size=7),
-    legend.text = element_text(size = 6),
-    plot.margin = margin(1, 1.75, 1.5, 1.5, unit='mm'),
-    plot.background = element_rect(fill='transparent',
-                                   color = NA),
-    panel.background = element_rect(fill='transparent',
-                                    color=NA),
-    plot.tag = element_text(size=6,face='bold'),
-    strip.background = element_rect(fill = 'transparent',
-                                    color=NA),
-    strip.text = element_text(size = 6)
-  )
-interaction_subersp_plt
-
-sub_ersp_legend <- get_legend(interaction_subersp_plt)
-ggsave(file.path(savedir,"sub_ersp_legend.png"), sub_ersp_legend,
-       width = 15, height = 30, units = 'mm',
-       dpi = 600, bg = 'transparent')
-
-interaction_subersp_plt + theme(legend.position = 'none',axis.title = element_blank())
-ggsave(file.path(savedir,"sub_maskersp.png"), width = 25, height = 20, units = 'mm',
-       dpi = 600, bg = 'transparent')
-
-```
 
