@@ -4,7 +4,6 @@ clear
 % adding necessary paths
 addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/fieldtrip-20180926/')
 addpath('/Volumes/Hera/Abby/Resources/eeglab_current/eeglab2024.2/')
-addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/eeg/Shane/Preprocessing_Functions/')
 addpath('/Volumes/Hera/Abby/AS_EEG/')
 addpath('/Volumes/Hera/Abby/Resources/slanCM/')
 
@@ -14,15 +13,13 @@ merged7t_eeg = readtable('/Volumes/Hera/Abby/AS_EEG/Results/merged7t_ASscore_tab
 tasks = ["corAS","VGS","errcorAS"];
 eventtype = 'prep';
 basenorm = 'avgtrl';
-% basenorm = 'singletrl';
-maindir = hera('Abby/AS_EEG/ERSPdata/');
+maindir = '/Volumes/Hera/Abby/AS_EEG/ERSPdata/';
 
 % Rerun?
 RERUN=0;
 % plot?
 PLOT=1;
-SAVE_FROW = 1;
-
+SAVE_FROW = 1; % for R scripts; already average across f-row for plotting
 
 % loop of tasks
 for t = 1:length(tasks)
@@ -62,32 +59,7 @@ for t = 1:length(tasks)
             itcdata_adults = squeeze(mean(itcdata(idmat_viable(:,3)>=18,:,:),1));
             erspdata_adolescents = squeeze(mean(erspdata(idmat_viable(:,3)<18,:,:),1));
             itcdata_adolescents = squeeze(mean(itcdata(idmat_viable(:,3)<18,:,:),1));
-            
-            % plot average f-row itc
-%             plot_tfce_clusters(times,freqs,squeeze(mean(erspdata,1)),...
-%                 'title',[currtask ' ERSP ' basenorm],'subtitle','F-row electrodes',...
-%                 'xlab','Preparatory Period (ms)','ylab','Frequency (Hz)','clab','dB','addlines',1,'map',MAP)
-%             % plot average f-row itc just adults
-%             plot_tfce_clusters(times,freqs,erspdata_adults,...
-%                 'title',[currtask ' ERSP adults ' basenorm],'subtitle','F-row electrodes',...
-%                 'xlab','Preparatory Period (ms)','ylab','Frequency (Hz)','clab','dB','addlines',1,'map',MAP)
-%             % plot average f-row itc just adults
-%             plot_tfce_clusters(times,freqs,erspdata_adolescents,...
-%                 'title',[currtask ' ERSP adolescents ' basenorm],'subtitle','F-row electrodes',...
-%                 'xlab','Preparatory Period (ms)','ylab','Frequency (Hz)','clab','dB','addlines',1,'map',MAP)
-%             
-%             % plot average f-row itc
-%             plot_tfce_clusters(times,freqs,squeeze(mean(itcdata,1)),...
-%                 'title',[currtask ' ITC'],'subtitle','F-row electrodes',...
-%                 'xlab','Preparatory Period (ms)','ylab','Frequency (Hz)','clab','Coherence','addlines',1,'map',MAP)
-%             % plot average f-row itc just adults
-%             plot_tfce_clusters(times,freqs,itcdata_adults,...
-%                 'title',[currtask ' ITC adults'],'subtitle','F-row electrodes',...
-%                 'xlab','Preparatory Period (ms)','ylab','Frequency (Hz)','clab','Coherence','addlines',1,'map',MAP)
-%             % plot average f-row itc just adolescents
-%             plot_tfce_clusters(times,freqs,itcdata_adolescents,...
-%                 'title',[currtask ' ITC adolescents'],'subtitle','F-row electrodes',...
-%                 'xlab','Preparatory Period (ms)','ylab','Frequency (Hz)','clab','Coherence','addlines',1,'map',MAP)
+         
         end
     else
         % set up large matricies

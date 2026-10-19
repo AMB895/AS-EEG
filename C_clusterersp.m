@@ -6,16 +6,14 @@ clear;
 addpath('/Volumes/Hera/Abby/AS_EEG/limo_tools/')
 addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/fieldtrip-20180926/')
 addpath('/Volumes/Hera/Abby/Resources/eeglab_current/eeglab2024.2/')
-addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/eeg/Shane/Preprocessing_Functions/')
 addpath('/Volumes/Hera/Abby/Resources/slanCM/')
 
 %% Directories and names
-resultsdir = hera('Abby/AS_EEG/Results');
-tfcedir = hera('Abby/AS_EEG/ERSPdata/Cluster_stats');
-erspdir = hera('Abby/AS_EEG/ERSPdata');
+resultsdir = '/Volumes/Hera/Abby/AS_EEG/Results';
+tfcedir = '/Volumes/Hera/Abby/AS_EEG/ERSPdata/Cluster_stats';
+erspdir = '/Volumes/Hera/Abby/AS_EEG/ERSPdata';
 eventtype = 'prep';
 basenorm = 'avgtrl';
-% basenorm = 'singletrl';
 row = 'prow';
 
 if strcmp(row,'frow')
