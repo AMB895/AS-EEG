@@ -5,7 +5,6 @@
 addpath('/Volumes/Hera/Abby/AS_EEG/limo_tools/')
 addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/fieldtrip-20180926/')
 addpath('/Volumes/Hera/Abby/Resources/eeglab_current/eeglab2024.2/')
-addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/eeg/Shane/Preprocessing_Functions/')
 addpath('/Volumes/Hera/Abby/Resources/slanCM/') 
 
 % define variables
@@ -13,7 +12,8 @@ addpath('/Volumes/Hera/Abby/Resources/slanCM/')
 datatypes = "ersp";
 eventtype = 'prep';
 basenorm = 'avgtrl';
-row = 'prow';
+row = 'prow'; % change to frow or prow
+
 % define electrodes
 if strcmp(row,'frow')
     electrodes = [4 5 6 7 37 38 39 40 41];
@@ -24,7 +24,7 @@ elseif strcmp(row,'prow')
 end
 
 % define directories and file names
-maindir = hera('Abby/AS_EEG/ERSPdata/Cluster_stats');
+maindir = '/Volumes/Hera/Abby/AS_EEG/ERSPdata/Cluster_stats';
 
 % rerun= 0; no rerun / rerun = 1; rerun
 RERUN =0;
