@@ -1,0 +1,593 @@
+---
+title: "Main spontaneous/ ERSP analysis"
+output: pdf_document
+date: "2026-10-20"
+editor_options: 
+  chunk_output_type: console
+---
+
+# Functions
+```{r functions, include = FALSE}
+# convert power in uV^2 to dB
+uV2_to_dB <- function(uV2){
+  dB <- 10*log10(uV2)
+}
+
+# outlier detection of lmer models
+outlier_modelresiduals <- function(df, model_residuals, var2clean){
+  # z-score residuals
+  residuals_z <- scale(model_residuals)[,1]
+  # new column name
+  newcolname <- paste0(var2clean,"_clean")
+  # outlier variables to NA
+  df <- df %>%
+    mutate(
+      !!newcolname := if_else(
+        abs(residuals_z)>2 | is.na(residuals_z),
+        NA,
+        .data[[var2clean]])
+    )
+  # remove outlier rows
+  df <- df %>% filter(!is.na(!!sym(newcolname)))
+  return(df)
+}
+
+# rename only the non-merge columns
+rename_data_cols <- function(df, suffix) {
+  data_cols <- setdiff(names(df), merge_cols)
+  names(df)[names(df) %in% data_cols] <- paste0(data_cols, "_", suffix)
+  df
+}
+```
+
+# Load libraries
+```{r load libraries, include=FALSE}
+library(paletteer)
+library(patchwork)
+library(ggnewscale)
+library(dplyr)
+library(viridis)
+library(readxl)
+library(gratia)
+library(R.matlab)
+library(ggplot2)
+library(ggrepel)
+library(ggdist)
+library(lme4)
+library(lmerTest)
+library(reshape2)
+library(scales)
+library(tidyr)
+library(gridExtra)
+library(ggpubr)
+library(mgcv)
+library(emmeans)
+library(modelr)
+library(stringr)
+library(boot)
+library(mediation)
+library(lmeresampler)
+library(ggeffects)
+library(sjPlot)
+library(interactions)
+library(grid)
+library(ggeffects)
+```
+
+# Load and clean data
+```{r load data, include=FALSE}
+# --- where to save model fits ---
+savedir <- '/Volumes/Hera/Abby/AS_EEG/Results/R/mainpaper/'
+
+# --- shared columns to merge on ---
+merge_cols <- c("lunaid","eeg_date","eeg_age","sex","PercentErrCor",
+                "Accuracy","AvgLatCor","CVLatCor","AvgLatErrCor","CVLatErrCor",
+                "NumCor","NumErrCor","NumIncor","NumDrop","Total","Viable")
+
+# --- ERSP cluster data ---
+# load data from cluster power/ersp table
+clusterpower_frow_df <- read.csv('/Volumes/Hera/Abby/AS_EEG/Results/ersp_itc_clusters_avgtrl_frow_20260508.csv')
+clusterpower_prow_df <- read.csv('/Volumes/Hera/Abby/AS_EEG/Results/ersp_itc_clusters_avgtrl_prow_20260615.csv')
+
+# Adding f-row to column names
+clusterpower_frow_df <- rename_data_cols(clusterpower_frow_df, "frow")
+clusterpower_prow_df <- rename_data_cols(clusterpower_prow_df, "prow")
+
+# combine cluster power frow and prow
+clusterpower_df <- merge(clusterpower_frow_df, clusterpower_prow_df, by = merge_cols)
+
+# cluster description data frames 
+clusters_frow_df <- read.csv('/Volumes/Hera/Abby/AS_EEG/Results/ersp_itc_clusterinfo_avgtrl_frow_20260508.csv')
+clusters_prow_df <- read.csv("/Volumes/Hera/Abby/AS_EEG/Results/ersp_itc_clusterinfo_avgtrl_prow_20260615.csv")
+clusters_frow_df$row <- as.factor('frow')
+clusters_prow_df$row <- as.factor('prow')
+clusters_df <- rbind(clusters_frow_df, clusters_prow_df)
+
+# --- Broadband spontaneous and evoked power data ---
+# broadband spontaneous and evoked power
+broadband_frow_df <- read.csv('/Volumes/Hera/Abby/AS_EEG/Results/broadband_sponevo_frow_20260508.csv') # f-row
+broadband_prow_df <- read.csv('/Volumes/Hera/Abby/AS_EEG/Results/broadband_sponevo_prow_20260615.csv') # p-row
+# renamed only non-merge columns
+broadband_frow_df <- rename_data_cols(broadband_frow_df,"frow")
+broadband_prow_df <- rename_data_cols(broadband_prow_df,"prow")
+# merge broadband dataframes
+broadband_df <- merge(broadband_frow_df, broadband_prow_df, by = merge_cols)
+
+# --- Combine ERSP and braodband spon/evo power ---
+# merge broadband and ersp data frames
+sponevo_ersp_df <- merge(clusterpower_df,broadband_df, by = merge_cols)
+
+# make lunaid a factor
+sponevo_ersp_df$lunaid <- as.factor(sponevo_ersp_df$lunaid)
+
+# add visit number
+sponevo_ersp_df <- sponevo_ersp_df %>%
+  group_by(lunaid) %>%
+  mutate(visit = row_number()) %>%
+  ungroup()
+
+# calculate correct response rate
+sponevo_ersp_df$CorRate <- sponevo_ersp_df$NumCor / (sponevo_ersp_df$NumCor +
+                                                               sponevo_ersp_df$NumErrCor)
+
+# columns to not convert to dB
+cols_no_convert <- c("lunaid","eeg_date","eeg_age","sex",
+                     "PercentErrCor","AvgLatCor","CVLatCor",
+                     "AvgLatErrCor","CVLatErrCor","NumCor",
+                     "NumErrCor","NumDrop","NumIncor","Total",
+                     "Viable","visit","CorRate","Accuracy","CorRate")
+
+# columns to convert to dB
+cols_to_convert <- sponevo_ersp_df %>%
+  dplyr::select(contains("power"), -all_of(cols_no_convert)) %>%
+  names()
+
+# convert power values from uV^2 to dB
+sponevo_ersp_df_dB <- sponevo_ersp_df %>%
+  mutate(
+    across(
+      .cols = all_of(cols_to_convert),
+      .fns = ~ uV2_to_dB(.x),
+      .names = "{.col}_dB"
+    )
+  )
+
+# --- Define main data frame ---
+main_df <- sponevo_ersp_df_dB
+
+# make sure dB matrix lunaid is factor
+main_df$lunaid <- factor(main_df$lunaid, levels = levels(main_df$lunaid))
+
+# Calculate inverse age
+main_df$invage <- 1/main_df$eeg_age
+
+# Make sex a categorical variable
+main_df$sex <- as.factor(main_df$sex.x)
+
+# Filter out non-viable subs
+main_df_viable <- main_df %>% filter(Viable==1)
+
+# Calculate spontaneous/ evoked difference (AS - VGS) and ersp cluster differences (AS - VGS)
+main_df_viable <- main_df_viable %>%
+  mutate(
+    # F-row spon/evo
+    diff_broadband_spon_frow = corAS_broadband_sponpower_frow_dB -
+      VGS_broadband_sponpower_frow_dB,
+    diff_broadband_evo_frow = corAS_broadband_evopower_frow_dB - 
+      VGS_broadband_evopower_frow_dB,
+    # P-row spon/evo
+    diff_broadband_spon_prow = corAS_broadband_sponpower_prow_dB -
+      VGS_broadband_evopower_frow_dB,
+    diff_broadband_evo_prow = corAS_broadband_evopower_prow_dB -
+      VGS_broadband_evopower_prow_dB,
+    # F-row ERSP
+    diff_c1_ersp_frow = corAS_c1_ersp_interaction_frow - VGS_c1_ersp_interaction_frow,
+    diff_c2_ersp_frow = corAS_c2_ersp_interaction_frow - VGS_c2_ersp_interaction_frow,
+    diff_c3_ersp_frow = corAS_c3_ersp_interaction_frow - VGS_c3_ersp_interaction_frow,
+    diff_c4_ersp_frow = corAS_c4_ersp_interaction_frow - VGS_c4_ersp_interaction_frow,
+    diff_c5_ersp_frow = corAS_c5_ersp_interaction_frow - VGS_c5_ersp_interaction_frow,
+    # P-row ERSP
+    diff_c1_ersp_prow = corAS_c1_ersp_interaction_prow - VGS_c1_ersp_interaction_prow,
+    diff_c2_ersp_prow = corAS_c2_ersp_interaction_prow - VGS_c2_ersp_interaction_prow,
+    diff_c3_ersp_prow = corAS_c3_ersp_interaction_prow - VGS_c3_ersp_interaction_prow,
+    diff_c4_ersp_prow = corAS_c4_ersp_interaction_prow - VGS_c4_ersp_interaction_prow,
+    diff_c5_ersp_prow = corAS_c5_ersp_interaction_prow - VGS_c5_ersp_interaction_prow,
+    diff_c6_ersp_prow = corAS_c6_ersp_interaction_prow - VGS_c6_ersp_interaction_prow
+  )
+
+# define age categories and make a factor
+main_df_viable <- main_df_viable %>% mutate(
+  age_cat = ifelse(
+    eeg_age < 17,"kid",
+    ifelse(
+      eeg_age>=23,
+      "adult",
+      'adolescent'
+    )
+  )
+)
+main_df_viable$age_cat <- factor(main_df_viable$age_cat, 
+                                 levels = c("kid","adolescent","adult"))
+```
+
+# Description of data
+```{r descriptive stats, echo = FALSE}
+# In data frame with non-viable subjects make eeg_age NA if not viable
+main_df <- main_df %>%
+  mutate(
+    eeg_age_viable = ifelse(Viable==1,
+                            eeg_age,
+                            NA)
+  )
+
+# filter out people who do not have EEGs (no eeg date)
+main_df_eeg <- main_df %>% filter(!is.na(eeg_date))
+
+# filter out people who do not have AS EEGs (no Viable value)
+main_df_ASeeg <- main_df_eeg %>% filter(!is.na(Viable))
+main_df_ASeeg_clean <- main_df_ASeeg %>% filter(!is.na(corAS_broadband_totpower_frow_dB))
+main_df_ASeeg_clean_viable <- main_df_ASeeg_clean %>% filter(Viable==1)
+
+# Two-sided KS test
+ks.test(main_df$eeg_age, main_df$eeg_age_viable, alternative = 'two.sided')
+
+# report age range; number M/F; total sessions
+cat(
+  # Total number of people who had an EEG session
+  "# subjects with EEG session: ", main_df_eeg %>% pull(lunaid) %>% n_distinct(),
+  " (", main_df_eeg %>% filter(sex.x == "F") %>% pull(lunaid) %>% n_distinct(), " F)", "\n",
+  main_df_eeg  %>% pull(eeg_age) %>% range() %>% .[1], "-",
+  main_df_eeg %>% pull(eeg_age) %>% range() %>% .[2], " years old\n",
+  "# sessions: ",  main_df_eeg %>% nrow(), "\n\n",
+  
+  # Total number of people who had AS EEG session (had behavioral data)
+  # (remove people who failed to score eye tracking)
+  "# subjects with AS EEG session (behavioral): ", main_df_ASeeg %>%  pull(lunaid) %>% n_distinct(),
+  " (", main_df_ASeeg %>% filter(sex.x=="F") %>% pull(lunaid) %>% n_distinct()," F)","\n",
+  main_df_ASeeg  %>% pull(eeg_age) %>% range() %>% .[1], "-",
+  main_df_ASeeg %>% pull(eeg_age) %>% range() %>% .[2], " years old\n",
+  "# sessions: ",  main_df_ASeeg %>% nrow(), "\n\n",
+  
+  # Total number of people who had an AS EEG session (had behavioral data and passed EEG preprocessing)
+  # (remove people who have EEG data values)
+  "# subjects with AS EEG session: ", main_df_ASeeg_clean %>%  pull(lunaid) %>% n_distinct(),
+  " (", main_df_ASeeg_clean %>% filter(sex.x=="F") %>% pull(lunaid) %>% n_distinct()," F)","\n",
+  main_df_ASeeg_clean  %>% pull(eeg_age) %>% range() %>% .[1], "-",
+  main_df_ASeeg_clean %>% pull(eeg_age) %>% range() %>% .[2], " years old\n",
+  "# sessions: ",  main_df_ASeeg_clean %>% nrow(), "\n\n",
+  
+  # Total number of people who had a viable AS EEG session
+  "# subjects with viable AS EEG session: ", main_df_ASeeg_clean_viable %>%  pull(lunaid) %>% n_distinct(),
+  " (", main_df_ASeeg_clean_viable %>% filter(sex.x=="F") %>% pull(lunaid) %>% n_distinct()," F)","\n",
+  main_df_ASeeg_clean_viable  %>% pull(eeg_age) %>% range() %>% .[1], "-",
+  main_df_ASeeg_clean_viable %>% pull(eeg_age) %>% range() %>% .[2], " years old\n",
+  "# sessions: ",  main_df_ASeeg_clean_viable %>% nrow(), "\n\n",
+  sep=""
+)
+```
+
+# Demographic information
+```{r}
+demo_info <- read_excel("/Volumes/Hera/Projects/7TBrainMech/scripts/txt/7T_packet.xlsx", sheet = "Demographics")
+demo_info <- demo_info %>%
+  mutate(
+    lunaid = as.factor(
+      sub("\\.0$","",
+          sub(";.","",ID))
+    )
+  ) %>% group_by(lunaid) %>%
+  mutate(
+    visit = row_number()
+  ) %>% ungroup()
+
+demo_info_first <- demo_info %>% filter(visit == 1)
+
+# matching ids
+demo_info_ids <- unique(demo_info_first$lunaid)
+main_df_ASeeg_ids <- unique(main_df_ASeeg$lunaid)
+
+keep_idx <- demo_info_first$lunaid %in% main_df_ASeeg_ids
+
+# filtered eeg df, only people who are in demo_info
+demo_info_filt <- demo_info_first[keep_idx, ]
+
+race_cols <- c("hispanic","american_indian","asian","black","hawaiian","white","unspecified")
+race_mat <- as.matrix(demo_info_filt[, race_cols])
+race_mat <- race_mat == "TRUE"
+n_checked <- rowSums(race_mat, na.rm=T)
+
+demo_info_filt$race_cat <- ifelse(
+  n_checked > 1, "multi",
+  ifelse(n_checked==0,"unspecified",
+         race_cols[apply(race_mat,1, function(x) which(x)[1])])
+)
+
+tab <- table(demo_info_filt$race_cat)
+round(100 * tab / sum(tab), 1)
+
+```
+
+# Behavior
+## Age + Sex
+```{r behavior age effects, echo = FALSE}
+# variables to loop over
+behavs <- c("CorRate","CVLatCor","AvgLatCor")
+
+for (b in behavs){
+  # define temporary data frame
+  temp_df <- data.frame(
+    behav = main_df_viable[[b]],
+    lunaid = main_df_viable$lunaid,
+    eeg_date = main_df_viable$eeg_date,
+    invage = main_df_viable$invage,
+    eeg_age = main_df_viable$eeg_age,
+    sex = main_df_viable$sex
+  )
+  # --- Inverse Age ---
+  # lm model with no random effects
+  lm_model <- lm(behav ~ invage + sex,
+                 data = temp_df,
+                 na.action = na.exclude)
+  clean_df <- outlier_modelresiduals(temp_df, 
+                                     residuals(lm_model),
+                                     "lunaid")
+  lmer_model <- lmerTest::lmer(behav ~ invage + sex + (1|lunaid_clean),
+                               data = clean_df,
+                               na.action = na.exclude)
+  # print summary
+  lmer_summary <- summary(lmer_model)
+  print(b)
+  print(lmer_summary)
+  
+  # --- Linear Age ---
+  # lm model with no random effects
+  lm_model_linage <- lm(behav ~ eeg_age + sex,
+                 data = temp_df,
+                 na.action = na.exclude)
+  clean_df_linage <- outlier_modelresiduals(temp_df, 
+                                     residuals(lm_model_linage),
+                                     "lunaid")
+  lmer_model_linage <- lmerTest::lmer(behav ~ eeg_age + sex + (1|lunaid_clean),
+                               data = clean_df_linage,
+                               na.action = na.exclude)
+  # print AICs
+  print(paste("AIC (inverse age):",round(AIC(lmer_model),2)))
+  print(paste("AIC (linear age):",round(AIC(lmer_model_linage),2)))
+  
+  # bundle of variables to save
+  model_bundle <- list(
+    model = lmer_model,
+    coefs = as.data.frame(coef(lmer_summary)),
+    cleandata = lmer_model@frame,
+    origdata = lm_model$model,
+    AIC_invage = AIC(lmer_model),
+    AIC_linage = AIC(lmer_model_linage),
+    BIC_invage = BIC(lmer_model),
+    BIC_linage = BIC(lmer_model_linage)
+  )
+  # save results
+  savename <- paste0(savedir,b,"_Age_Effects.rds")
+  saveRDS(model_bundle, file = savename)
+}
+
+```
+
+# Spontaneous and Evoked power
+## Age * Condition + Sex effects
+```{r spon/evo age effects, echo = FALSE}
+# variables to loop over
+powertypes <- c("spon","evo")
+rows <- c("frow","prow")
+
+for (p in powertypes){
+  for (r in rows){
+    # define temporary data frame
+    temp_df <- data.frame(
+      lunaid = main_df_viable$lunaid,
+      eeg_date = main_df_viable$eeg_date,
+      invage = main_df_viable$invage,
+      eeg_age = main_df_viable$eeg_age,
+      sex = main_df_viable$sex,
+      ASpower = main_df_viable[[paste0("corAS_broadband_",p,"power_", r,"_dB")]],
+      VGSpower = main_df_viable[[paste0("VGS_broadband_",p,"power_", r,"_dB")]],
+      diffpower = main_df_viable[[paste0("diff_broadband_",p,"_",r)]]
+      )
+    # pivot long
+    temp_df_long <- pivot_longer(temp_df, cols = c("ASpower","VGSpower"),
+                                 names_to = "condition",
+                                 values_to = "power")
+    temp_df_long$condition <- as.factor(temp_df_long$condition)
+    # lm model
+    lm_model <- lm(power ~ condition * invage + sex ,
+                   data = temp_df_long,
+                   na.action = na.exclude)
+    clean_df <- outlier_modelresiduals(temp_df_long,
+                                       residuals(lm_model),
+                                       "lunaid")
+    lmer_model <- lmerTest::lmer(power ~ condition * invage + sex +
+                                   (1|lunaid_clean),
+                                 data = clean_df,
+                                 na.action = na.exclude)
+    
+    # print summary 
+    lmer_summary <- summary(lmer_model)
+    print(paste(p,r))
+    print(lmer_summary)
+    
+    # bundle and save results
+    model_bundle <- list(
+      model = lmer_model,
+      coefs = as.data.frame(coef(lmer_summary)),
+      cleandata = lmer_model@frame,
+      origdata =  lm_model$model
+    )
+    savename <- paste0(savedir,p,"Power",r, "_AgeCondition_Effects.rds")
+    saveRDS(model_bundle,savename)
+    
+  }
+  
+}
+
+```
+
+## Behavior effects: F-row
+```{r spon/evo behavior effects, echo=FALSE}
+# variables to loop over
+powertypes <- c("spon","evo")
+rows <- c("frow")
+tasks <- c("corAS","VGS")
+behavs <- c("CorRate","CVLatCor","AvgLatCor")
+
+for (p in powertypes){
+  for (r in rows){
+    for (t in tasks){
+      for (b in behavs){
+        temp_df <- data.frame(
+          lunaid = main_df_viable$lunaid,
+          eeg_date = main_df_viable$eeg_date,
+          invage = main_df_viable$invage,
+          eeg_age = main_df_viable$eeg_age,
+          sex = main_df_viable$sex,
+          power = main_df_viable[[paste0(t,"_broadband_",p,"power_",r,"_dB")]],
+          behav = main_df_viable[[b]]
+          )
+        # lm model
+        lm_model <- lm(behav ~ power + invage + sex,
+                       data = temp_df,
+                       na.action = na.exclude)
+        clean_df <- outlier_modelresiduals(temp_df,
+                                           residuals(lm_model),
+                                           "lunaid")
+        lmer_model <- lmerTest::lmer(behav ~ power + invage + sex + (1|lunaid_clean),
+                                     data = clean_df,
+                                     na.action = na.exclude)
+        # print summary
+        lmer_summary <- summary(lmer_model)
+        lmer_coefs <- coef(lmer_summary)
+        print(paste(p,r,t,b))
+        print(lmer_coefs)
+        
+        # bundle and save results
+        model_bundle <- list(
+          model = lmer_model,
+          coefs = as.data.frame(lmer_coefs),
+          cleandata = lmer_model@frame,
+          origdata = lm_model$model
+        )
+        savename <- paste0(savedir,b,"_", t, p, "Power",r, "_Effects.rds")
+        saveRDS(model_bundle,savename)
+        
+      }
+    }
+  }
+}
+
+```
+
+# ERSP clusters
+## Behavior: F-row
+```{r ersp behavior effect, echo = FALSE}
+# variables to loop over
+tasks <- c("corAS","VGS")
+behavs <- c("CorRate","CVLatCor","AvgLatCor")
+modelterm <- "interaction"
+datatype <- "ersp"
+
+for (t in tasks){
+  for (b in behavs){
+    temp_df <- data.frame(
+      lunaid = main_df_viable$lunaid,
+      eeg_date = main_df_viable$eeg_date,
+      eeg_age = main_df_viable$eeg_age,
+      invage = main_df_viable$invage,
+      sex = main_df_viable$sex,
+      c1 = main_df_viable[[paste0(t,"_c1_ersp_",modelterm,"_frow")]],
+      c2 = main_df_viable[[paste0(t,"_c2_ersp_",modelterm,"_frow")]],
+      c3 = main_df_viable[[paste0(t,"_c3_ersp_",modelterm,"_frow")]],
+      c4 = main_df_viable[[paste0(t,"_c4_ersp_",modelterm,"_frow")]],
+      c5 = main_df_viable[[paste0(t,"_c5_ersp_",modelterm,"_frow")]],
+      behav = main_df_viable[[b]]
+    )
+    
+    # lm model 
+    lm_model <- lm(behav ~ invage + sex + c1 + c2 + c3 + c4 + c5, 
+                   data = temp_df,
+                   na.action = na.exclude)
+    clean_df <- outlier_modelresiduals(temp_df,
+                                       residuals(lm_model),
+                                       "lunaid")
+    lmer_model <- lmerTest::lmer(behav ~ invage +  sex + c1 + c2 + c3 + c4 + c5 + (1|lunaid_clean),
+                                 data = clean_df,
+                                 na.action = na.exclude)
+    # print summary
+    lmer_summary <- summary(lmer_model)
+    lmer_coefs <- coef(lmer_summary)
+    print(paste(t,b))
+    print(lmer_summary)
+    # bundle and save 
+    model_bundle <- list(
+      model = lmer_model,
+      coefs = as.data.frame(lmer_coefs),
+      cleandata = lmer_model@frame,
+      origdata = lm_model$model
+    )
+    savename <- paste0(savedir,b,"_",t,"frowERSPclusters_Effect.rds")
+    saveRDS(model_bundle,savename)
+  }
+}
+
+```
+
+# Spon/evo power and ERSP clusters
+## Power ~ Age * ERSP: F-row
+```{r power ~ age*ersp, echo=FALSE}
+# variables to loop over
+tasks <- c("corAS","VGS")
+powertypes <- c("spon","evo")
+clusters <- c(1,5)
+modelterm <- "interaction"
+
+for (p in powertypes){
+  for (C in clusters){
+    currcluster <- paste0("cluster",C)
+    for (t in tasks){
+      temp_df <- data.frame(
+        lunaid = main_df_viable$lunaid,
+        eeg_date = main_df_viable$eeg_date,
+        eeg_age = main_df_viable$eeg_age,
+        invage = main_df_viable$invage,
+        sex = main_df_viable$sex,
+        ersp = main_df_viable[[paste0(t,"_c",C,"_ersp_",modelterm,"_frow")]],
+        power = main_df_viable[[paste0("corAS_broadband_",p,"power_frow_dB")]]
+        )
+      # run model
+      lm_model <- lm(power~invage*ersp + sex,
+                     data = temp_df,
+                     na.action = na.exclude)
+      clean_df <- outlier_modelresiduals(temp_df,
+                                         residuals(lm_model),
+                                         "lunaid")
+      lmer_model <- lmerTest::lmer(power~invage*ersp + sex + (1|lunaid_clean),
+                                   data = clean_df,
+                                   na.action = na.exclude)
+      # print results
+      lmer_summary <- summary(lmer_model)
+      lmer_coefs <- coef(lmer_summary)
+      print(paste(p,C,t))
+      print(lmer_summary)
+
+      # save results
+      model_bundle <- list(
+        model = lmer_model,
+        coefs = as.data.frame(lmer_coefs),
+        cleandata = lmer_model@frame,
+        origdata = lm_model$model
+      )
+      savename <- paste0(savedir,
+                         t,p,"Power","_",currcluster,"ERSPfrow_Effect.rds")
+      saveRDS(model_bundle,savename)
+    }
+  }
+}
+
+```

@@ -230,7 +230,7 @@ colors_list <- list(
   c6prow = "#367DC0",
   c3prow = "#69C036")
 
-resultsdir <- "/Volumes/Hera/Abby/AS_EEG/Results/R/"
+resultsdir <- "/Volumes/Hera/Abby/AS_EEG/Results/R/mainpaper/"
 savedir <- "/Volumes/Hera/Abby/AS_EEG/paperfigs/"
 
 ```

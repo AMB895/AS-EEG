@@ -39,16 +39,6 @@ rename_data_cols <- function(df, suffix) {
   df
 }
 
-## --- extract ROI name from column name ---
-roi_from_name <- function(x) {
-  str_extract(x,"(?<=sipfc\\.)[^_]+")
-}
-
-## --- extract Metabolite from column name ---
-metabolite_from_name <- function(x) {
-  str_extract(x,"(?<=_)[^_]+(?=(_|$))")
-}
-
 ## --- predict model estimated means ---
 model_prediction <- function(model, predictVar, 
                              groupVar = NULL, 
@@ -229,7 +219,7 @@ colors_list <- list(
   c6prow = "#367DC0",
   c3prow = "#69C036")
 
-resultsdir <- "/Volumes/Hera/Abby/AS_EEG/Results/R/"
+resultsdir <- "/Volumes/Hera/Abby/AS_EEG/Results/R/supplement/"
 savedir <- "/Volumes/Hera/Abby/AS_EEG/paperfigs/"
 
 ```
