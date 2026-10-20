@@ -162,7 +162,7 @@ main_df$lunaid <- factor(main_df$lunaid, levels = levels(main_df$lunaid))
 main_df$invage <- 1/main_df$eeg_age
 
 # Make sex a categorical variable
-main_df$sex <- as.factor(main_df$sex.x)
+main_df$sex <- as.factor(main_df$sex)
 
 # Filter out non-viable subs
 main_df_viable <- main_df %>% filter(Viable==1)

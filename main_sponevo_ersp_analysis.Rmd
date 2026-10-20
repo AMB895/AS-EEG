@@ -162,7 +162,7 @@ main_df$lunaid <- factor(main_df$lunaid, levels = levels(main_df$lunaid))
 main_df$invage <- 1/main_df$eeg_age
 
 # Make sex a categorical variable
-main_df$sex <- as.factor(main_df$sex.x)
+main_df$sex <- as.factor(main_df$sex)
 
 # Filter out non-viable subs
 main_df_viable <- main_df %>% filter(Viable==1)
@@ -235,7 +235,7 @@ ks.test(main_df$eeg_age, main_df$eeg_age_viable, alternative = 'two.sided')
 cat(
   # Total number of people who had an EEG session
   "# subjects with EEG session: ", main_df_eeg %>% pull(lunaid) %>% n_distinct(),
-  " (", main_df_eeg %>% filter(sex.x == "F") %>% pull(lunaid) %>% n_distinct(), " F)", "\n",
+  " (", main_df_eeg %>% filter(sex == "F") %>% pull(lunaid) %>% n_distinct(), " F)", "\n",
   main_df_eeg  %>% pull(eeg_age) %>% range() %>% .[1], "-",
   main_df_eeg %>% pull(eeg_age) %>% range() %>% .[2], " years old\n",
   "# sessions: ",  main_df_eeg %>% nrow(), "\n\n",
@@ -243,7 +243,7 @@ cat(
   # Total number of people who had AS EEG session (had behavioral data)
   # (remove people who failed to score eye tracking)
   "# subjects with AS EEG session (behavioral): ", main_df_ASeeg %>%  pull(lunaid) %>% n_distinct(),
-  " (", main_df_ASeeg %>% filter(sex.x=="F") %>% pull(lunaid) %>% n_distinct()," F)","\n",
+  " (", main_df_ASeeg %>% filter(sex=="F") %>% pull(lunaid) %>% n_distinct()," F)","\n",
   main_df_ASeeg  %>% pull(eeg_age) %>% range() %>% .[1], "-",
   main_df_ASeeg %>% pull(eeg_age) %>% range() %>% .[2], " years old\n",
   "# sessions: ",  main_df_ASeeg %>% nrow(), "\n\n",
@@ -251,14 +251,14 @@ cat(
   # Total number of people who had an AS EEG session (had behavioral data and passed EEG preprocessing)
   # (remove people who have EEG data values)
   "# subjects with AS EEG session: ", main_df_ASeeg_clean %>%  pull(lunaid) %>% n_distinct(),
-  " (", main_df_ASeeg_clean %>% filter(sex.x=="F") %>% pull(lunaid) %>% n_distinct()," F)","\n",
+  " (", main_df_ASeeg_clean %>% filter(sex=="F") %>% pull(lunaid) %>% n_distinct()," F)","\n",
   main_df_ASeeg_clean  %>% pull(eeg_age) %>% range() %>% .[1], "-",
   main_df_ASeeg_clean %>% pull(eeg_age) %>% range() %>% .[2], " years old\n",
   "# sessions: ",  main_df_ASeeg_clean %>% nrow(), "\n\n",
   
   # Total number of people who had a viable AS EEG session
   "# subjects with viable AS EEG session: ", main_df_ASeeg_clean_viable %>%  pull(lunaid) %>% n_distinct(),
-  " (", main_df_ASeeg_clean_viable %>% filter(sex.x=="F") %>% pull(lunaid) %>% n_distinct()," F)","\n",
+  " (", main_df_ASeeg_clean_viable %>% filter(sex=="F") %>% pull(lunaid) %>% n_distinct()," F)","\n",
   main_df_ASeeg_clean_viable  %>% pull(eeg_age) %>% range() %>% .[1], "-",
   main_df_ASeeg_clean_viable %>% pull(eeg_age) %>% range() %>% .[2], " years old\n",
   "# sessions: ",  main_df_ASeeg_clean_viable %>% nrow(), "\n\n",

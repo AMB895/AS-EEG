@@ -308,8 +308,9 @@ behav_agesex_coefs <- behav_agesex_coefs%>%
   ) %>% ungroup()
 
 # save coefs as table
-write.table(behav_agesex_coefs, file = "/Volumes/Hera/Abby/AS_EEG/paperfigs/tables/SM_behav_agesex_coefs.csv",
-            col.names = T, row.names = F)
+write.csv(behav_agesex_coefs, file =
+            paste0(savedir,"tables/supplement/SM_behav_agesex_coefs.csv"),
+          row.names = F)
 
 behavior_plot <- function(modellist,colorslist,
                            markerslist, alphalist,
@@ -415,7 +416,7 @@ sponevo_agerow_coefs <- sponevo_agerow_coefs %>%
   ) %>% ungroup()
 
 # save coefs as table
-write.table(sponevo_agerow_coefs, file = "/Volumes/Hera/Abby/AS_EEG/paperfigs/tables/SM_sponevo_agerow_coefs.csv",
+write.csv(sponevo_agerow_coefs, file = "/Volumes/Hera/Abby/AS_EEG/paperfigs/tables/supplement/SM_sponevo_agerow_coefs.csv",
             col.names=T, row.names = F)
 
 sponevo_agerow_effect_plot <- function(modellist,
@@ -561,7 +562,7 @@ sponevo_agesex_coefs <- sponevo_agesex_coefs %>%
   ) %>% ungroup()
 
 # save coefs as table
-write.table(sponevo_agesex_coefs, file = "/Volumes/Hera/Abby/AS_EEG/paperfigs/tables/SM_sponevo_agesex_coefs.csv",
+write.csv(sponevo_agesex_coefs, file = "/Volumes/Hera/Abby/AS_EEG/paperfigs/tables/supplement/SM_sponevo_agesex_coefs.csv",
             col.names=T, row.names = F)
 
 sponevo_agecondition_plot <- function(frow_modellist,
@@ -720,36 +721,11 @@ ggsave(file.path(savedir,"sponevo_agesex.png"),
 
 ## Age * Condition + Sex (p-row)
 ```{r}
-# find rds file with results
-filepaths <- list.files(
-  path = resultsdir, 
-  pattern = "row_AgeCondition_Effects.rds$", 
-  full.names = TRUE,                    
-  recursive = FALSE,                     
-  ignore.case = TRUE                    
-)
-
-files <- lapply(filepaths, readRDS)
-
-names(files)  <- tools::file_path_sans_ext(basename(filepaths))
-
-# compile all results into one data frame
-sponevo_agecondition_coefs <- compile_coefs(files)
-# adjust p-values
-sponevo_agecondition_coefs <- sponevo_agecondition_coefs %>%
-  group_by(term) %>%
-  mutate(
-    p_fdr = p.adjust(`Pr(>|t|)`, method = 'fdr')
-  ) %>% ungroup()
-
-# save coefs as table
-write.table(sponevo_agecondition_coefs, file = "/Volumes/Hera/Abby/AS_EEG/paperfigs/tables/SM_sponevo_agecondition_coefs.csv",
-            col.names = T, row.names = F)
-
 ## --- Just p-row ---
+# results for these plots are in mainpaper/
 # find rds file with results
 filepaths <- list.files(
-  path = resultsdir, 
+  path = "/Volumes/Hera/Abby/AS_EEG/Results/R/mainpaper/", 
   pattern = "prow_AgeCondition_Effects.rds$", 
   full.names = TRUE,                    
   recursive = FALSE,                     
@@ -770,8 +746,11 @@ sponevo_agecondition_prow_coefs <- sponevo_agecondition_prow_coefs %>%
   ) %>% ungroup()
 
 # save coefs as table
-write.table(sponevo_agecondition_prow_coefs, file = "/Volumes/Hera/Abby/AS_EEG/paperfigs/tables/SM_sponevo_agecondition_prow_coefs.csv",
-            col.names = T, row.names = F)
+write.csv(sponevo_agecondition_prow_coefs, 
+          file = 
+            paste0(savedir,
+                   "tables/supplement/SM_sponevo_agecondition_prow_coefs.csv"),
+                   row.names = F)
 
 ```
 
@@ -779,31 +758,56 @@ write.table(sponevo_agecondition_prow_coefs, file = "/Volumes/Hera/Abby/AS_EEG/p
 
 ### One plot per behavior (all rows and conditions)
 ```{r}
+# results for f-row are in mainpaper/
+ASfrow_filepaths <- list.files(
+  path = "/Volumes/Hera/Abby/AS_EEG/Results/R/mainpaper/", 
+  pattern = "_corAS(evo|spon)Powerfrow_Effects.rds$", 
+  full.names = TRUE,                    
+  recursive = FALSE,                     
+  ignore.case = TRUE                    
+)
+
+ASfrow_files <- lapply(ASfrow_filepaths, readRDS)
+
+names(ASfrow_files)  <- tools::file_path_sans_ext(basename(ASfrow_filepaths))
+
 # find rds file with results
-AS_filepaths <- list.files(
-  path = resultsdir, 
+VGSfrow_filepaths <- list.files(
+  path = "/Volumes/Hera/Abby/AS_EEG/Results/R/mainpaper/", 
+  pattern = "_VGS(evo|spon)Powerfrow_Effects.rds$", 
+  full.names = TRUE,                    
+  recursive = FALSE,                     
+  ignore.case = TRUE                    
+)
+
+VGSfrow_files <- lapply(VGSfrow_filepaths, readRDS)
+
+names(VGSfrow_files)  <- tools::file_path_sans_ext(basename(VGSfrow_filepaths))
+# find rds file with results
+ASprow_filepaths <- list.files(
+  path = "/Volumes/Hera/Abby/AS_EEG/Results/R/supplement/", 
   pattern = "_corAS(evo|spon)Power(f|p)row_Effects.rds$", 
   full.names = TRUE,                    
   recursive = FALSE,                     
   ignore.case = TRUE                    
 )
 
-AS_files <- lapply(AS_filepaths, readRDS)
+ASprow_files <- lapply(ASprow_filepaths, readRDS)
 
-names(AS_files)  <- tools::file_path_sans_ext(basename(AS_filepaths))
+names(ASprow_files)  <- tools::file_path_sans_ext(basename(ASprow_filepaths))
 
 # find rds file with results
-VGS_filepaths <- list.files(
-  path = resultsdir, 
+VGSprow_filepaths <- list.files(
+  path = "/Volumes/Hera/Abby/AS_EEG/Results/R/supplement/", 
   pattern = "_VGS(evo|spon)Power(f|p)row_Effects.rds$", 
   full.names = TRUE,                    
   recursive = FALSE,                     
   ignore.case = TRUE                    
 )
 
-VGS_files <- lapply(VGS_filepaths, readRDS)
+VGSprow_files <- lapply(VGSprow_filepaths, readRDS)
 
-names(VGS_files)  <- tools::file_path_sans_ext(basename(VGS_filepaths))
+names(VGSprow_files)  <- tools::file_path_sans_ext(basename(VGSprow_filepaths))
 
 sponevo_behav_combined_plot <- function(ASmodellistfrow,
                                         ASmodellistprow,
@@ -864,13 +868,13 @@ sponevo_behav_combined_plot <- function(ASmodellistfrow,
 
 # Spontaneous power
 allspon_corrate <- sponevo_behav_combined_plot(ASmodellistfrow =
-                              AS_files$CorRate_corASsponPowerfrow_Effects,
+                              ASfrow_files$CorRate_corASsponPowerfrow_Effects,
                             ASmodellistprow = 
-                              AS_files$CorRate_corASsponPowerprow_Effects,
+                              ASprow_files$CorRate_corASsponPowerprow_Effects,
                             VGSmodellistfrow = 
-                              VGS_files$CorRate_VGSsponPowerfrow_Effects,
+                              VGSfrow_files$CorRate_VGSsponPowerfrow_Effects,
                             VGSmodellistprow = 
-                              VGS_files$CorRate_VGSsponPowerprow_Effects,
+                              VGSprow_files$CorRate_VGSsponPowerprow_Effects,
                             colorslist = colors_list,
                             alphalist = alpha_list,
                             lineslist = lines_list,
@@ -879,13 +883,13 @@ allspon_corrate <- sponevo_behav_combined_plot(ASmodellistfrow =
                             labelslist = list(ylabel = "% correct"))
 
 allspon_cvlat <- sponevo_behav_combined_plot(ASmodellistfrow =
-                              AS_files$CVLatCor_corASsponPowerfrow_Effects,
+                              ASfrow_files$CVLatCor_corASsponPowerfrow_Effects,
                             ASmodellistprow = 
-                              AS_files$CVLatCor_corASsponPowerprow_Effects,
+                              ASprow_files$CVLatCor_corASsponPowerprow_Effects,
                             VGSmodellistfrow = 
-                              VGS_files$CVLatCor_VGSsponPowerfrow_Effects,
+                              VGSfrow_files$CVLatCor_VGSsponPowerfrow_Effects,
                             VGSmodellistprow = 
-                              VGS_files$CVLatCor_VGSsponPowerprow_Effects,
+                              VGSprow_files$CVLatCor_VGSsponPowerprow_Effects,
                             colorslist = colors_list,
                             alphalist = alpha_list,
                             lineslist = lines_list,
@@ -894,13 +898,13 @@ allspon_cvlat <- sponevo_behav_combined_plot(ASmodellistfrow =
                             labelslist = list(ylabel = "Coefficient of variation"))
 
 allspon_avglat <- sponevo_behav_combined_plot(ASmodellistfrow =
-                              AS_files$AvgLatCor_corASsponPowerfrow_Effects,
+                              ASfrow_files$AvgLatCor_corASsponPowerfrow_Effects,
                             ASmodellistprow = 
-                              AS_files$AvgLatCor_corASsponPowerprow_Effects,
+                              ASprow_files$AvgLatCor_corASsponPowerprow_Effects,
                             VGSmodellistfrow = 
-                              VGS_files$AvgLatCor_VGSsponPowerfrow_Effects,
+                              VGSfrow_files$AvgLatCor_VGSsponPowerfrow_Effects,
                             VGSmodellistprow = 
-                              VGS_files$AvgLatCor_VGSsponPowerprow_Effects,
+                              VGSprow_files$AvgLatCor_VGSsponPowerprow_Effects,
                             colorslist = colors_list,
                             alphalist = alpha_list,
                             lineslist = lines_list,
@@ -910,13 +914,13 @@ allspon_avglat <- sponevo_behav_combined_plot(ASmodellistfrow =
 
 # Evoked power
 allevo_corrate <- sponevo_behav_combined_plot(ASmodellistfrow =
-                              AS_files$CorRate_corASevoPowerfrow_Effects,
+                              ASfrow_files$CorRate_corASevoPowerfrow_Effects,
                             ASmodellistprow = 
-                              AS_files$CorRate_corASevoPowerprow_Effects,
+                              ASprow_files$CorRate_corASevoPowerprow_Effects,
                             VGSmodellistfrow = 
-                              VGS_files$CorRate_VGSevoPowerfrow_Effects,
+                              VGSfrow_files$CorRate_VGSevoPowerfrow_Effects,
                             VGSmodellistprow = 
-                              VGS_files$CorRate_VGSevoPowerprow_Effects,
+                              VGSprow_files$CorRate_VGSevoPowerprow_Effects,
                             colorslist = colors_list,
                             alphalist = alpha_list,
                             lineslist = lines_list,
@@ -925,13 +929,13 @@ allevo_corrate <- sponevo_behav_combined_plot(ASmodellistfrow =
                             labelslist = list(ylabel = "% correct"))
 
 allevo_cvlat <- sponevo_behav_combined_plot(ASmodellistfrow =
-                              AS_files$CVLatCor_corASevoPowerfrow_Effects,
+                              ASfrow_files$CVLatCor_corASevoPowerfrow_Effects,
                             ASmodellistprow = 
-                              AS_files$CVLatCor_corASevoPowerprow_Effects,
+                              ASprow_files$CVLatCor_corASevoPowerprow_Effects,
                             VGSmodellistfrow = 
-                              VGS_files$CVLatCor_VGSevoPowerfrow_Effects,
+                              VGSfrow_files$CVLatCor_VGSevoPowerfrow_Effects,
                             VGSmodellistprow = 
-                              VGS_files$CVLatCor_VGSevoPowerprow_Effects,
+                              VGSprow_files$CVLatCor_VGSevoPowerprow_Effects,
                             colorslist = colors_list,
                             alphalist = alpha_list,
                             lineslist = lines_list,
@@ -940,13 +944,13 @@ allevo_cvlat <- sponevo_behav_combined_plot(ASmodellistfrow =
                             labelslist = list(ylabel = "Coefficient of variation"))
 
 allevo_avglat <- sponevo_behav_combined_plot(ASmodellistfrow =
-                              AS_files$AvgLatCor_corASevoPowerfrow_Effects,
+                              ASfrow_files$AvgLatCor_corASevoPowerfrow_Effects,
                             ASmodellistprow = 
-                              AS_files$AvgLatCor_corASevoPowerprow_Effects,
+                              ASprow_files$AvgLatCor_corASevoPowerprow_Effects,
                             VGSmodellistfrow = 
-                              VGS_files$AvgLatCor_VGSevoPowerfrow_Effects,
+                              VGSfrow_files$AvgLatCor_VGSevoPowerfrow_Effects,
                             VGSmodellistprow = 
-                              VGS_files$AvgLatCor_VGSevoPowerprow_Effects,
+                              VGSprow_files$AvgLatCor_VGSevoPowerprow_Effects,
                             colorslist = colors_list,
                             alphalist = alpha_list,
                             lineslist = lines_list,
@@ -987,34 +991,6 @@ cowplot::plot_grid(
   )
 ggsave(file.path(savedir,"allsponevo_behavs.png"),
        dpi = 600, units = 'mm', width = 90, height = 90 ,bg="transparent")
-
-## --- AS and VGS together for coefs table ---
-# find rds file with results
-filepaths <- list.files(
-  path = resultsdir, 
-  pattern = "(evo|spon)Power(f|p)row_Effects.rds$", 
-  full.names = TRUE,                    
-  recursive = FALSE,                     
-  ignore.case = TRUE                    
-)
-
-files <- lapply(filepaths, readRDS)
-
-names(files)  <- tools::file_path_sans_ext(basename(filepaths))
-
-sponevo_powerbehav_coefs <- compile_coefs(files)
-
-sponevo_powerbehav_coefs <- sponevo_powerbehav_coefs %>%
-  group_by(term) %>%
-  mutate(
-    p_fdr = p.adjust(`Pr(>|t|)`, method = 'fdr')
-  ) %>%
-  ungroup()
-
-# save coefs as table
-write.table(sponevo_powerbehav_coefs, file = "/Volumes/Hera/Abby/AS_EEG/paperfigs/tables/SM_sponevo_powerbehav_coefs.csv",
-            col.names = T, row.names = F)
-
 
 ```
 
@@ -1513,8 +1489,9 @@ ersp_frow_behavage_interaction_coefs <- ersp_frow_behavage_interaction_coefs %>%
   ) %>% ungroup()
 
 # save coefs as table
-write.table(ersp_frow_behavage_interaction_coefs, file = "/Volumes/Hera/Abby/AS_EEG/paperfigs/tables/SM_ersp_frow_behavage_interaction_coefs.csv",
-            col.name = T, row.name = F)
+write.csv(ersp_frow_behavage_interaction_coefs,
+          file = paste0(savedir,"tables/SM_ersp_frow_behavage_interaction_coefs.csv"),
+          row.names = F)
 
 ```
 
@@ -1537,8 +1514,21 @@ names(AS_files)  <- tools::file_path_sans_ext(basename(AS_filepaths))
 asersp_behav_coefs <- compile_coefs(AS_files)
 
 # save coefs as table
-write.table(asersp_behav_coefs, file = "/Volumes/Hera/Abby/AS_EEG/paperfigs/tables/SM_ASersp_prow_behav_coefs.csv",
+write.csv(asersp_behav_coefs, file = "/Volumes/Hera/Abby/AS_EEG/paperfigs/tables/SM_ASersp_prow_behav_coefs.csv",
             col.names = T, row.names = F)
+
+# VGS files
+VGS_filepaths <- list.files(
+  path = resultsdir, 
+  pattern = "VGSprowERSPclusters_Effect.rds$", 
+  full.names = TRUE,                    
+  recursive = FALSE,                     
+  ignore.case = TRUE                    
+)
+
+VGS_files <- lapply(VGS_filepaths, readRDS)
+
+names(VGS_files)  <- tools::file_path_sans_ext(basename(VGS_filepaths))
 
 cluster_behav_plot <- function(AS_modellist, 
                                VGS_modellist,
@@ -1552,12 +1542,14 @@ cluster_behav_plot <- function(AS_modellist,
     condition = as.factor("AS"))
   AS_df <- AS_df[,c("behav","invage","sex",cluster,"lunaid_clean","condition")]
   colnames(AS_df) <-  c("behav","invage","sex","ersp","lunaid_clean","condition")
-  VGS_df <- VGS_modellist$cleandata 
+  
+  # VGS
+  VGS_df <- VGS_modellist$cleandata
   VGS_df <- VGS_df %>% mutate(
     condition = as.factor("VGS"))
-  VGS_df <- VGS_df[,c(behav,"invage",paste0("VGS_",cluster,"_ersp_interaction_prow"),"sex","lunaid_clean","condition")]
-  VGS_df <- VGS_df[, c(behav, "invage","sex",paste0("VGS_",cluster,"_ersp_interaction_prow"),"lunaid_clean","condition")]
-  colnames(VGS_df) <- c("behav","invage","sex","ersp","lunaid_clean","condition")
+  VGS_df <- VGS_df[,c("behav","invage","sex",cluster,"lunaid_clean","condition")]
+  colnames(VGS_df) <-  c("behav","invage","sex","ersp","lunaid_clean","condition")
+  
   long_df <- rbind(AS_df, VGS_df)
   
   violin_plt <- ggplot(data=long_df, 
@@ -1624,7 +1616,7 @@ cluster_behav_plot <- function(AS_modellist,
 
 cvlat_c3 <- cluster_behav_plot(AS_modellist =
                                    AS_files$CVLatCor_corASprowERSPclusters_Effect,
-                   VGS_modellist = VGS_files$CVLatVar_VGSc3prowinteraction,
+                   VGS_modellist = VGS_files$CVLatCor_VGSprowERSPclusters_Effect,
                    cluster = "c3",
                    behav = "CVLatCor",
                    colorslist = colors_list,
@@ -1637,7 +1629,7 @@ cvlat_c3 <- cluster_behav_plot(AS_modellist =
 
 cvlat_c5 <- cluster_behav_plot(AS_modellist =
                                    AS_files$CVLatCor_corASprowERSPclusters_Effect,
-                   VGS_modellist = VGS_files$CVLatVar_VGSc5prowinteraction,
+                   VGS_modellist = VGS_files$CVLatCor_VGSprowERSPclusters_Effect,
                    cluster = "c5",
                    behav = "CVLatCor",
                    colorslist = colors_list,
@@ -1650,7 +1642,7 @@ cvlat_c5 <- cluster_behav_plot(AS_modellist =
 
 cvlat_c6 <- cluster_behav_plot(AS_modellist =
                                    AS_files$CVLatCor_corASprowERSPclusters_Effect,
-                   VGS_modellist = VGS_files$CVLatVar_VGSc6prowinteraction,
+                   VGS_modellist = VGS_files$CVLatCor_VGSprowERSPclusters_Effect,
                    cluster = "c6",
                    behav = "CVLatCor",
                    colorslist = colors_list,

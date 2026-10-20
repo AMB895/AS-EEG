@@ -145,13 +145,10 @@ library(broom.helpers)
 library(R.matlab)
 library(webshot2)
 library(ggplot2)
-# library(ggside)
 library(ggrepel)
 library(broom.mixed)
 library(ggdist)
 library(lme4)
-# library(gtsummary)
-# library(LNCDR)
 library(lmerTest)
 library(reshape2)
 library(scales)
@@ -261,8 +258,10 @@ behav_coefs <- behav_coefs %>%
   ) %>% ungroup()
 
 # export model coefs as a table
-write.table(behav_coefs, file = "/Volumes/Hera/Abby/AS_EEG/paperfigs/tables/behav_age_coefs.csv",
-            col.names = TRUE, row.names = FALSE)
+write.csv(behav_coefs, 
+            file = 
+              paste0(savedir,"tables/mainpaper/behav_age_coefs.csv"),
+          row.names = FALSE)
 
 behavior_plot <- function(modellist,colorslist,
                            markerslist, alphalist,
@@ -375,8 +374,9 @@ sponevo_agecondition_frow_coefs <- sponevo_agecondition_frow_coefs %>%
   ) %>% ungroup()
 
 # save coefs as table
-write.table(sponevo_agecondition_frow_coefs, file = "/Volumes/Hera/Abby/AS_EEG/paperfigs/tables/sponevo_agecondition_frow_coefs.csv",
-            col.names = T, row.names =F)
+write.csv(sponevo_agecondition_frow_coefs, 
+          file = paste0(savedir,"tables/mainpaper/sponevo_agecondition_frow_coefs.csv"),
+          row.names =F)
 
 
 sponevo_agecondition_plot <- function(modellist,colorslist,
@@ -598,8 +598,9 @@ sponevo_behav_coefs <- sponevo_behav_coefs %>%
   ) %>% ungroup()
 
 # save coefs as table
-write.table(sponevo_behav_coefs, file = "/Volumes/Hera/Abby/AS_EEG/paperfigs/tables/sponevo_behav_coefs.csv",
-            col.names = T, row.names = F)
+write.csv(sponevo_behav_coefs,
+          file = paste0(savedir,"tables/mainpaper/sponevo_behav_coefs.csv"),
+          row.names = F)
 
 sponevo_behav_plot <- function(modellist,colorslist,
                                task,powertype,
@@ -1038,8 +1039,23 @@ names(AS_files)  <- tools::file_path_sans_ext(basename(AS_filepaths))
 asersp_behav_coefs <- compile_coefs(AS_files)
 
 # save coefs as table
-write.table(asersp_behav_coefs, file = "/Volumes/Hera/Abby/AS_EEG/paperfigs/tables/ASersp_frow_behav_coefs.csv",
-            col.names = T, row.names = F)
+write.csv(asersp_behav_coefs, 
+          file = paste0(savedir,"tables/mainpaper/ASersp_frow_behav_coefs.csv"),
+                        row.names = F)
+
+# VGS files
+VGS_filepaths <- list.files(
+  path = resultsdir, 
+  pattern = "VGSfrowERSPclusters_Effect.rds$", 
+  full.names = TRUE,                    
+  recursive = FALSE,                     
+  ignore.case = TRUE                    
+)
+
+VGS_files <- lapply(VGS_filepaths, readRDS)
+
+names(VGS_files)  <- tools::file_path_sans_ext(basename(VGS_filepaths))
+
 
 cluster_behav_plot <- function(AS_modellist, 
                                VGS_modellist,
@@ -1060,13 +1076,8 @@ cluster_behav_plot <- function(AS_modellist,
   VGS_df <- VGS_modellist$cleandata 
   VGS_df <- VGS_df %>% mutate(
     condition = as.factor("VGS"))
-  VGS_df <- VGS_df[,c(behav,"invage",paste0("VGS_",cluster,
-                                            "_ersp_interaction_frow"),
-                      "sex",
-                      "lunaid_clean","condition")]
-  VGS_df <- VGS_df[, c(behav, "invage","sex",
-                       paste0("VGS_",cluster,"_ersp_interaction_frow"),
-                       "lunaid_clean","condition")]
+  VGS_df <- VGS_df[,c("behav","invage","sex",cluster,
+                    "lunaid_clean","condition")]
   colnames(VGS_df) <- c("behav","invage","sex","ersp",
                         "lunaid_clean","condition")
   long_df <- rbind(AS_df, VGS_df)
@@ -1120,14 +1131,10 @@ cluster_behav_plot <- function(AS_modellist,
                                "lower.CL","upper.CL")
   # VGS model predictions
   VGS_predict_df <- model_prediction(model = VGS_modellist$model,
-                                     predictVar = paste0("VGS_",
-                                                         cluster,
-                                                         "_ersp_interaction_frow"),
-                                     groupVar = "invage",
-                                     cleandf = VGS_modellist$cleandata)
-  colnames(VGS_predict_df) <- c("ersp","invage","emmean","SE","df",
-                                "lower.CL","upper.CL")
-  VGS_predict_df$eeg_age <- as.factor(round(1/VGS_predict_df$invage))
+                                    predictVar = cluster,
+                                    cleandf = VGS_modellist$cleandata)
+  colnames(VGS_predict_df) <- c("ersp","emmean","SE","df",
+                               "lower.CL","upper.CL")
   
   # determine if axes should be shared
   if (!is.null(share_yaxis)){
@@ -1160,7 +1167,7 @@ cluster_behav_plot <- function(AS_modellist,
 
 corrate_c1 <- cluster_behav_plot(AS_modellist =
                                    AS_files$CorRate_corASfrowERSPclusters_Effect,
-                   VGS_modellist = VGS_files$CorRate_VGSc1frowinteraction,
+                   VGS_modellist = VGS_files$CorRate_VGSfrowERSPclusters_Effect,
                    cluster = "c1",
                    behav = "CorRate",
                    colorslist = colors_list,
@@ -1172,7 +1179,7 @@ corrate_c1 <- cluster_behav_plot(AS_modellist =
                                      ylabel="% correct")) 
 
 corrate_c5 <- cluster_behav_plot(AS_modellist = AS_files$CorRate_corASfrowERSPclusters_Effect,
-                   VGS_modellist = VGS_files$CorRate_VGSc5frowinteraction,
+                   VGS_modellist = VGS_files$CorRate_VGSfrowERSPclusters_Effect,
                    cluster = "c5",
                    behav = "CorRate",
                    colorslist = colors_list,
@@ -1184,7 +1191,7 @@ corrate_c5 <- cluster_behav_plot(AS_modellist = AS_files$CorRate_corASfrowERSPcl
                                      ylabel="% correct")) 
 
 cvlat_c1 <- cluster_behav_plot(AS_modellist = AS_files$CVLatCor_corASfrowERSPclusters_Effect,
-                   VGS_modellist = VGS_files$CVLatVar_VGSc1frowinteraction,
+                   VGS_modellist = VGS_files$CVLatCor_VGSfrowERSPclusters_Effect,
                    cluster = "c1",
                    behav = "CVLatCor",
                    colorslist = colors_list,
@@ -1196,7 +1203,7 @@ cvlat_c1 <- cluster_behav_plot(AS_modellist = AS_files$CVLatCor_corASfrowERSPclu
                                      ylabel="Coefficient of variation")) 
 
 cvlat_c5 <- cluster_behav_plot(AS_modellist = AS_files$CVLatCor_corASfrowERSPclusters_Effect,
-                   VGS_modellist = VGS_files$CVLatVar_VGSc5frowinteraction,
+                   VGS_modellist = VGS_files$CVLatCor_VGSfrowERSPclusters_Effect,
                    cluster = "c5",
                    behav = "CVLatCor",
                    colorslist = colors_list,
@@ -1342,18 +1349,22 @@ names(files)  <- tools::file_path_sans_ext(basename(filepaths))
 sponevo_ersp_frow_coefs <- compile_coefs(files)
 
 # condition column
-sponevo_ersp_frow_coefs$condition <- sub(".*(corAS|VGS).*","\\1", sponevo_ersp_frow_coefs$model)
+sponevo_ersp_frow_coefs$condition <- sub(".*(corAS|VGS).*","\\1",
+                                         sponevo_ersp_frow_coefs$model)
+sponevo_ersp_frow_coefs$cluster <- sub(".*(1|5).*","\\1",
+                                       sponevo_ersp_frow_coefs$model)
 
 # adjust p-values
 sponevo_ersp_frow_coefs <- sponevo_ersp_frow_coefs %>%
-  group_by(term, condition) %>%
+  group_by(term,condition) %>%
   mutate(
     p_fdr = p.adjust(`Pr(>|t|)`, method = 'fdr')
   ) %>% ungroup()
 
 # save coefs as table
-write.table(sponevo_ersp_frow_coefs, file = "/Volumes/Hera/Abby/AS_EEG/paperfigs/tables/sponevo_ersp_frow_coefs.csv",
-            col.names = T, row.names = F)
+write.csv(sponevo_ersp_frow_coefs,
+          file = paste0(savedir,"tables/mainpaper/sponevo_ersp_frow_coefs.csv"),
+          row.names = F)
 
 sponevo_ersp_interaction_plot <- function(modellist,colorslist,
                                     task,powertype,
