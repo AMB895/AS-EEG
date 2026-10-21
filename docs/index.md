@@ -1,6 +1,6 @@
 <br>
 
-# Neuronal Oscillations and Cortical SNR Support Development of Inhibitory Control from Adolescence into Adulthood
+# Developmental interactions between oscillatory and spontaneous neural activity support improvements in inhibitory control from adolescence into adulthood
 
 ### Project Lead
 Abigail M. Beatty
