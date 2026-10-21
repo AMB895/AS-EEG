@@ -28,7 +28,7 @@ https://github.com/AMB895/AS-EEG
 
 **Event-related spectral perturbation**
 
-** Spontaneous and evoked power **
+**Spontaneous and evoked power**
 
 **Statistical analyses**
 
