@@ -22,15 +22,15 @@ https://github.com/AMB895/AS-EEG
 
 ## Code Documentation
 
-** Pre-processing **
+**Pre-processing**
 
-** Antisaccade trial scoring **
+**Antisaccade trial scoring**
 
-** Event-related spectral perturbation **
+**Event-related spectral perturbation**
 
 ** Spontaneous and evoked power **
 
-** Statistical analyses **
+**Statistical analyses**
 
 
 
