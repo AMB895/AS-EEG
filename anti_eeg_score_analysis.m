@@ -3,7 +3,6 @@
 % Updated 1/30/25 bc now have error corrected trials
 % Updataed 2/18/25 
 % Updated 3/20/25 to calculate coefficient of latency variance and percent error corrected
-% TODO: add scoring script to github for this project
 
 clear; close all;
 % adding paths
