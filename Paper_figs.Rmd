@@ -567,9 +567,13 @@ ggsave(file.path(savedir, "spon_frow_diff_plot.png"),
 ## Behavior
 ### Individual AS and VGS 
 ```{r spon/evo behavior plots, echo = FALSE}
+resultsdirs <- c(
+  "/Volumes/Hera/Abby/AS_EEG/Results/R/mainpaper/",
+  "/Volumes/Hera/Abby/AS_EEG/Results/R/supplement/"
+)
 # find rds file with results
 filepaths <- list.files(
-  path = resultsdir, 
+  path = resultsdirs , 
   pattern = "_(corAS|VGS)(evo|spon)Power(f|p)row_Effects.rds$", 
   full.names = TRUE,                    
   recursive = FALSE,                     
