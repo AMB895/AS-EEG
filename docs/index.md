@@ -22,6 +22,8 @@ https://github.com/AMB895/AS-EEG
 
 ## Code Documentation
 **Outline**
+
+
 |Step|Outputs|
 |-----|-----|
 |1. Pre-processing|Cleaned EEG data ready for analysis|
