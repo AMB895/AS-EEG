@@ -23,8 +23,6 @@ LNCD 7T
 ## Code Documentation
 **Outline**
 
----
-
 | Step | Outputs |
 |------|---------|
 | 1. Pre-processing | Cleaned EEG data ready for analysis |
@@ -33,8 +31,6 @@ LNCD 7T
 | 4. Spontaneous/ evoked power | Data table of mean broadband spontaneous/evoked power |
 | 5. Statistical Analyses | R files with model outputs |
 | 6. Paper figures | Generate figures for paper and supplementary material |
-
----
 
 **Pre-processing**
 
