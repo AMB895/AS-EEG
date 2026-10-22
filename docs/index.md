@@ -46,7 +46,7 @@ Pre-preprocessing scripts can be found in `/AS-EEG/preprocessingFunctions/`
 Antisaccade scoring was done with [score_anti.m](https://github.com/AMB895/AS-EEG/blob/main/eog_scoring/score_anti.m)
 1. Read in each subjects raw EOG channels [all_anti.m](https://github.com/AMB895/AS-EEG/blob/main/eog_scoring/all_anti.m)
  
-MATLAB script keys:    
+### MATLAB script keys:    
 - `C_` : compile data scripts. Use to compile data generated into one matrix/ table across all subjects. (e.g. `C_ersp.m` compiles ERSP data into large 4D matrix)
 - `G_` : generate data scripts. Use to generate data (e.g. `G_ersp.m` generates an ERSP data file for each subject)
 - `F_` : functions. Functions to run computations (e.g. `F_ersp.m` is a function that computes ERSP)
