@@ -24,13 +24,13 @@ https://github.com/AMB895/AS-EEG
 
 Script keys:
     
-- 'C_' : compile scripts. Use to compile data generated into one matrix/ table across all subjects. (e.g. 'C_ersp.m' compiles ERSP data into large 4D matrix)
-- 'G_' : generate scripts. Use to generate data (e.g. 'G_ersp.m' generates ERSP data file for each subject)
-- 'F_' : functions. Functions to run computations (e.g. 'F_ersp.m' is a function that computes ERSP)
+- `C_` : compile scripts. Use to compile data generated into one matrix/ table across all subjects. (e.g. `C_ersp.m` compiles ERSP data into large 4D matrix)
+- `G_` : generate scripts. Use to generate data (e.g. `G_ersp.m` generates ERSP data file for each subject)
+- `F_` : functions. Functions to run computations (e.g. `F_ersp.m` is a function that computes ERSP)
 
 **Pre-processing**
 
-Pre-preprocessing scripts can be found in [/AS-EEG/preprocessingFunctions/]
+Pre-preprocessing scripts can be found in `/AS-EEG/preprocessingFunctions/`
 1. Raw EEG files were pulled in and trigger values were adjusted to simplier values using [remarkAS.m] for AS trials or [remark.m] for VGS trials
 2. Pre-processing pipeline was run with [run_preprocessing_pipelineAS.m] for AS trials or [run_preprocessing_pipelineVGS.m] for VGS trials
     1. Referenced data to mastoids
