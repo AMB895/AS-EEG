@@ -40,27 +40,21 @@ Pre-preprocessing scripts can be found in `/AS-EEG/preprocessingFunctions/`
 
 **Antisaccade trial scoring**
 
-Antisaccade scoring was done with [score_anti.m]
-1. Read in each subjects raw EOG channels [all_anti.m]
+Antisaccade scoring was done with [score_anti.m](https://github.com/AMB895/AS-EEG/blob/main/eog_scoring/score_anti.m)
+1. Read in each subjects raw EOG channels [all_anti.m](https://github.com/AMB895/AS-EEG/blob/main/eog_scoring/all_anti.m)
  
 
 **Event-related spectral perturbation**
 
-1. The ERSP for each subject at every channel was computed with [G_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/G_ersp.m) using the functions [F_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/F_ersp.m) and [F_tfpower.m](https://github.com/AMB895/AS-EEG/blob/main/F_tfpower.m)
-    1. [F_tfpower.m](https://github.com/AMB895/AS-EEG/blob/main/F_tfpower.m) uses Morlet wavelets to compute the time-resolved power spectrum
-    2. [F_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/F_ersp.m) uses the power spectrums generated from `F_tfpower.m` to compute th ERSP
-2. A 4D matrix (subjects x channels x time x frequency) of all ERSP data was made using [C_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/C_ersp.m)
-3. Significant ERSP time-frequency clusters were computed through the following steps:
-    1. [G_erspstats.m](https://github.com/AMB895/AS-EEG/blob/main/G_erspstats.m) ran a linear mixed effects model at each time-frequency point to determine main effects of inverse age and condition (AS/VGS) and their interaction.
-    2. [G_tfceersp.m](https://github.com/AMB895/AS-EEG/blob/main/G_tfceersp.m) ran the threshold-free cluster enhancement algorithm on the t-values from `G_erspstats.m` which was used to determine significant time-frequency clusters for each term in the linear mixed effects model.
-    3. [C_clusterersp.m](https://github.com/AMB895/AS-EEG/blob/main/C_clusterersp.m) compiled the mean ERSP from significant time-frequency clusters for each subject into one data table. This data was then imported in R for further statistical analyses.
+The ERSP for each subject at every channel was computed with [G_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/G_ersp.m) using the functions [F_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/F_ersp.m) and [F_tfpower.m](https://github.com/AMB895/AS-EEG/blob/main/F_tfpower.m). A 4D matrix (subjects x channels x time x frequency) containing ERSP data for every subject across channels was compiled with [C_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/C_ersp.m)
+* [F_tfpower.m](https://github.com/AMB895/AS-EEG/blob/main/F_tfpower.m) uses Morlet wavelets (## to ## cycles) to compute the time-resolved power spectrum from 3-70 Hz.
+* [F_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/F_ersp.m) uses the power spectrums generated from `F_tfpower.m` to compute the ERSP
 
-|Step|Scripts used|Outputs|
-|------|------|------|
-|1|[G_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/G_ersp.m)|Individual ERSP subject files|
-
+Significant ERSP time-frequency clusters for frontal and parietal electrodes were found first by running a linear mixed effects model to determine main effects of inverse age and condition (AS/VGS) and their interaction at each ERSP time-frequency point using [G_erspstats.m](https://github.com/AMB895/AS-EEG/blob/main/G_erspstats.m). [G_tfceersp.m](https://github.com/AMB895/AS-EEG/blob/main/G_tfceersp.m) uses the t-values from the linear mixed effects models computed with `G_erspstats.m` as inputs to the threshold-free cluster enhancement algorithm (CITATION) to find significant ERSP clusters from each term in the linear mixed effects models. Finally, [C_clusterersp.m](https://github.com/AMB895/AS-EEG/blob/main/C_clusterersp.m) compiles mean ERSP from significant clusters for each subject into one data table. 
 
 **Spontaneous and evoked power**
+
+The spontaneous and evoked power spectrums were computed with [GC_sponevopower.m](https://github.com/AMB895/AS-EEG/blob/main/GC_sponevopower.m) which uses [F_tfpower.m](https://github.com/AMB895/AS-EEG/blob/main/F_tfpower.m) then averages across time to get broadband spontaneous/ evoked power spectrums. `GC_sponevopower.m` also compiles average broadband power values into data table for future analyses. 
 
 **Statistical analyses**
 
