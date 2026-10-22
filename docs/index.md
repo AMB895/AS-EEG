@@ -21,12 +21,15 @@ LNCD 7T
 https://github.com/AMB895/AS-EEG
 
 ## Code Documentation
-
-Script keys:
-    
-- `C_` : compile data scripts. Use to compile data generated into one matrix/ table across all subjects. (e.g. `C_ersp.m` compiles ERSP data into large 4D matrix)
-- `G_` : generate data scripts. Use to generate data (e.g. `G_ersp.m` generates an ERSP data file for each subject)
-- `F_` : functions. Functions to run computations (e.g. `F_ersp.m` is a function that computes ERSP)
+**Outline**
+|Step|Outputs|
+|-----|-----|
+|1. Pre-processing|Cleaned EEG data ready for analysis|
+|2. Score antisaccade trials|Data table of behavioral performance|
+|3. Event-related spectral perturbation|Data table of average ERSP from significant time-frequency clusters|
+|4. Spontaneous/ evoked power|Data table of mean broadband spontaneous/evoked power|
+|5. Statistical Analyses|R files with model outputs|
+|6. Paper figures|Generate figures for paper and supplementary material|
 
 **Pre-processing**
 
@@ -43,6 +46,10 @@ Pre-preprocessing scripts can be found in `/AS-EEG/preprocessingFunctions/`
 Antisaccade scoring was done with [score_anti.m](https://github.com/AMB895/AS-EEG/blob/main/eog_scoring/score_anti.m)
 1. Read in each subjects raw EOG channels [all_anti.m](https://github.com/AMB895/AS-EEG/blob/main/eog_scoring/all_anti.m)
  
+MATLAB script keys:    
+- `C_` : compile data scripts. Use to compile data generated into one matrix/ table across all subjects. (e.g. `C_ersp.m` compiles ERSP data into large 4D matrix)
+- `G_` : generate data scripts. Use to generate data (e.g. `G_ersp.m` generates an ERSP data file for each subject)
+- `F_` : functions. Functions to run computations (e.g. `F_ersp.m` is a function that computes ERSP)
 
 **Event-related spectral perturbation**
 
@@ -50,7 +57,7 @@ The ERSP for each subject at every channel was computed with [G_ersp.m](https://
 * [F_tfpower.m](https://github.com/AMB895/AS-EEG/blob/main/F_tfpower.m) uses Morlet wavelets (## to ## cycles) to compute the time-resolved power spectrum from 3-70 Hz.
 * [F_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/F_ersp.m) uses the power spectrums generated from `F_tfpower.m` to compute the ERSP
 
-Significant ERSP time-frequency clusters for frontal and parietal electrodes were found first by running a linear mixed effects model to determine main effects of inverse age and condition (AS/VGS) and their interaction at each ERSP time-frequency point using [G_erspstats.m](https://github.com/AMB895/AS-EEG/blob/main/G_erspstats.m). [G_tfceersp.m](https://github.com/AMB895/AS-EEG/blob/main/G_tfceersp.m) uses the t-values from the linear mixed effects models computed with `G_erspstats.m` as inputs to the threshold-free cluster enhancement algorithm (CITATION) to find significant ERSP clusters from each term in the linear mixed effects models. Finally, [C_clusterersp.m](https://github.com/AMB895/AS-EEG/blob/main/C_clusterersp.m) compiles mean ERSP from significant clusters for each subject into one data table. 
+Significant ERSP time-frequency clusters for frontal and parietal electrodes were found first by running a linear mixed effects model to determine main effects of inverse age and condition (AS/VGS) and their interaction at each ERSP time-frequency point using [G_erspstats.m](https://github.com/AMB895/AS-EEG/blob/main/G_erspstats.m). [G_tfceersp.m](https://github.com/AMB895/AS-EEG/blob/main/G_tfceersp.m) uses the t-values from the linear mixed effects models computed with `G_erspstats.m` as inputs to the threshold-free cluster enhancement algorithm (CITATION) to find significant ERSP clusters from each term in the linear mixed effects models. Finally, [C_clusterersp.m](https://github.com/AMB895/AS-EEG/blob/main/C_clusterersp.m) compiles mean ERSP from significant clusters for each subject into one data table for future analyses. 
 
 **Spontaneous and evoked power**
 
