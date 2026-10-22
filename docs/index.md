@@ -18,7 +18,7 @@ In progress
 LNCD 7T
 
 ## Github Repository
-https://github.com/AMB895/AS-EEG
+[https://github.com/AMB895/AS-EEG](https://github.com/AMB895/AS-EEG/tree/main)
 
 ## Code Documentation
 **Outline**
@@ -66,7 +66,10 @@ Significant ERSP time-frequency clusters for frontal and parietal electrodes wer
 
 The spontaneous and evoked power spectrums were computed with [GC_sponevopower.m](https://github.com/AMB895/AS-EEG/blob/main/GC_sponevopower.m) which uses [F_tfpower.m](https://github.com/AMB895/AS-EEG/blob/main/F_tfpower.m) then averages across time to get broadband spontaneous/ evoked power spectrums. `GC_sponevopower.m` also compiles average broadband power values into data table for future analyses. 
 
-**Statistical analyses**
+**Statistics and figures**
 
+All statistical analyses done for the main paper are in [main_sponevo_ersp_analysis.Rmd](https://github.com/AMB895/AS-EEG/blob/main/main_sponevo_ersp_analysis.Rmd) and supplemental statistical analyses are found in [supplement_sponevo_ersp_analysis.Rmd](https://github.com/AMB895/AS-EEG/blob/main/supplement_sponevo_ersp_analysis.Rmd ). Main paper figures were generated using [Paper_figs.Rmd](https://github.com/AMB895/AS-EEG/blob/main/Paper_figs.Rmd) and supplemental figures were generated using [Supplemental_figs.Rmd](https://github.com/AMB895/AS-EEG/blob/main/Supplemental_figs.Rmd).
+
+## Project Software 
 
 
