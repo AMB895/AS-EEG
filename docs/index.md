@@ -22,6 +22,11 @@ https://github.com/AMB895/AS-EEG
 
 ## Code Documentation
 
+Script keys:
+    - 'C_' : compile scripts. Use to compile data generated into one matrix/ table across all subjects. (e.g. 'C_ersp.m' compiles ERSP data into large 4D matrix)
+    - 'G_' : generate scripts. Use to generate data (e.g. 'G_ersp.m' generates ERSP data file for each subject)
+    - 'F_' : functions. Functions to run computations (e.g. 'F_ersp.m' is a function that computes ERSP)
+
 **Pre-processing**
 
 Pre-preprocessing scripts can be found in [/AS-EEG/preprocessingFunctions/]
@@ -39,6 +44,8 @@ Antisaccade scoring was done with [score_anti.m]
  
 
 **Event-related spectral perturbation**
+
+
 
 **Spontaneous and evoked power**
 
