@@ -24,14 +24,14 @@ https://github.com/AMB895/AS-EEG
 **Outline**
 
 
-|Step|Outputs|
+| Step | Outputs |
 |-----|-----|
-|1. Pre-processing|Cleaned EEG data ready for analysis|
-|2. Score antisaccade trials|Data table of behavioral performance|
-|3. Event-related spectral perturbation|Data table of average ERSP from significant time-frequency clusters|
-|4. Spontaneous/ evoked power|Data table of mean broadband spontaneous/evoked power|
-|5. Statistical Analyses|R files with model outputs|
-|6. Paper figures|Generate figures for paper and supplementary material|
+| 1. Pre-processing | Cleaned EEG data ready for analysis |
+| 2. Score antisaccade trials | Data table of behavioral performance |
+| 3. Event-related spectral perturbation | Data table of average ERSP from significant time-frequency clusters |
+| 4. Spontaneous/ evoked power | Data table of mean broadband spontaneous/evoked power |
+| 5. Statistical Analyses | R files with model outputs |
+| 6. Paper figures | Generate figures for paper and supplementary material |
 
 **Pre-processing**
 
