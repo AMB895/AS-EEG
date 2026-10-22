@@ -27,9 +27,9 @@ https://github.com/AMB895/AS-EEG
 Pre-preprocessing scripts can be found in [/AS-EEG/preprocessingFunctions/]
 1. Raw EEG files were pulled in and trigger values were adjusted to simplier values using [remarkAS.m] for AS trials or [remark.m] for VGS trials
 2. Pre-processing pipeline was run with [run_preprocessing_pipelineAS.m] for AS trials or [run_preprocessing_pipelineVGS.m] for VGS trials
-        1. Referenced data to mastoids
-        2. Bandpass filtered data from 0.5 to 70 Hz
-        3. Downsampled data to 150 Hz
+    1. Referenced data to mastoids
+    2. Bandpass filtered data from 0.5 to 70 Hz
+    3. Downsampled data to 150 Hz
 
 
 **Antisaccade trial scoring**
