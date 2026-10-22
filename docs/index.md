@@ -24,8 +24,8 @@ https://github.com/AMB895/AS-EEG
 
 Script keys:
     
-- `C_` : compile scripts. Use to compile data generated into one matrix/ table across all subjects. (e.g. `C_ersp.m` compiles ERSP data into large 4D matrix)
-- `G_` : generate scripts. Use to generate data (e.g. `G_ersp.m` generates ERSP data file for each subject)
+- `C_` : compile data scripts. Use to compile data generated into one matrix/ table across all subjects. (e.g. `C_ersp.m` compiles ERSP data into large 4D matrix)
+- `G_` : generate data scripts. Use to generate data (e.g. `G_ersp.m` generates an ERSP data file for each subject)
 - `F_` : functions. Functions to run computations (e.g. `F_ersp.m` is a function that computes ERSP)
 
 **Pre-processing**
@@ -46,7 +46,7 @@ Antisaccade scoring was done with [score_anti.m]
 
 **Event-related spectral perturbation**
 
-1. The ERSP for each subject at every channel was computed with `G_ersp.m` using the function `F_ersp.m` and `F_tfpower.m`
+1. The ERSP for each subject at every channel was computed with [G_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/G_ersp.m) using the function `F_ersp.m` and `F_tfpower.m`
     1. `F_tfpower.m` uses Morlet wavelets to compute the time-resolved power spectrum
     2. `F_ersp.m` uses the power spectrums generated from `F_tfpower.m` to compute th ERSP
 2. A 4D matrix (subjects x channels x time x frequency) of all ERSP data was made using `C_ersp.m`
