@@ -46,14 +46,18 @@ Antisaccade scoring was done with [score_anti.m]
 
 **Event-related spectral perturbation**
 
-1. The ERSP for each subject at every channel was computed with [G_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/G_ersp.m) using the function `F_ersp.m` and `F_tfpower.m`
-    1. `F_tfpower.m` uses Morlet wavelets to compute the time-resolved power spectrum
-    2. `F_ersp.m` uses the power spectrums generated from `F_tfpower.m` to compute th ERSP
-2. A 4D matrix (subjects x channels x time x frequency) of all ERSP data was made using `C_ersp.m`
+1. The ERSP for each subject at every channel was computed with [G_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/G_ersp.m) using the functions [F_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/F_ersp.m) and [F_tfpower.m](https://github.com/AMB895/AS-EEG/blob/main/F_tfpower.m)
+    1. [F_tfpower.m](https://github.com/AMB895/AS-EEG/blob/main/F_tfpower.m) uses Morlet wavelets to compute the time-resolved power spectrum
+    2. [F_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/F_ersp.m) uses the power spectrums generated from `F_tfpower.m` to compute th ERSP
+2. A 4D matrix (subjects x channels x time x frequency) of all ERSP data was made using [C_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/C_ersp.m)
 3. Significant ERSP time-frequency clusters were computed through the following steps:
-    1. `G_erspstats.m` ran a linear mixed effects model at each time-frequency point to determine main effects of inverse age and condition (AS/VGS) and their interaction.
-    2. `G_tfceersp.m` ran the threshold-free cluster enhancement algorithm on the t-values from `G_erspstats.m` which was used to determine significant time-frequency clusters for each term in the linear mixed effects model.
-    3. `C_clusterersp.m` compiled the mean ERSP from significant time-frequency clusters for each subject into one data table. This data was then imported in R for further statistical analyses.
+    1. [G_erspstats.m](https://github.com/AMB895/AS-EEG/blob/main/G_erspstats.m) ran a linear mixed effects model at each time-frequency point to determine main effects of inverse age and condition (AS/VGS) and their interaction.
+    2. [G_tfceersp.m](https://github.com/AMB895/AS-EEG/blob/main/G_tfceersp.m) ran the threshold-free cluster enhancement algorithm on the t-values from `G_erspstats.m` which was used to determine significant time-frequency clusters for each term in the linear mixed effects model.
+    3. [C_clusterersp.m](https://github.com/AMB895/AS-EEG/blob/main/C_clusterersp.m) compiled the mean ERSP from significant time-frequency clusters for each subject into one data table. This data was then imported in R for further statistical analyses.
+
+|Step|Scripts used|Outputs|
+|------|------|------|
+|1|[G_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/G_ersp.m)|Individual ERSP subject files|
 
 
 **Spontaneous and evoked power**
