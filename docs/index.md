@@ -29,7 +29,7 @@ LNCD 7T
 | 2. Score antisaccade trials | Data table of behavioral performance |
 | 3. Event-related spectral perturbation | Data table of average ERSP from significant time-frequency clusters |
 | 4. Spontaneous/ evoked power | Data table of mean broadband spontaneous/evoked power |
-| 5. Statistical Analyses | R files with model outputs |
+| 5. Statistical analyses | R files with model outputs |
 | 6. Paper figures | Generate figures for paper and supplementary material |
 
 **Pre-processing**
@@ -40,6 +40,7 @@ Pre-preprocessing scripts can be found in `/AS-EEG/preprocessingFunctions/`
     1. Referenced data to mastoids
     2. Bandpass filtered data from 0.5 to 70 Hz
     3. Downsampled data to 150 Hz
+    4. Rejected noisy channels
 
 
 **Antisaccade trial scoring**
