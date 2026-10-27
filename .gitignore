@@ -1,0 +1,76 @@
+
+# R / system files
+.RData
+.RDataTmp
+.Rhistory
+
+# Data files
+*.csv
+*.asv
+*.mat
+
+# Folders
+ChannelNeighbors/
+PSCfunctions/
+Results/
+figures/
+paperfigs/
+StatsProject/
+limo_tools/
+STUDY/
+oldData/
+
+# R markdown
+AEC_analysis.Rmd
+AEC_avgFrow_analysis.Rmd
+AS_EEG_analysis.Rmd
+AS_analysis_gam.Rmd
+AS_analysis_new.Rmd
+AS_eeg_behavior_analysis.Rmd
+AS_eeg_clusterERSP_fullLME.Rmd
+AS_eeg_figures.Rmd
+AS_eeg_sponevo_analysis.Rmd
+ASeeg_analysis.Rmd
+erspStats.Rmd
+final_AS_eeg.Rmd
+final_AS_eeg_analysis.Rmd
+trialtype_ERSPclusters_CorASvsVGS.Rmd
+whiteboard_AS_EEG.Rmd
+
+# R scripts
+generate_text_file.R
+
+# MATLAB
+BPfilt_epoch.m
+ICAvarianceAnalysis.m
+addAges.m
+calc_AEC.m
+calc_ersp.m
+calc_spontaneous_power.m
+calc_timefreq.m
+calc_timefreqpower.m
+clusterpower_corASvsVGS_fullLME.m
+ersp_stats.m
+gen_clusterpower.m
+gen_clusterpower2.m
+gen_ersp.m
+gen_ersp_timefreq.m
+gen_scalpmaps.m
+gen_sponPowSpec.m
+gen_sponPowSpec_fft.m
+gen_sponevopowerspec.m
+gen_sponevopowerspec_AS.m
+gen_sponevopowerspec_ErrCorrAS.m
+gen_sponevopowerspec_VGS.m
+gen_tfce_ersp.m
+hilbert_AEC.m
+playground.m
+playground_morlet.m
+plot_tfce_clusters.m
+tfce_ersp.m
+timefreq_script.m
+untitled.m
+whiteboard_figs.m
+GC_sponevopower_rest.m
+
+
