@@ -36,24 +36,30 @@ LNCD 7T
 
 **Pre-processing**
 
-Pre-preprocessing scripts can be found in `/AS-EEG/preprocessingFunctions/`
-1. Raw EEG files were pulled in and trigger values were adjusted to simplier values using [remarkAS.m] for AS trials or [remark.m] for VGS trials
-2. Pre-processing pipeline was run with [run_preprocessing_pipelineAS.m] for AS trials or [run_preprocessing_pipelineVGS.m] for VGS trials
-    1. Referenced data to mastoids
-    2. Bandpass filtered data from 0.5 to 70 Hz
-    3. Downsampled data to 150 Hz
-    4. Rejected noisy channels
+Specific details on pre-preprocessing scripts found in [EEG_preprocessing](https://github.com/LabNeuroCogDevel/EEG_preprocessing) repository from [LabNeuroCogDevel](https://github.com/LabNeuroCogDevel). Brief overview of pre-processing pipeline:
+1. Pre-processing pipeline initiated with [run_preprocessing_V2.m](https://github.com/LabNeuroCogDevel/EEG_preprocessing/blob/main/run_preprocessing_V2.m)
+    - Inputs are `task` (e.g. anti, vgs, rest), `maindir` (where things are being saved), and `rawdir` (where raw EEG files are)
+Within [run_preprocessing_V2.m](https://github.com/LabNeuroCogDevel/EEG_preprocessing/blob/main/run_preprocessing_V2.m): 
+2. Raw EEG files were loaded in and trigger values were adjusted to simplier values using remark functions ([remark_AS_7t.m](https://github.com/LabNeuroCogDevel/EEG_preprocessing/blob/main/preprocessingTools/functions/remark_functions/remark_AS_7T.m) for AS trials and [remark_vgs.m](https://github.com/LabNeuroCogDevel/EEG_preprocessing/blob/main/preprocessingTools/functions/remark_functions/remark_vgs.m) for VGS trials)
+3. Pre-processing pipeline was run with [preprocessing_pipeline_V2.m](https://github.com/LabNeuroCogDevel/EEG_preprocessing/blob/main/preprocessingTools/preprocessing_pipeline_V2.m) which involved the following steps:
+    1. Referenced data to mastoids [run_filtering.m](https://github.com/LabNeuroCogDevel/EEG_preprocessing/blob/main/preprocessingTools/steps/run_filtering.m)
+    2. Bandpass filtered data from 0.5 to 70 Hz [run_filtering.m](https://github.com/LabNeuroCogDevel/EEG_preprocessing/blob/main/preprocessingTools/steps/run_filtering.m)
+    2. Downsampled data to 150 Hz [run_filtering.m](https://github.com/LabNeuroCogDevel/EEG_preprocessing/blob/main/preprocessingTools/steps/run_filtering.m) (for current study downsampled to 150 Hz, preprocessing pipeline has since been updated to downsampling to 512 Hz)
+    4. Rejected noisy channels [run_channel_rejection.m](https://github.com/LabNeuroCogDevel/EEG_preprocessing/blob/main/preprocessingTools/steps/run_channel_rejection.m)
+    5. Interpolated rejected channels [run_channel_interpolation](https://github.com/LabNeuroCogDevel/EEG_preprocessing/blob/main/preprocessingTools/steps/run_channel_interpolation.m)
+    6. ICA weights generated
+    7. ICA weghts applied to data
+    8. Manual ICA rejection of components corresponding to eye blinks, horizontal/ vertical eye movements, ECG activity, channel noise, or movement artifacts [run_manualICArejection.m](https://github.com/LabNeuroCogDevel/EEG_preprocessing/blob/main/preprocessingTools/steps/run_channel_interpolation.m)
+    9. Notch filtered data at 60 Hz [run_filtering.m](https://github.com/LabNeuroCogDevel/EEG_preprocessing/blob/main/preprocessingTools/steps/run_filtering.m) (current study did this at step 9, updated pre-processing pipeline does this during bandpass filtering step)
+    10. Homogenized channel locations, for caps that had 128 channels for comparison to caps with 64 channels
+4. Data was segmented into epochs, time-locked to the onset of the preparatory period (for AS task only preparatory period of correct AS trials)
 
 
-**Antisaccade trial scoring**
-
-Antisaccade scoring was done with [score_anti.m](https://github.com/AMB895/AS-EEG/blob/main/eog_scoring/score_anti.m)
-1. Read in each subjects raw EOG channels [all_anti.m](https://github.com/AMB895/AS-EEG/blob/main/eog_scoring/all_anti.m)
- 
-### MATLAB script keys:    
+### MATLAB script naming conventions:
 - `C_` : compile data scripts. Use to compile data generated into one matrix/ table across all subjects. (e.g. `C_ersp.m` compiles ERSP data into large 4D matrix)
 - `G_` : generate data scripts. Use to generate data (e.g. `G_ersp.m` generates an ERSP data file for each subject)
 - `F_` : functions. Functions to run computations (e.g. `F_ersp.m` is a function that computes ERSP)
+
 
 **Event-related spectral perturbation**
 
