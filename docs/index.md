@@ -23,7 +23,7 @@ LNCD 7T
 [https://github.com/AMB895/AS-EEG](https://github.com/AMB895/AS-EEG/tree/main)
 
 ## CODE DOCUMENTATION
-**Outline**
+### Outline
 
 | Step | Outputs |
 |------|---------|
@@ -34,7 +34,7 @@ LNCD 7T
 | 5. Statistical analyses | R files with model outputs |
 | 6. Paper figures | Generate figures for paper and supplementary material |
 
-**Pre-processing**
+### Pre-processing
 
 Specific details on pre-preprocessing scripts found in [EEG_preprocessing](https://github.com/LabNeuroCogDevel/EEG_preprocessing) repository from [LabNeuroCogDevel](https://github.com/LabNeuroCogDevel). Brief overview of pre-processing pipeline:
 1. Pre-processing pipeline initiated with [run_preprocessing_V2.m](https://github.com/LabNeuroCogDevel/EEG_preprocessing/blob/main/run_preprocessing_V2.m)
@@ -61,32 +61,32 @@ Within [run_preprocessing_V2.m](https://github.com/LabNeuroCogDevel/EEG_preproce
 - `F_` : functions. Functions to run computations (e.g. `F_ersp.m` is a function that computes ERSP)
 
 
-**Event-related spectral perturbation**
+### Event-related spectral perturbation
 
 The ERSP for each subject at every channel was computed with [G_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/G_ersp.m) 
 * Loads in pre-processed, epoched EEG data (AS and VGS)
 * Loops over each EEG file and computes ERSP (using [F_tfpower.m](https://github.com/AMB895/AS-EEG/blob/main/F_tfpower.m) and [F_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/F_ersp.m) at every channel with baseline period defined as 700 to 400 ms prior to the onset of the preparatory period
-    - [F_tfpower.m](https://github.com/AMB895/AS-EEG/blob/main/F_tfpower.m) uses Morlet wavelets (3 to 35 cycles) to compute the time-resolved power spectrum from 3-70 Hz. Required input is the EEG structure. Optional inputs are `channels` (vector of channel numbers to compute power for), `evoked` (0 = not evoked power, 1 = evoked power; default is not evoked), `itc` (0 = do not compute ITC, 1 = compute ITC; default is to not compute), and `amplitude` (0 = do not compute amplitude envelope, 1 = compute amplitude envelope; default is to not compute amplitude envelope). Output of [F_tfpower.m](https://github.com/AMB895/AS-EEG/blob/main/F_tfpower.m) is `power` (4D matrix: frequency x time x trial x channel), `times` (vector of times), and `freqs` (vector of frequencies)
-    - [F_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/F_ersp.m) uses the power spectrums generated from [F_tfpower.m](https://github.com/AMB895/AS-EEG/blob/main/F_tfpower.m) to compute the ERSP. Required inputs are `power` (3D matrix: frequency x time x channel), `times` (vector of epoch time), `baseline_times` (vector with when baseline starts and when baseline ends. e.g.: [-700 -400]), and `event_times` (vector with when event of interest starts and ends. e.g.: [0 500]). Optional input includes `base_norm` (how ERSP is normalized by baseline period. options include: 'singletrial','avgtrial', or 'avgtrial_ers'; default is 'avgtrial_ers'). Outputs include the 4D matrix of ERSP in decibels (dB) and a vector of times which corresponds to the ERSP.
+    - [F_tfpower.m](https://github.com/AMB895/AS-EEG/blob/main/F_tfpower.m) uses Morlet wavelets (3 to 35 cycles) to compute the time-resolved power spectrum from 3-70 Hz. Required input is the EEG structure. Optional inputs are `channels` (vector of channel numbers to compute power for), `evoked` (0 = not evoked power, 1 = evoked power; default is not evoked), `itc` (0 = do not compute ITC, 1 = compute ITC; default is to not compute), and `amplitude` (0 = do not compute amplitude envelope, 1 = compute amplitude envelope; default is to not compute amplitude envelope). **Outputs:** `power` (4D matrix: frequency x time x trial x channel), `times` (vector of times), and `freqs` (vector of frequencies)
+    - [F_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/F_ersp.m) uses the power spectrums generated from [F_tfpower.m](https://github.com/AMB895/AS-EEG/blob/main/F_tfpower.m) to compute the ERSP. Required inputs are `power` (3D matrix: frequency x time x channel), `times` (vector of epoch time), `baseline_times` (vector with when baseline starts and when baseline ends. e.g.: [-700 -400]), and `event_times` (vector with when event of interest starts and ends. e.g.: [0 500]). Optional input includes `base_norm` (how ERSP is normalized by baseline period. options include: 'singletrial','avgtrial', or 'avgtrial_ers'; default is 'avgtrial_ers'). **Outputs:** matrix of ERSP in decibels (dB) and a vector of times which corresponds to the ERSP.
 
-[C_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/C_ersp.m) loaded in individual subjects' 3D ERSP matricies and compiled into one large 4D matrix (subject X frequency x time x channel)
+[C_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/C_ersp.m) loaded in individual subjects' 3D ERSP matricies and compiled into one large matrix. **Output:** 4D ERSP matrix (subject X frequency x time x channel)
 
 Significant ERSP time-frequency clusters were found using [G_erspstats.m](https://github.com/AMB895/AS-EEG/blob/main/G_erspstats.m) and [G_tfceersp.m](https://github.com/AMB895/AS-EEG/blob/main/G_tfceersp.m)
-* [G_erspstats.m](https://github.com/AMB895/AS-EEG/blob/main/G_erspstats.m) loads in 4D matrix (subject X frequency x time x channel) and averages across specificed channels for AS and VGS task. At each time-freuquency point the linear mixed effects model `ERSP ~ 1 + Inverse Age * Condition + Sex + (1 | ID)` was evaluated and statistical parameters (t-values and beta estimates) were extraced for each model term at every time-frequency point. A 2D matrix (frequency x time) of t-values and beta estimates were saved for each model term. 
-* [G_tfceersp.m](https://github.com/AMB895/AS-EEG/blob/main/G_tfceersp.m) load in the 2D matrix output of t-values from [G_erspstats.m](https://github.com/AMB895/AS-EEG/blob/main/G_erspstats.m) as the inputs to the threshold-free cluster enhancement algorithm (Smith & Nichols, 2009). This algorithm outputs a 2D matrix of enhanced t-values. To find significant clusters (p<0.01), the original 2D t-value matrix was permuted 1000 times, inputed into the TFCE algorithm, and the maximum enhanced t-value was extracted for each permutation to build a null distribution. The threshold for a significant cluster was found using the null distribution at p=0.01. Using this threshold, a mask of significant clusters was generated and saved. 
+* [G_erspstats.m](https://github.com/AMB895/AS-EEG/blob/main/G_erspstats.m) loads in 4D matrix (subject X frequency x time x channel) and averages across specificed channels for AS and VGS task. At each time-freuquency point the linear mixed effects model `ERSP ~ 1 + Inverse Age * Condition + Sex + (1 | ID)` was evaluated and statistical parameters (t-values and beta estimates) were extraced for each model term at every time-frequency point. **Outputs:** 2D matrix (frequency x time) of t-values and beta estimates were saved for each model term. 
+* [G_tfceersp.m](https://github.com/AMB895/AS-EEG/blob/main/G_tfceersp.m) load in the 2D matrix output of t-values from [G_erspstats.m](https://github.com/AMB895/AS-EEG/blob/main/G_erspstats.m) as the inputs to the threshold-free cluster enhancement algorithm (Smith & Nichols, 2009). This algorithm outputs a 2D matrix of enhanced t-values. To find significant clusters (p<0.01), the original 2D t-value matrix was permuted 1000 times, inputed into the TFCE algorithm, and the maximum enhanced t-value was extracted for each permutation to build a null distribution. The threshold for a significant cluster was found using the null distribution at p=0.01. Using this threshold, a mask of significant clusters was generated. **Outputs:** 2D matrix of enhanced t-values, vector of maximum enhanced t-values form permutations, and a 2D mask of significant ERSP clusters (all for each model term).
 
-[C_clusterersp.m](https://github.com/AMB895/AS-EEG/blob/main/C_clusterersp.m) loaded in the the 4D matrix of ERSP data and averaged across specificed electrodes. The significant cluster masks were applied to each subject's ERSP data and average ERSP from significant clusters were extracted and put into a table for subsequent analyses. 
+[C_clusterersp.m](https://github.com/AMB895/AS-EEG/blob/main/C_clusterersp.m) loaded in the the 4D matrix of ERSP data and averaged across specificed electrodes. The significant cluster masks were applied to each subject's ERSP data and average ERSP from significant clusters were extracted. **Outputs:** A table of each subject's average ERSP from signfiicant clusters for AS and VGS tasks. 
 
 
-**Spontaneous and evoked power**
+### Spontaneous and evoked power
 
 The spontaneous and evoked power spectrums were computed with [GC_sponevopower.m](https://github.com/AMB895/AS-EEG/blob/main/GC_sponevopower.m) which uses [F_tfpower.m](https://github.com/AMB895/AS-EEG/blob/main/F_tfpower.m) then averages across time to get broadband spontaneous/ evoked power spectrums. [GC_sponevopower.m](https://github.com/AMB895/AS-EEG/blob/main/GC_sponevopower.m) also compiles average broadband power values into data table for future analyses. 
 
-**Statistics**
+### Statistics
 
 All statistical analyses done for the main paper are in [main_sponevo_ersp_analysis.Rmd](https://github.com/AMB895/AS-EEG/blob/main/main_sponevo_ersp_analysis.Rmd) and supplemental statistical analyses are found in [supplement_sponevo_ersp_analysis.Rmd](https://github.com/AMB895/AS-EEG/blob/main/supplement_sponevo_ersp_analysis.Rmd ). 
 
-**Figures**
+### Figures
 
 Main paper figures were generated using [Paper_figs.Rmd](https://github.com/AMB895/AS-EEG/blob/main/Paper_figs.Rmd) and supplemental figures were generated using [Supplemental_figs.Rmd](https://github.com/AMB895/AS-EEG/blob/main/Supplemental_figs.Rmd).
 
