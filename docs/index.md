@@ -108,6 +108,6 @@ Electroocculogram (EOG) recorded during the antisaccade task were used to score 
 
 - Analyses were done using MATLAB 2021a.
 - EEGLAB 2024.2 was used for pre-processing and epoching EEG data.
-- [LIMO Tools V3](https://github.com/AMB895/limo_tools) plug-in for EEGLAB was used for the TFCE algorithm.
+- [LIMO Tools](https://github.com/AMB895/limo_tools) plug-in for EEGLAB was used for the TFCE algorithm.
 - Statistical analyses were done using R 4.5.1
 
