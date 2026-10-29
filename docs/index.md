@@ -4,23 +4,17 @@ Abstract:
 
 *Adolescence is a critical period of development marked by improvements in cognitive control driven by maturation of executive brain systems. Neural mechanisms supporting inhibitory control—the ability to suppress a prepotent response in favor of generating a goal-directed response—mature into adulthood in parallel with refinements in neural frequency-specific neural oscillations and broadband spontaneous activity, supporting more accurate and reliable performance on response inhibition tasks, such as the antisaccade (AS) oculomotor task. Prior work has established that the maturation of neural circuitry (e.g. synaptic pruning and myelination) contributes to age-related decreases in spontaneous activity, supporting higher fidelity transmission of task-relevant activity, such as frequency-specific neural oscillations which are crucial for AS performance. Using longitudinal electroencephalography (EEG) data from 146 participants (72F, 10-34yos, 253 total sessions) during the AS task, we sought to understand the interplay between frontal oscillatory and spontaneous activity during cognitive processing and how it supports developmental improvements in inhibitory control. We found that spontaneous activity developmentally decreased during the preparation of an inhibitory response which was associated with reduced trial-to-trial variability in response latency indicating reductions in spontaneous activity may increase reliability of inhibitory control processing. Furthermore, increased suppression of preparatory high-beta oscillations was associated with decreased latency variability and lower broadband spontaneous activity, with an age interaction indicating this modulation became more pronounced through development. Together, these results illustrate how developmental enhancements in the coordination of frequency-specific oscillations and spontaneous activity during inhibitory response preparation support improvements in inhibitory control, providing a potential mechanism through which inhibitory control becomes more accurate and reliable from adolescence into adulthood.*
 
-### Project Lead
-Abigail M. Beatty
+**Project Lead:** Abigail M. Beatty
 
-### Faculty Lead
-Beatriz Luna 
+**Faculty Lead:** Beatriz Luna
 
-### Project Start Date
-September 2024
+**Project Start Date:** September 2024
 
-### Current Project Status
-In progress 
+**Current Project Status:** In preparation
 
-### Datasets
-LNCD 7T
+**Datasets:** LNCD 7T
 
-### Github Repository
-[https://github.com/AMB895/AS-EEG](https://github.com/AMB895/AS-EEG/tree/main)
+**Github Repository:** [https://github.com/AMB895/AS-EEG](https://github.com/AMB895/AS-EEG/tree/main)
 
 ## CODE DOCUMENTATION
 ### Outline
@@ -54,6 +48,7 @@ Within [run_preprocessing_V2.m](https://github.com/LabNeuroCogDevel/EEG_preproce
     10. Homogenized channel locations, for caps that had 128 channels for comparison to caps with 64 channels
 4. Data was segmented into epochs, time-locked to the onset of the preparatory period (for AS task only preparatory period of correct AS trials) [run_epoching.m](https://github.com/LabNeuroCogDevel/EEG_preprocessing/blob/main/run_epoching.m)
 
+
 ### Score antisaccade trials
 
 Electroocculogram (EOG) recorded during the antisaccade task were used to score participants' behavior. The software used is found in the LabNeuroCogDevel repository, [7TBrainMech_scripts/eeg/eog_cal/](https://github.com/LabNeuroCogDevel/7TBrainMech_scripts/tree/master/eeg/eog_cal)
@@ -66,6 +61,7 @@ Electroocculogram (EOG) recorded during the antisaccade task were used to score 
     - **Output:** table of trial information (trial number, latency, score, drop reason if applicable) is saved for each subject
 3. [all_anti.m](https://github.com/LabNeuroCogDevel/7TBrainMech_scripts/blob/master/eeg/eog_cal/all_anti.m) compiles each subject's individual data table. **Output:** one large trial-level data table with all subjects' trial-level performance variables.
 4. [anti_eeg_score_analysis.m](https://github.com/AMB895/AS-EEG/blob/main/anti_eeg_score_analysis.m) uses subjects' trial level data to compute average latency on correct trials, latency variability on correct trials and correct response rate.**Output:** data table with each subject having their own row of overall AS task performance variables. 
+
 
 ### MATLAB script naming conventions:
 - `C_` : compile data scripts. Use to compile data generated into one matrix/ table across all subjects. (e.g. `C_ersp.m` compiles ERSP data into large 4D matrix)
@@ -85,6 +81,7 @@ Electroocculogram (EOG) recorded during the antisaccade task were used to score 
     - [G_tfceersp.m](https://github.com/AMB895/AS-EEG/blob/main/G_tfceersp.m) loads in the 2D matrix output of t-values from [G_erspstats.m](https://github.com/AMB895/AS-EEG/blob/main/G_erspstats.m) as the inputs to the threshold-free cluster enhancement algorithm (Smith & Nichols, 2009). This algorithm outputs a 2D matrix of enhanced t-values. To find significant clusters (p<0.01), the original 2D t-value matrix was permuted 1000 times, inputted into the TFCE algorithm, and the maximum enhanced t-value was extracted for each permutation to build a null distribution. The threshold for a significant cluster was found using the null distribution at p=0.01. Using this threshold, a mask of significant clusters was generated. **Outputs:** 2D matrix (frequency x time) of enhanced t-values, vector of maximum enhanced t-values form permutations, and a 2D mask of significant ERSP clusters (all for each model term).
 
 4. [C_clusterersp.m](https://github.com/AMB895/AS-EEG/blob/main/C_clusterersp.m) loads in the the 4D matrix of ERSP data and averages across specificed electrodes. The significant cluster masks were applied to each subject's ERSP data and average ERSP from significant clusters were extracted. **Outputs:** A table of each subject's average ERSP from signfiicant clusters for AS and VGS tasks. 
+
 
 ### Spontaneous and evoked power
 
