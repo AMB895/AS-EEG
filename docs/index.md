@@ -2,7 +2,7 @@
 
 Abstract:
 
-*Adolescence is a critical period of development marked by improvements in cognitive control driven by maturation of executive brain systems. Neural mechanisms supporting inhibitory control—the ability to suppress a prepotent response in favor of generating a goal-directed response—mature into adulthood in parallel with refinements in neural frequency-specific neural oscillations and broadband spontaneous activity, supporting more accurate and reliable performance on response inhibition tasks, such as the antisaccade (AS) oculomotor task. Prior work has established that the maturation of neural circuitry (e.g. synaptic pruning and myelination) contributes to age-related decreases in spontaneous activity, supporting higher fidelity transmission of task-relevant activity, such as frequency-specific neural oscillations which are crucial for AS performance. Using longitudinal electroencephalography (EEG) data from 146 participants (72F, 10-34yos, 253 total sessions) during the AS task, we sought to understand the interplay between frontal oscillatory and spontaneous activity during cognitive processing and how it supports developmental improvements in inhibitory control. We found that spontaneous activity developmentally decreased during the preparation of an inhibitory response which was associated with reduced trial-to-trial variability in response latency indicating reductions in spontaneous activity may increase reliability of inhibitory control processing. Furthermore, increased suppression of preparatory high-beta oscillations was associated with decreased latency variability and lower broadband spontaneous activity, with an age interaction indicating this modulation became more pronounced through development. Together, these results illustrate how developmental enhancements in the coordination of frequency-specific oscillations and spontaneous activity during inhibitory response preparation support improvements in inhibitory control, providing a potential mechanism through which inhibitory control becomes more accurate and reliable from adolescence into adulthood.*
+*Adolescence is a critical period of development marked by improvements in cognitive control driven by maturation of executive brain systems. Neural mechanisms supporting inhibitory control— the ability to suppress a prepotent response in favor of generating a goal-directed response— mature into adulthood in parallel with refinements in frequency-specific neural oscillations and broadband spontaneous activity, supporting more accurate and reliable performance on response inhibition tasks, such as the antisaccade (AS) oculomotor task. Prior work has established that the maturation of neural circuitry contributes to age-related decreases in spontaneous activity, supporting higher fidelity transmission of task-relevant activity, such as frequency-specific neural oscillations which are crucial for AS performance. Using longitudinal electroencephalography (EEG) data from 146 participants (72F, 10-34yos, 253 total sessions) collected while participants performed an AS task, we sought to understand the interplay between frontal oscillatory and spontaneous activity during cognitive processing and how it supports developmental improvements in inhibitory control. We found that spontaneous activity decreased developmentally during the preparation of an inhibitory response, and that this was associated with reduced trial-to-trial variability in response latency indicating that reductions in spontaneous activity may increase reliability of inhibitory control processing. Furthermore, performance-related decreases in broadband spontaneous activity were associated with the suppression of preparatory high-beta oscillations in an age-dependent manner, such that modulation became more pronounced through development. Together, these results illustrate how developmental enhancements in the coordination of frequency-specific oscillations and spontaneous activity during inhibitory response preparation support developmental improvements in inhibitory control, providing a potential mechanism through which inhibitory control becomes more accurate and reliable from adolescence into adulthood.*
 
 **Project Lead:** Abigail M. Beatty
 
@@ -76,9 +76,11 @@ Electroocculogram (EOG) recorded during the antisaccade task were used to score 
 
 2. [C_ersp.m](https://github.com/AMB895/AS-EEG/blob/main/C_ersp.m) loads in individual subjects' 3D ERSP matricies and compiles into one large matrix. **Output:** 4D ERSP matrix (subject X frequency x time x channel)
 
-3. Significant ERSP time-frequency clusters are found using [G_erspstats.m](https://github.com/AMB895/AS-EEG/blob/main/G_erspstats.m) and [G_tfceersp.m](https://github.com/AMB895/AS-EEG/blob/main/G_tfceersp.m)
+3. Significant ERSP time-frequency clusters are found using [G_erspstats.m](https://github.com/AMB895/AS-EEG/blob/main/G_erspstats.m) and [G_tfceersp.m](https://github.com/AMB895/AS-EEG/blob/main/G_tfceersp.m). See figure below (see supplemental material for description of figure) for visual depiction of threshold-free cluster enhnancement (TFCE) method.
     - [G_erspstats.m](https://github.com/AMB895/AS-EEG/blob/main/G_erspstats.m) loads in 4D matrix (subject X frequency x time x channel) and averages across specificed channels for AS and VGS task. At each time-freuquency point the linear mixed effects model `ERSP ~ 1 + Inverse Age * Condition + Sex + (1 | ID)` is evaluated and statistical parameters (t-values and beta estimates) are extraced for each model term at every time-frequency point. **Outputs:** 2D matrix (frequency x time) of t-values and beta estimates were saved for each model term. 
-    - [G_tfceersp.m](https://github.com/AMB895/AS-EEG/blob/main/G_tfceersp.m) loads in the 2D matrix output of t-values from [G_erspstats.m](https://github.com/AMB895/AS-EEG/blob/main/G_erspstats.m) as the inputs to the threshold-free cluster enhancement algorithm (Smith & Nichols, 2009). This algorithm outputs a 2D matrix of enhanced t-values. To find significant clusters (p<0.01), the original 2D t-value matrix was permuted 1000 times, inputted into the TFCE algorithm, and the maximum enhanced t-value was extracted for each permutation to build a null distribution. The threshold for a significant cluster was found using the null distribution at p=0.01. Using this threshold, a mask of significant clusters was generated. **Outputs:** 2D matrix (frequency x time) of enhanced t-values, vector of maximum enhanced t-values form permutations, and a 2D mask of significant ERSP clusters (all for each model term).
+    - [G_tfceersp.m](https://github.com/AMB895/AS-EEG/blob/main/G_tfceersp.m) loads in the 2D matrix output of t-values from [G_erspstats.m](https://github.com/AMB895/AS-EEG/blob/main/G_erspstats.m) as the inputs to the TFCE algorithm (Smith & Nichols, 2009). This algorithm outputs a 2D matrix of enhanced t-values. To find significant clusters (p<0.01), the original 2D t-value matrix was permuted 1000 times, inputted into the TFCE algorithm, and the maximum enhanced t-value was extracted for each permutation to build a null distribution. The threshold for a significant cluster was found using the null distribution at p=0.01. Using this threshold, a mask of significant clusters was generated. **Outputs:** 2D matrix (frequency x time) of enhanced t-values, vector of maximum enhanced t-values form permutations, and a 2D mask of significant ERSP clusters (all for each model term).
+
+![TFCE method](./SM_tfce_method.png)
 
 4. [C_clusterersp.m](https://github.com/AMB895/AS-EEG/blob/main/C_clusterersp.m) loads in the the 4D matrix of ERSP data and averages across specificed electrodes. The significant cluster masks were applied to each subject's ERSP data and average ERSP from significant clusters were extracted. **Outputs:** A table of each subject's average ERSP from signfiicant clusters for AS and VGS tasks. 
 
@@ -86,28 +88,36 @@ Electroocculogram (EOG) recorded during the antisaccade task were used to score 
 ### Spontaneous and evoked power
 
 1. [GC_sponevopower.m](https://github.com/AMB895/AS-EEG/blob/main/GC_sponevopower.m) loads in pre-processed and epoched EEG data (AS and VGS) and loops over each subject to compute spontaneous and evoked power, using [F_tfpower.m](https://github.com/AMB895/AS-EEG/blob/main/F_tfpower.m).
-    - Compute a 4D matrix of total power (frequency x time x trial x channel) and a 3D matrix of evoked power (frequency x time x channel). See Event-related power spectrum section for function inputs and outputs.
+    - Compute a 4D matrix of total power (frequency x time x trial x channel) and a 3D matrix of evoked power (frequency x time x channel). See event-related spectral perturbation section for inputs and outputs of [F_tfpower.m](https://github.com/AMB895/AS-EEG/blob/main/F_tfpower.m).
     - Computes spontaneous power spectrum by subtracting the evoked power spectrum from the total power spectrum.
     - Total, evoked, and spontaneous power spectrums are averaged across specified electrodes, time, and trials (for total and spontaneous power). **Outputs:** data table with average spontaneous, evoked and total power across specified electrodes for AS and VGS tasks.
 
 ### Statistics
 
-1. All main paper statistical analyses are in [main_sponevo_ersp_analysis.Rmd](https://github.com/AMB895/AS-EEG/blob/main/main_sponevo_ersp_analysis.Rmd). **Outputs:** rds files with the model, the original data frame, the cleaned data frame, and the model coefficients table. 
-    - R markdown file chunked by different analyses.
-2. Supplemental statistical analyses are found in [supplement_sponevo_ersp_analysis.Rmd](https://github.com/AMB895/AS-EEG/blob/main/supplement_sponevo_ersp_analysis.Rmd ). **Outputs:** rds files with the model, the original data frame, the cleaned data frame, and the model coefficients table. 
-    - R markdown file chunked by different analyses.
+1. All main paper statistical analyses are in [main_sponevo_ersp_analysis.Rmd](https://github.com/AMB895/AS-EEG/blob/main/main_sponevo_ersp_analysis.Rmd). **Outputs:** RDS files with the model, the original data frame, the cleaned data frame, and the model's coefficients table. 
+    - R markdown file chunked by different analyses that are described in the main paper.
+2. Supplemental statistical analyses are found in [supplement_sponevo_ersp_analysis.Rmd](https://github.com/AMB895/AS-EEG/blob/main/supplement_sponevo_ersp_analysis.Rmd ). **Outputs:** RDS files with the model, the original data frame, the cleaned data frame, and the model's coefficients table. 
+    - R markdown file chunked by different analyses that are described in the supplemental material.
 
 ### Figures
 
-1. Main paper figures are generated using [Paper_figs.Rmd](https://github.com/AMB895/AS-EEG/blob/main/Paper_figs.Rmd) 
-    - R markdown file chucked by figures. Loads in model outputs from statistical models and plots raw and predicted data for figures. P-value correction using FDR for each group of models.
+1. Main paper figures are generated using [Paper_figs.Rmd](https://github.com/AMB895/AS-EEG/blob/main/Paper_figs.Rmd).
+    - R markdown file chucked by figures in the main paper.
+    - Loads in model and clean data from RDS files.
+    - Plots raw data points and model predictions for figures.
+    - P-value correction using FDR for each group of models.
 2. Supplemental figures were generated using [Supplemental_figs.Rmd](https://github.com/AMB895/AS-EEG/blob/main/Supplemental_figs.Rmd).
-    - R markdown file chucked by figures. Loads in model outputs from statistical models and plots raw and predicted data for figures. P-value correction using FDR for each group of models.
+    - R markdown file chucked by figures in the supplemental material.
+    - Loads in model and clean data from RDS files.
+    - Plots raw data points and model predictions for figures.
+    - P-value correction using FDR for each group of models.
+
+*Note for main and supplemental figures: plots were generated in R and the finalized figures were generated in Inkscape.
 
 ### Project Software
 
 - Analyses were done using MATLAB 2021a.
-- EEGLAB 2024.2 was used for pre-processing and epoching EEG data.
+- [EEGLAB 2024.2](https://sccn.ucsd.edu/eeglab/) was used for pre-processing and epoching EEG data.
 - [LIMO Tools](https://github.com/AMB895/limo_tools) plug-in for EEGLAB was used for the TFCE algorithm.
 - Statistical analyses were done using R 4.5.1
 
