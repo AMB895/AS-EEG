@@ -1,70 +1,44 @@
 % Calculate time frequency reconstruction of power from EEG
 % amb895 05/07/2026
-function [power, times, freqs, varargout] = F_tfpower(EEG,varargin)
+function [power, times, freqs, varargout] = F_tfpower(EEG, channels, run_evoked, run_itc, run_amplitude)
 % inputs
 % EEG = EEG structure from EEGLAB
+% inputs
+%   EEG structure
 % optional inputs
-% 'channels' = vector of channel numbers
-% 'evoked' = 0, not evoked; 1, evoked
-% 'itc' = 0, do not compute itc; 1, compute itc
+%   channels = vector of channel numbers
+%   run_evoked = 0, not evoked; 1, evoked
+%   run_itc = 0, do not compute itc; 1, compute itc
+%   run_amplitude = 0, do not return amplitude envelope; 1, return amplitdue envelope
 % outputs
-% power - freq x time X trials X channels matrix
-% times
-% freqs
+%   power - freq x time X trials X channels 
+%   times
+%   freqs
 % optional outputs
-% itc - freq x time x channels
+%   itc - freq x time x channels
+%   amplitude - freq x time x trials x channels
 
-% defining optional input and output variables
-args = reshape(varargin,2,[]);
-p = struct(args{:});
-nout = max(nargout,1) - 3; % 3 variables that are alway output
+arguments
+    EEG struct
+    channels = 1:64
+    run_evoked = 0 
+    run_itc = 0
+    run_amplitude = 0
+end
+varargout = {};
 
 % EEG default settings
-nchans = EEG.nbchan;
+nchans = length(channels);
 EEGdata = EEG.data;
-channels = 1:64;
 times = EEG.times;
 pnts = EEG.pnts;
 ntrls = EEG.trials;
 Fs = EEG.srate;
-run_itc = 0;
-evoked=0;
-amplitude = 0;
-varargout = {};
 
-% define parameters based on inputs
-for i = 1:size(args,2)
-    param = args{1,i};
-    value = args{2,i};
-    param = lower(param);
-    switch param
-        case 'channels' % only run specific channels if specified
-            nchans = length(value);
-            channels = value;
-            EEGdata = EEG.data(value,:,:);
-        case 'evoked'
-            if value
-                evoked =1;
-                EEGdata = mean(EEGdata,3); % channels x time
-                ntrls = 1;
-            else 
-                evoked=0;
-                EEGdata = EEG.data; % channels x time x trials
-                ntrls = EEG.trials;
-            end
-        case 'itc'
-            if value
-                run_itc = 1;
-            else
-                run_itc = 0;
-            end
-        case 'amplitude'
-            if value
-                amplitude =1;
-            else
-                amplitude = 0;
-            end
-    end
+% for evoked power spectrum, average across trials in time domain
+if run_evoked
+    EEGdata = mean(EEGdata,3);
+    ntrls = 1;
 end
 
 % Wavelet and convolution parameters
@@ -78,7 +52,8 @@ halfw = floor(length(wavet) / 2) + 1;
 nconv = pnts + length(wavet) - 1;
 
 %% Manual computation of morlet wavelet reconstruction
-if evoked
+% change shape of matrix for computations
+if run_evoked
     EEGdata = permute(EEGdata,[2 1]); % time x channels
 else 
     EEGdata = permute(EEGdata, [2 3 1]); % time x trials x channels
@@ -107,7 +82,7 @@ for fi = 1:nfreqs
     % trim
     temp = temp_full(halfw:halfw + pnts -1,:,:);
     % save complex reconstruction if running ITC
-    if run_itc || amplitude
+    if run_itc || run_amplitude
         F(fi,:,:,:) = temp;
     end
     % compute power
@@ -122,9 +97,10 @@ if run_itc
 end
 
 % return amplitude envelopes if specified
-if amplitude
+if run_amplitude
     amp_env = abs(F);
     varargout{end+1} = amp_env;
 end
+
 
 end

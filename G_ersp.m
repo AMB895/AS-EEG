@@ -7,7 +7,6 @@ clear;
 addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/fieldtrip-20180926/') % fieldtrip
 addpath('/Volumes/Hera/Abby/Resources/eeglab_current/eeglab2024.2/') % eeglab
 addpath('/Volumes/Hera/Abby/AS_EEG/')
-addpath('/Volumes/Hera/Abby/Resources/slanCM/') % color palette for plotting ersp maps
 addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/txt/') % get age and sex from merged7T file
 
 % start eeglab
@@ -69,9 +68,11 @@ for t = 1:length(tasks)
         splitfilename = strsplit(filename,'_');
         lunaid = cell2mat(splitfilename(1));
         eeg_date = cell2mat(splitfilename(2));
+        
         % define file name to save subject's data
         subtasksavepath = sprintf('/Volumes/Hera/Abby/AS_EEG/ERSPdata/%s_data/%s/SubjectData/%s',currtask,eventtype,basenormfolder);
         subtasksavename = sprintf('%s_%s_%s_%s_ersp.mat',lunaid,eeg_date,currtask,eventtype);
+        
         % if already have ERSP for subject skip
         if exist(fullfile(subtasksavepath,subtasksavename),'file') && RERUN ==0
             fprintf('skipping; computed ERSP and time/freq for %s_%s\n',lunaid,eeg_date)
@@ -90,14 +91,17 @@ for t = 1:length(tasks)
                 warning('Subject %s %s does not have age; skipping\n',lunaid,eeg_date)
                 continue
             end
+            
             % load subject's EEG
             EEG = pop_loadset('filename',filename,'filepath',filepath);
             chanNames = string({EEG.chanlocs.labels}');
+            
             % skipping if channel labels do not match template
             if all(tempChanLabels~=chanNames)
                 warning('Check Subject Channel Labels %s %s; skipping\n',lunaid,eeg_date)
                 continue
             end
+            
             % skip if subject has 0 or 1 epochs (fails if subject has only 1 epoch)
             numEpochs = length(EEG.epoch);
             if numEpochs < 1
@@ -112,7 +116,7 @@ for t = 1:length(tasks)
             % Compute TF reconstruction of power
             [sub_totpower, times, freqs, sub_itc] = F_tfpower(EEG,'itc',1);
             % Comptue ERSP from power
-            [sub_ersp, ersptimes] = F_ersp(sub_totpower,times,[basestart baseend],[eventstart eventend],'base_norm',base_norm);
+            [sub_ersp, ersptimes] = F_ersp(sub_totpower,times,[basestart baseend],[eventstart eventend],base_norm);
             
             % Just prep period of power and itc
             sub_totpower = sub_totpower(:,eventstart_idx:eventend_idx,:,:);

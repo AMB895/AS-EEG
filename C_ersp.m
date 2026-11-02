@@ -5,7 +5,6 @@ clear
 addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/fieldtrip-20180926/')
 addpath('/Volumes/Hera/Abby/Resources/eeglab_current/eeglab2024.2/')
 addpath('/Volumes/Hera/Abby/AS_EEG/')
-addpath('/Volumes/Hera/Abby/Resources/slanCM/')
 
 %% Setting up directories
 % merged 7t  eeg info and AS scores
@@ -94,7 +93,7 @@ for t = 1:length(tasks)
         close(w)
         
         if PLOT
-            MAP = slanCM('viridis',256);
+            MAP = parula(256);
             % load total ersp
             load(fullfile(taskdir_ersp,ersp_name))
             load(fullfile(taskdir_ersp,itc_name))

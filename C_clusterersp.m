@@ -6,7 +6,6 @@ clear;
 addpath('/Volumes/Hera/Abby/AS_EEG/limo_tools/')
 addpath('/Volumes/Hera/Projects/7TBrainMech/scripts/fieldtrip-20180926/')
 addpath('/Volumes/Hera/Abby/Resources/eeglab_current/eeglab2024.2/')
-addpath('/Volumes/Hera/Abby/Resources/slanCM/')
 
 %% Directories and names
 resultsdir = '/Volumes/Hera/Abby/AS_EEG/Results';
@@ -146,23 +145,9 @@ for d = 1:length(datatypes)
                    % if no file found set power and ersp to NanN
                    avgcorAS_data(s,1) = NaN; 
                else
-                   %% FIX ME instead use data already loaded above
                    sub_corASdata = squeeze(data.(currdatatype).corAS(corASdata_idx,:,:));
-%                    corASerspfile = corASerspfiles(corASerspfileidx);
-                   % load file
-%                    substructcorASersp = load(fullfile(corASerspfile.folder,corASerspfile.name),...
-%                        'times','freqs','sub_totersp');
-%                    ERSPTIMES = substructcorASersp.times;
-
-%                     % average across f-row
-%                    sub_toterspcorAS = squeeze(mean(...
-%                        substructcorASersp.sub_totersp(:,...
-%                        :,:,[4 5 6 7 37 38 39 40 41]),4));
-
                    % mask ersp and power with current cluster mask and average value and save to vectors
                    avgcorAS_data(s,1) = mean(nonzeros(sub_corASdata.*currclustermask));
-
-
                end
 
 
@@ -177,31 +162,6 @@ for d = 1:length(datatypes)
                    sub_VGSdata = squeeze(data.(currdatatype).VGS(VGSdata_idx,:,:));
                    avgVGS_data(s,1) = mean(nonzeros(sub_VGSdata.*currclustermask));
                end
-                % find subject's ersp/power file (correct AS and VGS)
-%                VGSerspfilenames = {VGSerspfiles.name};
-%                VGSersp_isfile = contains(VGSerspfilenames,[num2str(lunaid) '_' num2str(eeg_date)]);
-%                VGSerspfileidx = find(VGSersp_isfile);
-%                %% Average ERSP 
-%                if isempty(VGSerspfileidx)
-%                    % if no file found set power and ersp to NanN
-%                    avgVGS_data(s,1) = NaN; 
-%                else
-%                    VGSerspfile = VGSerspfiles(VGSerspfileidx);
-%                    % load file
-%                    substructVGSersp = load(fullfile(VGSerspfile.folder,VGSerspfile.name),...
-%                        'times','freqs','sub_totersp');
-%                    ERSPTIMES = substructVGSersp.times;
-% 
-%                     % average across f-row
-%                    sub_toterspVGS = squeeze(mean(...
-%                        substructVGSersp.sub_totersp(:,...
-%                        :,:,[4 5 6 7 37 38 39 40 41]),4));
-% 
-%                    % mask ersp and power with current cluster mask and average value and save to vectors
-%                    avgVGS_data(s,1) = mean(nonzeros(sub_toterspVGS.*currclustermask));
-% 
-%                end
-
 
            end
            % add vectors of ersp and power for corAS and VGS to big table
