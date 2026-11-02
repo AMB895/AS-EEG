@@ -100,15 +100,15 @@ Electroocculogram (EOG) recorded during the antisaccade task were used to score 
 ### Spontaneous and evoked power
 
 1. [GC_sponevopower.m](https://github.com/AMB895/AS-EEG/blob/main/GC_sponevopower.m) loads in pre-processed and epoched EEG data (AS and VGS) and loops over each subject to compute spontaneous and evoked power, using [F_tfpower.m](https://github.com/AMB895/AS-EEG/blob/main/F_tfpower.m).
-    - Compute a 4D matrix of total power (frequency x time x trial x channel) and a 3D matrix of evoked power (frequency x time x channel). See Event-related power spectrum section for function inputs and outputs.
+    - Compute a 4D matrix of total power (frequency x time x trial x channel) and a 3D matrix of evoked power (frequency x time x channel). See event-related spectral perturbation section for inputs and outputs of [F_tfpower.m](https://github.com/AMB895/AS-EEG/blob/main/F_tfpower.m).
     - Computes spontaneous power spectrum by subtracting the evoked power spectrum from the total power spectrum.
     - Total, evoked, and spontaneous power spectrums are averaged across specified electrodes, time, and trials (for total and spontaneous power). **Outputs:** data table with average spontaneous, evoked and total power across specified electrodes for AS and VGS tasks.
 
 ### Statistics
 
-1. All main paper statistical analyses are in [main_sponevo_ersp_analysis.Rmd](https://github.com/AMB895/AS-EEG/blob/main/main_sponevo_ersp_analysis.Rmd). **Outputs:** rds files with the model, the original data frame, the cleaned data frame, and the model's coefficients table. 
+1. All main paper statistical analyses are in [main_sponevo_ersp_analysis.Rmd](https://github.com/AMB895/AS-EEG/blob/main/main_sponevo_ersp_analysis.Rmd). **Outputs:** RDS files with the model, the original data frame, the cleaned data frame, and the model's coefficients table. 
     - R markdown file chunked by different analyses that are described in the main paper.
-2. Supplemental statistical analyses are found in [supplement_sponevo_ersp_analysis.Rmd](https://github.com/AMB895/AS-EEG/blob/main/supplement_sponevo_ersp_analysis.Rmd ). **Outputs:** rds files with the model, the original data frame, the cleaned data frame, and the model's coefficients table. 
+2. Supplemental statistical analyses are found in [supplement_sponevo_ersp_analysis.Rmd](https://github.com/AMB895/AS-EEG/blob/main/supplement_sponevo_ersp_analysis.Rmd ). **Outputs:** RDS files with the model, the original data frame, the cleaned data frame, and the model's coefficients table. 
     - R markdown file chunked by different analyses that are described in the supplemental material.
 
 ### Figures
@@ -119,7 +119,7 @@ Electroocculogram (EOG) recorded during the antisaccade task were used to score 
     - Plots raw data points and model predictions for figures.
     - P-value correction using FDR for each group of models.
 2. Supplemental figures were generated using [Supplemental_figs.Rmd](https://github.com/AMB895/AS-EEG/blob/main/Supplemental_figs.Rmd).
-    -R markdown file chucked by figures in the supplemental material.
+    - R markdown file chucked by figures in the supplemental material.
     - Loads in model and clean data from RDS files.
     - Plots raw data points and model predictions for figures.
     - P-value correction using FDR for each group of models.
