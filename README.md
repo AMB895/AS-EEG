@@ -27,7 +27,5 @@ Some files/folders need to be updated/ made for script to run:
     - `maindirpreproc` = directory to preprocessed EEG data
     - `epochdirAS` and `epochdirVGS` = directories to EEG epoch data for AS and VGS tasks
  
-## Authors
-Abigail Beatty, University of Pittsburgh
 
-## License
+
