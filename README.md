@@ -1,5 +1,6 @@
 # AS-EEG repository 
-Code used to run analyses and generate figures for [insert paper here] 
+Code used to run analyses and generate figures for [insert paper here]
+
 See [Github page](https://amb895.github.io/AS-EEG/) for detailed project description and code documentation
 
 ## Getting started
